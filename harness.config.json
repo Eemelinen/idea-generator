@@ -1,0 +1,49 @@
+{
+  "$comment": "Loop driver configuration (scripts/harness-loop.ts). Caps bound one generator session; allowedTools merge with .claude/settings.json only for driver-run sessions. Models must equal config/models.yaml roles harness_generator / harness_evaluator (tests/test_harness_config.py). Set merge to \"auto\" only after branch protection exists. See docs/harness/README.md.",
+  "caps": {
+    "maxAttempts": 2,
+    "maxTurns": 200,
+    "maxBudgetUsd": 15,
+    "wallClockMin": 60,
+    "maxConsecutiveFailures": 2
+  },
+  "generator": {
+    "model": "opus",
+    "permissionMode": "auto",
+    "effort": "high"
+  },
+  "evaluator": {
+    "model": "opus",
+    "effort": "high",
+    "maxTurns": 60,
+    "maxBudgetUsd": 4,
+    "wallClockMin": 15
+  },
+  "allowedTools": [
+    "Bash(pnpm check*)",
+    "Bash(pnpm typecheck)",
+    "Bash(pnpm format*)",
+    "Bash(pnpm test:unit*)",
+    "Bash(pnpm test:py*)",
+    "Bash(pnpm harness:*)",
+    "Bash(pnpm exec tsc*)",
+    "Bash(pnpm exec prettier*)",
+    "Bash(uv run pytest*)",
+    "Bash(uv run python scripts/*)",
+    "Bash(uv run python -m ideaforge*)",
+    "Bash(uv sync*)",
+    "Bash(scripts/clean-state-check.sh*)",
+    "Bash(FAST=1 ./init.sh)",
+    "Bash(git status*)",
+    "Bash(git log*)",
+    "Bash(git diff*)",
+    "Bash(git show*)",
+    "Bash(git add *)",
+    "Bash(git commit *)",
+    "Bash(git worktree list)"
+  ],
+  "worktreeRoot": "../idea-generator-worktrees",
+  "merge": "wait",
+  "traceDir": ".harness/traces",
+  "runsLog": ".harness/runs.jsonl"
+}

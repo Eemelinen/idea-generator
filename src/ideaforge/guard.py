@@ -8,18 +8,21 @@ Policy (exit 2 = deny, reason on stderr):
 - Subagents are always strict: a research agent may write only its own
   runs/<run_id>/02_research/<dimension>.md, a debate agent only under
   runs/<run_id>/debate/, any other subagent only under runs/ or cache/.
-- The main session is strict (runs/ and cache/ only) unless the dev marker
-  file .ideaforge-dev exists at the project root, in which case it may write
-  anywhere inside the project.
+- The main session is strict (runs/ and cache/ only) unless it is a development
+  session: the dev marker file .ideaforge-dev exists at the project root, or the
+  harness loop driver started it (HARNESS_LOOP=1, docs/DECISIONS.md D-005). A
+  development session may write anywhere inside the project.
 - Shell commands in strict mode must match an allow-list (uv run python -m
   ideaforge…, uv run python scripts/…, uv run pytest, git, ls, cat) and may not
   fetch from the network, substitute commands or redirect output to files.
-  Research agents may only run the ideaforge.fi data tools (plus ls/cat).
+  Research agents may only run the ideaforge.fi data tools (plus ls/cat); the
+  harness evaluator may also run the read-only harness checks.
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 from pathlib import Path
@@ -41,6 +44,9 @@ GENERAL_ALLOW = (
     re.compile(r"^git(\s|$)"),
     re.compile(r"^(ls|cat)(\s|$)"),
 )
+HARNESS_ALLOW = GENERAL_ALLOW + (
+    re.compile(r"^pnpm\s+(--silent\s+)?(check|harness:check|harness:feature\s+(show|list|next))(\s|$)"),
+)
 RESEARCH_ALLOW = (
     re.compile(r"^uv\s+run\s+(--quiet\s+|-q\s+)?python\s+-m\s+ideaforge\.fi\.\w+(\s|$)"),
     re.compile(r"^python\s+-m\s+ideaforge\.fi\.\w+(\s|$)"),
@@ -49,7 +55,7 @@ RESEARCH_ALLOW = (
 
 
 def dev_mode() -> bool:
-    return config.DEV_MARKER.exists()
+    return config.DEV_MARKER.exists() or os.environ.get("HARNESS_LOOP") == "1"
 
 
 def _within(path: Path, parent: Path) -> bool:
@@ -136,7 +142,8 @@ def check_bash(data: dict[str, Any]) -> str | None:
         return "command denied: redirecting output to files is not allowed; write files with the Write tool"
 
     spec = agents.get(hookio.agent_name(data)) if subagent else None
-    allow = RESEARCH_ALLOW if spec is not None and spec.kind == "research" else GENERAL_ALLOW
+    kind = spec.kind if spec is not None else None
+    allow = {"research": RESEARCH_ALLOW, "harness": HARNESS_ALLOW}.get(kind, GENERAL_ALLOW)
     for segment in SEGMENT_SPLIT_RE.split(command):
         seg = segment.strip().replace("\\", "/")
         if seg and not any(p.match(seg) for p in allow):

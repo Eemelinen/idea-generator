@@ -15,6 +15,7 @@ def bash(command, tool="Bash", **extra):
 
 RESEARCH = {"agent_id": "a1", "agent_type": "research-pricing"}
 DEBATE = {"agent_id": "a2", "agent_type": "debate-investor"}
+EVALUATOR = {"agent_id": "a3", "agent_type": "evaluator"}
 
 
 # ---------------------------------------------------------------- writes
@@ -135,6 +136,45 @@ def test_research_agent_limited_to_fi_tools(active_run, project):
     assert guard.check_bash(bash("uv run python -m ideaforge.validate_file x", **RESEARCH)) is not None
     assert guard.check_bash(bash("git status", **RESEARCH)) is not None
     assert guard.check_bash(bash("curl https://x", **RESEARCH)) is not None
+
+
+def test_harness_loop_is_a_development_session(project, monkeypatch):
+    monkeypatch.setenv("HARNESS_LOOP", "1")
+    assert guard.check_write(write(project / "src" / "ideaforge" / "x.py")) is None
+    assert guard.check_bash(bash("pnpm harness:verify F-006")) is None
+
+
+def test_harness_loop_never_relaxes_subagents(active_run, monkeypatch):
+    monkeypatch.setenv("HARNESS_LOOP", "1")
+    assert guard.check_write(write(active_run / "04_scores.json", **RESEARCH)) is not None
+    assert guard.check_bash(bash("git status", **RESEARCH)) is not None
+
+
+@pytest.mark.parametrize("cmd", [
+    "git diff origin/main...HEAD",
+    "pnpm harness:check",
+    "pnpm --silent harness:check",
+    "pnpm check",
+    "pnpm harness:feature show F-006",
+    "uv run pytest tests/test_guard.py",
+])
+def test_evaluator_runs_read_only_checks(project, cmd):
+    assert guard.check_bash(bash(cmd, **EVALUATOR)) is None
+
+
+@pytest.mark.parametrize("cmd", [
+    "pnpm harness:feature activate F-006",
+    "pnpm harness:verify F-006",
+    "pnpm install",
+    "pnpm check > runs/out.txt",
+])
+def test_evaluator_cannot_change_state(project, cmd):
+    assert guard.check_bash(bash(cmd, **EVALUATOR)) is not None
+
+
+def test_evaluator_cannot_write_project_files(project):
+    (project / ".ideaforge-dev").touch()
+    assert guard.check_write(write(project / "src" / "x.py", **EVALUATOR)) is not None
 
 
 def test_main_exits_2_with_reason(project, monkeypatch, capsys):

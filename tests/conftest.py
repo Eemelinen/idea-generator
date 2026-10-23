@@ -26,6 +26,7 @@ def project(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "DEV_MARKER", root / ".ideaforge-dev")
     monkeypatch.setenv("IDEAFORGE_DB", str(root / "test.db"))
     monkeypatch.delenv("IDEAFORGE_RUN_ID", raising=False)
+    monkeypatch.delenv("HARNESS_LOOP", raising=False)  # set when pytest runs inside a driver session
     return root
 
 

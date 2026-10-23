@@ -43,6 +43,7 @@ class ModelsConfig(_Cfg):
         Literal[
             "orchestrator", "research_subagent", "killcause_scout", "claim_extractor",
             "synthesizer", "debate_persona", "debate_judge",
+            "harness_generator", "harness_evaluator",
         ],
         ModelAlias,
     ]

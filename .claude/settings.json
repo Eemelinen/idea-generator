@@ -14,15 +14,49 @@
       "Bash(git status*)",
       "Bash(git diff*)",
       "Bash(git log*)",
+      "Bash(git show*)",
       "Bash(ls*)",
-      "Bash(cat*)"
+      "Bash(cat*)",
+      "Bash(pnpm check*)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm format*)",
+      "Bash(pnpm test:unit*)",
+      "Bash(pnpm test:py*)",
+      "Bash(pnpm exec tsc*)",
+      "Bash(pnpm exec prettier*)",
+      "Bash(pnpm harness:*)",
+      "Bash(scripts/clean-state-check.sh*)",
+      "Bash(./scripts/clean-state-check.sh*)"
     ],
     "deny": [
       "Bash(curl*)",
-      "Bash(wget*)"
+      "Bash(wget*)",
+      "Read(./.env)",
+      "Edit(./.env)",
+      "Write(./.env)",
+      "Edit(.claude/agents/**)",
+      "Write(.claude/agents/**)",
+      "Edit(uv.lock)",
+      "Write(uv.lock)",
+      "Edit(pnpm-lock.yaml)",
+      "Write(pnpm-lock.yaml)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)"
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Write|Edit|MultiEdit|NotebookEdit",
@@ -43,6 +77,26 @@
             "timeout": 30
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.sh",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.sh",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -53,6 +107,16 @@
             "type": "command",
             "command": "uv run --quiet --project \"$CLAUDE_PROJECT_DIR\" python -m ideaforge.usage log",
             "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format.sh",
+            "timeout": 20
           }
         ]
       }
@@ -74,6 +138,11 @@
           {
             "type": "command",
             "command": "uv run --quiet --project \"$CLAUDE_PROJECT_DIR\" python -m ideaforge.validate_file --auto --stop",
+            "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop-guard.sh",
             "timeout": 60
           }
         ]

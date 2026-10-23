@@ -84,6 +84,11 @@ def test_auto_ignores_unknown_agents(active_run):
     assert vf.auto({"agent_type": "general-purpose"}, stop=False) == 0
 
 
+def test_auto_ignores_the_harness_evaluator(active_run):
+    assert vf.auto({"agent_id": "e", "agent_type": "evaluator"}, stop=False) == 0
+    assert not list(active_run.glob("VALIDATION_FAILED_*"))
+
+
 def test_auto_blocks_once_then_records_failure(active_run):
     hook = {"agent_id": "a", "agent_type": "research-pricing"}
     with pytest.raises(SystemExit) as exc:

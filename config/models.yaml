@@ -8,6 +8,10 @@ roles:
   synthesizer: opus
   debate_persona: opus        # downgrade candidate #2 (sonnet)
   debate_judge: opus
+  # Development harness (pnpm harness:loop, docs/harness/README.md); never runs pipeline work.
+  # harness.config.json must use the same values (tests/test_harness_config.py).
+  harness_generator: opus
+  harness_evaluator: opus
 notes: |
   Downgrade order if usage limits are hit: claim_extractor → debate_persona → research_subagent.
   Keep synthesizer and debate_judge on opus longest.

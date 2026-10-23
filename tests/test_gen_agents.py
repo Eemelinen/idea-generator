@@ -9,9 +9,9 @@ def frontmatter(text):
     return yaml.safe_load(fm), body
 
 
-def test_renders_17_agents_all_on_opus():
+def test_renders_18_agents_all_on_opus():
     rendered = gen_agents.render_all()
-    assert len(rendered) == 17
+    assert len(rendered) == 18
     for path, text in rendered.items():
         fm, body = frontmatter(text)
         assert fm["name"] == path.stem
@@ -36,13 +36,21 @@ def test_research_agents_carry_contract_and_budget():
     assert "8 web searches" in rendered["research-pricing"]
 
 
+def test_evaluator_is_generated_read_only():
+    fm, body = frontmatter({p.stem: t for p, t in gen_agents.render_all().items()}["evaluator"])
+    assert fm["tools"] == "Read, Glob, Grep, Bash"
+    assert "docs/harness/evaluator-rubric.md" in body
+    assert "You never edit files" in body
+
+
 def test_model_comes_from_config(monkeypatch):
-    roles = dict(config.models().roles) | {"debate_persona": "sonnet", "claim_extractor": "haiku"}
+    roles = dict(config.models().roles) | {"debate_persona": "sonnet", "claim_extractor": "haiku", "harness_evaluator": "sonnet"}
     monkeypatch.setattr(config, "models", lambda: config.ModelsConfig(roles=roles))
     rendered = {p.stem: frontmatter(t)[0]["model"] for p, t in gen_agents.render_all().items()}
     assert rendered["debate-founder"] == "sonnet"
     assert rendered["debate-judge"] == "opus"
     assert rendered["research-market"] == "opus"
+    assert rendered["evaluator"] == "sonnet"
 
 
 def test_committed_agent_files_are_up_to_date():

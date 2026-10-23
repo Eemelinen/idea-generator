@@ -173,7 +173,7 @@ def auto(data: dict[str, Any], stop: bool) -> int:
         targets = [(run_dir / rel, kind) for rel, kind in STAGE_FILES.items() if (run_dir / rel).exists()]
     else:
         spec = agents.get(hookio.agent_name(data))
-        if spec is None:
+        if spec is None or spec.kind == "harness":
             return hookio.OK  # not one of our pipeline agents
         agent = spec.name
         if spec.kind == "research":

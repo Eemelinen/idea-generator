@@ -12,7 +12,7 @@ from ideaforge.schemas import PERSONAS, RESEARCH_DIMENSIONS
 class AgentSpec:
     name: str          # subagent name == .claude/agents/<name>.md == hook agent_type
     role: str          # key in config/models.yaml roles
-    kind: str          # research | debate | judge
+    kind: str          # research | debate | judge | harness
     dimension: str | None = None
     persona: str | None = None
     budget_key: str | None = None   # key in a budget preset
@@ -45,6 +45,8 @@ for _dim in RESEARCH_DIMENSIONS:
 for _p in PERSONAS:
     AGENTS[f"debate-{_p}"] = AgentSpec(name=f"debate-{_p}", role="debate_persona", kind="debate", persona=_p)
 AGENTS["debate-judge"] = AgentSpec(name="debate-judge", role="debate_judge", kind="judge")
+# Development harness reviewer (docs/harness/evaluator-rubric.md); read-only, writes no run files.
+AGENTS["evaluator"] = AgentSpec(name="evaluator", role="harness_evaluator", kind="harness")
 
 
 def get(name: str | None) -> AgentSpec | None:
