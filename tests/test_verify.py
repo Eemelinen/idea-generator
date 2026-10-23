@@ -195,6 +195,58 @@ def test_quote_outside_the_main_content_still_matches(project):
     assert not list(verify.cache_path(url).parent.glob("*.tmp"))
 
 
+XHTML = (
+    '<?xml version="1.0" encoding="UTF-8"?>\n'
+    '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">\n'
+    '<html xmlns="http://www.w3.org/1999/xhtml"><head><title>t</title></head>'
+    "<body><p>Synthetic XHTML page. Arvonlisäverovelvollisuuden alaraja on 20 000 euroa tilikaudessa.</p></body></html>"
+)
+
+
+@pytest.mark.parametrize("ctype", ["text/html; charset=utf-8", "application/xhtml+xml"])
+def test_xhtml_with_an_encoding_declaration_is_parsed(project, ctype):
+    # lxml rejects a str that declares its encoding; the declaration must not make the page unfetchable.
+    url = "https://www.vero.fi/synthetic-xhtml"
+    page = Fetcher(FakeWeb({url: HttpResponse(200, "﻿" + XHTML, ctype)}), record_sources=False).get(url)
+    assert page.status == "ok"
+    assert verify.quote_matches("Arvonlisäverovelvollisuuden alaraja on 20 000 euroa tilikaudessa.", page.text)
+    assert "<?xml" not in page.text
+
+
+def test_trafilatura_extract_is_the_fallback_when_lxml_fails(project, monkeypatch):
+    def unparsable(html):
+        raise ValueError("synthetic lxml failure")
+
+    monkeypatch.setattr(verify, "page_text", unparsable)
+    paragraph = "<p>Synthetic fallback paragraph about lakeside cabins and their weekly rental prices in summer.</p>"
+    text = verify.extract_text(html(paragraph * 5))
+    assert text and "Synthetic fallback paragraph" in text
+
+
+def test_failed_cache_write_leaves_no_temp_file(project, monkeypatch):
+    url = "https://example.fi/disk-full"
+
+    def no_rename(src, dst):
+        raise OSError("synthetic rename failure")
+
+    monkeypatch.setattr(verify.os, "replace", no_rename)
+    with pytest.raises(OSError):
+        Fetcher(FakeWeb({url: html("<p>Synthetic page text.</p>")}), record_sources=False).get(url)
+    cached = verify.cache_path(url)
+    assert not cached.exists() and not list(cached.parent.glob("*.tmp"))
+
+
+def test_summary_groups_by_research_file_not_claim_dimension():
+    # A file whose claims name another dimension is reported under its own stem, once.
+    claim = _claim(claim_id="pricing-001", dimension="pricing", verification="verified")
+    result = verify.VerifyResult([claim], {"market": [claim], "gtm": []}, [])
+    assert verify.summary(result).splitlines() == [
+        "gtm: 0 claims",
+        "market: 1 verified, 0 unverified (0 unfetchable, 0 robots-disallowed)",
+        "total: 1/1 verified",
+    ]
+
+
 def test_requests_get_sends_ua_and_timeout(monkeypatch):
     seen = {}
 

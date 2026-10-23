@@ -13,6 +13,7 @@ dependencies = [
     "pandas>=2.2",
     "jinja2>=3.1",
     "truststore>=0.9",
+    "lxml>=5.3",
 ]
 
 [dependency-groups]

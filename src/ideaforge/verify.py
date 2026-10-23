@@ -24,6 +24,7 @@ from typing import Literal
 from urllib.parse import urlsplit
 from urllib.robotparser import RobotFileParser
 
+import lxml.etree
 import lxml.html
 import requests
 import trafilatura
@@ -47,6 +48,8 @@ TEXT_SUFFIXES = ("+json", "+xml")
 # A page whose only text asks for JavaScript is a JS-only page, not its content.
 JS_ONLY_RE = re.compile(r"enable javascript|javascript (?:is )?(?:required|disabled)|ota javascript käyttöön", re.I)
 JS_ONLY_MAX_CHARS = 300
+# lxml refuses a str that declares its own encoding (common in XHTML); the text is already decoded.
+XML_DECL_RE = re.compile(r"^\ufeff?\s*<\?xml[^>]*\?>")
 
 
 class FetchError(Exception):
@@ -179,7 +182,7 @@ def page_text(html: str) -> str:
     cannot make a wrong quote match. Scripts and styles are dropped first so a JS-only page stays
     empty (its <noscript> notice remains for JS_ONLY_RE).
     """
-    tree = lxml.html.fromstring(html)
+    tree = lxml.html.fromstring(XML_DECL_RE.sub("", html, count=1))
     for el in tree.xpath("//script|//style|//template"):
         el.drop_tree()
     return trafilatura.html2txt(tree, clean=False)
@@ -189,7 +192,11 @@ def extract_text(resp: HttpResponse) -> str | None:
     """Readable text of a response, or None when there is none to match against."""
     ctype = resp.content_type.split(";", 1)[0].strip().lower()
     if ctype in HTML_TYPES:
-        text = page_text(resp.text) or trafilatura.extract(resp.text, favor_recall=True, include_tables=True)
+        try:
+            text = page_text(resp.text)
+        except (ValueError, lxml.etree.LxmlError):  # markup lxml cannot parse: let trafilatura try
+            text = None
+        text = text or trafilatura.extract(resp.text, favor_recall=True, include_tables=True)
     elif ctype.startswith(TEXT_TYPES) or ctype.endswith(TEXT_SUFFIXES):
         text = resp.text
     else:
@@ -245,9 +252,12 @@ class Fetcher:
             return Page(url, "unfetchable", fetched_at, detail=problem)
         # Write then rename, so a killed run never leaves a truncated page that counts as cached.
         cached.parent.mkdir(parents=True, exist_ok=True)
-        tmp = cached.with_suffix(".tmp")
-        tmp.write_text(text, encoding="utf-8")
-        os.replace(tmp, cached)
+        tmp = cached.with_name(f"{cached.name}.{os.getpid()}.tmp")
+        try:
+            tmp.write_text(text, encoding="utf-8")
+            os.replace(tmp, cached)
+        finally:
+            tmp.unlink(missing_ok=True)
         self._record(url, text, fetched_at, resp.status)
         return Page(url, "ok", fetched_at, text)
 
@@ -328,7 +338,9 @@ def verify_claim(claim: Claim, page: Page) -> Claim:
 @dataclass
 class VerifyResult:
     claims: list[Claim]
-    files: list[str]  # research file stems, including files that yielded no claims
+    # Verified claims per research file stem, including files that yielded no claims. Grouped by
+    # file, not by claim.dimension, which an agent may set to something other than its stem.
+    by_file: dict[str, list[Claim]]
     warnings: list[str]
 
 
@@ -373,6 +385,7 @@ def verify_run(run_id: str, http_get: HttpGet | None = None) -> VerifyResult:
 
     fetcher = Fetcher(http_get or requests_get)
     verified: list[Claim] = []
+    by_file: dict[str, list[Claim]] = {stem: [] for stem in parsed}
     seen_ids: set[str] = set()
     for stem, claims in parsed.items():
         for c in claims:
@@ -384,27 +397,25 @@ def verify_run(run_id: str, http_get: HttpGet | None = None) -> VerifyResult:
             if page.status != "ok":
                 warnings.append(f"{c.claim_id}: {page.status} {c.source_url} ({page.detail})")
             verified.append(verify_claim(c, page))
+            by_file[stem].append(verified[-1])
 
     _write_claims(run_dir / "03_claims" / "verified.json", verified)
     db.upsert_claims(run_id, verified)
-    return VerifyResult(verified, list(parsed), warnings)
+    return VerifyResult(verified, by_file, warnings)
 
 
 def summary(result: VerifyResult) -> str:
-    """One line per dimension (every research file, even one without claims): counts and fetch flags."""
+    """One line per research file (even one without claims): counts and fetch flags."""
     lines = []
-    by_dim: dict[str, list[Claim]] = {stem: [] for stem in result.files}
-    for c in result.claims:
-        by_dim.setdefault(c.dimension, []).append(c)
-    for dim in sorted(by_dim):
-        cs = by_dim[dim]
+    for stem in sorted(result.by_file):
+        cs = result.by_file[stem]
         if not cs:
-            lines.append(f"{dim}: 0 claims")
+            lines.append(f"{stem}: 0 claims")
             continue
         n = {s: sum(c.verification == s for c in cs) for s in ("verified", "unverified")}
         f = {fl: sum(fl in c.flags for c in cs) for fl in FETCH_FLAGS}
         lines.append(
-            f"{dim}: {n['verified']} verified, {n['unverified']} unverified"
+            f"{stem}: {n['verified']} verified, {n['unverified']} unverified"
             f" ({f['unfetchable']} unfetchable, {f['robots_disallowed']} robots-disallowed)"
         )
     total = len(result.claims)
