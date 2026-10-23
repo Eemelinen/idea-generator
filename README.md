@@ -34,3 +34,12 @@ Status: Phase 1 (the skeleton) is done. See `docs/TICKETS.md` for what comes nex
 The project's hooks block writes outside `runs/` and `cache/` and allow only a short list of shell commands. To work on the code itself, create an empty `.ideaforge-dev` file at the project root (it is gitignored). Subagents are always held to the strict rules.
 
 After editing `config/models.yaml`, `agent_templates/` or `prompts/`, run `uv run python scripts/gen_agents.py`. The tests fail if the generated agent files are stale.
+
+The remaining work is built with an agent harness: one feature per Claude Code session, verified by scripts before it counts as done. You need Node 24 (`.nvmrc`) with pnpm, plus uv, and on Windows Git Bash. `uv`, `claude` and `gh` must be on `PATH`.
+
+- `./init.sh` installs both toolchains and runs the L1 check, `pnpm check`.
+- In Claude Code: `/clock-in` picks and activates the next feature, `/verify-feature F-NNN` runs its checks, and `/clock-out` commits.
+- `pnpm harness:feature list` shows the queue (`feature_list.json`; tickets in `docs/TICKETS.md`).
+- `pnpm harness:loop --once` runs one ready feature unattended in its own worktree and opens a PR.
+
+The session loop is described in [AGENTS.md](AGENTS.md) and the driver in [docs/harness/README.md](docs/harness/README.md).
