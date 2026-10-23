@@ -7,12 +7,13 @@ Repository-local session log. Read it at clock-in, update it at clock-out (AGENT
 - Repository root: `idea-generator/` (this directory; contains `AGENTS.md`, `feature_list.json`, `init.sh`, `harness.config.json`).
 - Standard startup path: `./init.sh` (`FAST=1` skips the baseline). It needs node 24, pnpm and uv on `PATH`.
 - Standard verification path: L1 `pnpm check` (Prettier, `pnpm harness:check`, `uv run pytest`). There is no L2/L3 (D-001). Per feature: `pnpm harness:verify F-NNN`.
-- Phase 1 skeleton (F-001), the harness (F-000) and the full research validator (F-006) are `passing`. Otherwise nothing in Phase 2+ is built: `fi/` clients are stubs, and there is no `verify.py`, scoring, report, debate or eval code yet.
+- Phase 1 skeleton (F-001), the harness (F-000), the full research validator (F-006) and claim verification (F-007) are `passing`. Otherwise nothing in Phase 2+ is built: `fi/` clients are stubs, and there is no API re-query or conflict detection, scoring, report, debate or eval code yet.
 - F-006: `validate_file --kind research` (and the SubagentStop hook) rejects figures without a following `>` quote and cited URLs missing from the agent's `.seen_urls.txt` (API URLs in `ideaforge.fi.API_URL_PREFIXES` exempt), and warns about factual sentences without `[src: …]` (hook mode also writes `VALIDATION_WARNINGS_<agent>`). The rule choices are TICKETS.md plan note 15; IF-216 (F-013) tunes them on real files.
+- F-007: `uv run python scripts/verify_claims.py <run_id>` (`ideaforge.verify`) parses the candidate claims of `02_research/*.md` into `03_claims/<dim>.json`, fetches each source once (robots.txt, 10 s timeout, UA, truststore; text cached in `cache/<sha256(url)>.txt`, `sources` rows), sets `verified` at normalized `partial_ratio ≥ 90`, flags `unfetchable` / `robots_disallowed`, types allow-listed URLs `official` (not `api`), and writes `03_claims/verified.json` + `claims` rows. Rules chosen unattended: TICKETS.md plan note 16.
 - Queue: 29 features (`pnpm harness:feature list`), 20 unattended and 7 human-only among the 27 open.
-  - Ready now, unattended: F-007 (claim verification), F-009 (usage report + status), F-010 (stage state machine), F-014 (scoring), F-015 (economics), F-021 (debate anonymization + validation).
+  - Ready now, unattended: F-009 (usage report + status), F-010 (stage state machine), F-014 (scoring), F-015 (economics), F-021 (debate anonymization + validation). F-011 also needs F-009 and F-010; F-008 needs F-004/F-005 (behind F-003).
   - Ready now, human-only: F-002 (§13 decisions), F-003 (record API fixtures). Both gate later work.
-- Last verified: branch `feat/F-006` on 2026-10-23, `pnpm harness:verify F-006` green (`pnpm check` = Prettier, `harness:check` and 187 pytest tests passed, 1 Windows-only skip). F-000/F-001 evidence is from `db97340`. The evidence lines are in `feature_list.json`.
+- Last verified: branch `feat/F-007` on 2026-10-23, `pnpm harness:verify F-007` green (`pnpm check` = Prettier, `harness:check` and 223 pytest tests passed, 1 Windows-only skip; `tests/test_verify.py` 36 passed). F-000/F-001/F-006 evidence lines are in `feature_list.json`.
 - Session 002 (interactive: shared harness): the copied harness is replaced by `@eemelinen/harness` (devDependency, tag `v0.2.0`; the CLI behind every `pnpm harness:*`, new `pnpm harness:doctor`, also run by `./init.sh`) and the plugin `harness@eemelinen-harness` (skills `/harness:clock-in`, `/harness:verify-feature`, `/harness:clock-out`, agent `harness:evaluator`, hooks); the pipeline hooks are unchanged. Project rules live in `harness.config.json` and `docs/harness/generator-notes.md`. The evaluator is no longer generated (`agents.AGENTS["harness:evaluator"]`, 17 generated agents). D-007.
 - Current blocker: none in the repo.
   - Host: `uv`, `claude` and `gh` are installed but not on the Git Bash `PATH` (`~/.local/bin`, `C:\Program Files\GitHub CLI`). The pipeline hooks fail open without `uv`. `gh` is already logged in (account Eemelinen, keyring).
@@ -23,9 +24,22 @@ Repository-local session log. Read it at clock-in, update it at clock-out (AGENT
 1. Human, once: add `%USERPROFILE%\.local\bin` and `C:\Program Files\GitHub CLI` to the user `Path`, then open a new terminal and restart VS Code. Run `claude` in the repository once and accept the trust dialog and the harness plugin marketplace.
 2. GitHub is set up for unattended runs: `main` is pushed, auto-merge and squash merging are allowed, `main` requires `L1 (pnpm check)`, and the loop merges with `merge: "auto"`.
 3. Human-only features, interactively: F-002 (answer the §13 questions) and F-003 (record the API fixtures with network). They unblock F-004/F-005/F-008, the Phase 2 run and the starttiraha draft.
-4. Unattended: `pnpm harness:loop` continues with the next ready feature (F-007 by priority). Compare the evaluator's verdict with your own and add a row to the rubric's tuning log for each of the first 3–5 runs.
+4. Unattended: `pnpm harness:loop` continues with the next ready feature (F-009 by priority). Compare the evaluator's verdict with your own and add a row to the rubric's tuning log for each of the first 3–5 runs.
 
 ## Session Log
+
+### Session 004 — 2026-10-23 (driver-run: F-007 claim verification)
+
+- Goal: F-007 / IF-208, stage 3 claim verification: parse candidate claims, fetch and cache sources, fuzzy-match quotes, type official sources, persist.
+- Completed:
+  - `src/ideaforge/verify.py`: injectable `HttpGet` (`requests_get` is the real one), `Fetcher` (per-run memo, cache, robots.txt per origin, `sources` rows via new `db.upsert_source`), `extract_text` (trafilatura, raw text types, JS-only detection), `normalize` / `quote_score` / `quote_matches`, `domain_matches` / `is_official` / `source_type`, `verify_claim`, `verify_run`, `summary`.
+  - `scripts/verify_claims.py <run_id>`: summary per dimension on stdout, `warning:` lines on stderr, exit 1 only for an unknown run.
+  - `validate_file.candidate_claims(md)` factored out of `validate_research` so the validator and the verifier parse claim blocks the same way.
+  - Tests (`tests/test_verify.py`, synthetic pages only): 89/90 boundary, normalization, short-page guard, official-domain matching incl. path entries, source typing, cache hits (no network on re-run), robots semantics, unfetchable cases (403, 500, JS-only, empty, PDF, timeout), UA + timeout, and a run directory going from research Markdown to `verified.json`, DB claim and source rows and the script's output.
+  - Docs: TICKETS.md plan note 16, README status line.
+- Choices (no one to ask): see plan note 16. The notable ones: PDFs are `unfetchable`; unparseable claim blocks are warnings, not a failed stage; a model-declared `official` on a non-listed domain is kept, so scoring (F-014 / IF-302) must check `verify.is_official(url)` for `has_official_source`; `api` claims are quote-matched until F-008.
+- Verification run: `pnpm harness:verify F-007` → `pnpm check` (223 passed, 1 skipped) and `uv run pytest tests/test_verify.py` (36 passed).
+- Next best step: F-009 or F-010 (both gate F-011, the validate/research skills). Watch the PDF and JS-only rates on the first real run (F-013).
 
 ### Session 003 — 2026-10-23 (driver-run: F-006 full research validator)
 

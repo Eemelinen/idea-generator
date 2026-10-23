@@ -260,6 +260,29 @@ def upsert_claims(run_id: str, claims: Iterable[Claim]) -> int:
     return len(rows)
 
 
+def upsert_source(
+    url: str,
+    domain: str,
+    *,
+    content_sha: str | None,
+    cache_path: str | None,
+    fetched_at: str,
+    http_status: int | None,
+) -> None:
+    with session() as conn:
+        conn.execute(
+            """
+            INSERT INTO sources(url, domain, content_sha, cache_path, fetched_at, http_status)
+            VALUES (?,?,?,?,?,?)
+            ON CONFLICT(url) DO UPDATE SET
+                domain=excluded.domain, content_sha=excluded.content_sha,
+                cache_path=excluded.cache_path, fetched_at=excluded.fetched_at,
+                http_status=excluded.http_status
+            """,
+            (url, domain, content_sha, cache_path, fetched_at, http_status),
+        )
+
+
 def stage_set(run_id: str, stage: str, status: str) -> None:
     ts = now()
     with session() as conn:
