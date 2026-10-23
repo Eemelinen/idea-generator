@@ -6,6 +6,7 @@
     uv run python -m ideaforge.validate_file --auto --stop                # Stop hook
 
 Exit 0 = valid, 1 = invalid (CLI), 2 = invalid (hook mode; stderr goes back to the model).
+Heuristic research findings (sentences without [src: …]) are printed as warnings and never fail.
 
 In hook mode a failing agent is blocked once so it can fix its own file. If the hook
 already fired (stop_hook_active), the failure is recorded as
@@ -23,7 +24,8 @@ from typing import Any
 
 from pydantic import TypeAdapter, ValidationError
 
-from ideaforge import agents, config, hookio, runs
+from ideaforge import agents, config, hookio, runs, usage
+from ideaforge.fi import API_URL_PREFIXES
 from ideaforge.schemas import LIST_KINDS, SCHEMAS, CandidateClaim
 
 KINDS = sorted([*SCHEMAS, *LIST_KINDS, "research"])
@@ -41,7 +43,43 @@ STAGE_FILES: dict[str, str] = {
 }
 
 FENCED_JSON_RE = re.compile(r"```json\s*\n(.*?)```", re.DOTALL)
+FENCED_RE = re.compile(r"```.*?```", re.DOTALL)
 HEADING_RE = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
+
+# Research prose rules (§6 stage 2 output contract). They apply to the body sections; the
+# title + summary before the first "##", "## Candidate claims" and "## Gaps" are exempt.
+UNCHECKED_SECTIONS = {"candidate claims", "gaps"}
+LIST_ITEM_RE = re.compile(r"^(?:[-*+]|\d+[.)])\s+")
+SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?=[A-ZÅÄÖ])")
+SRC_TAG_RE = re.compile(r"\[src:[^\]]*\]", re.IGNORECASE)
+_MONTH = (
+    r"(?:january|february|march|april|may|june|july|august|september|october|november|december"
+    r"|jan|feb|mar|apr|jun|jul|aug|sept?|oct|nov|dec)\b"
+    r"|(?:tammi|helmi|maalis|huhti|touko|kesä|heinä|elo|syys|loka|marras|joulu)kuu\w*"
+)
+# Digit-bearing text that is not a figure, removed before looking for digits. Order matters:
+# dates before years, because a date contains a year.
+NOT_A_FIGURE_RES = [
+    SRC_TAG_RE,
+    usage.URL_RE,
+    re.compile(r"`[^`]*`"),  # inline code
+    re.compile(r"\b[a-z_]+-\d{3,}\b"),  # claim ids (schemas.CLAIM_ID_RE)
+    re.compile(r"\b\d{4}-\d{2}-\d{2}\b"),  # ISO date
+    re.compile(r"\b\d{1,2}\.\d{1,2}\.\d{4}\b"),  # Finnish date 31.12.2024
+    re.compile(r"\b\d{1,2}/\d{4}\b"),  # month/year 3/2025
+    re.compile(rf"\b\d{{1,2}}\.?\s+(?:{_MONTH})\b", re.IGNORECASE),  # 1 March, 1. maaliskuuta
+    re.compile(rf"\b(?:{_MONTH})\s+\d{{1,2}}\b", re.IGNORECASE),  # March 1
+    re.compile(r"\b(?:1[89]|20)\d{2}(?:[/–-]\d{2})?\b"),  # year, 2024/25
+    re.compile(r"\b[^\W\d_]+-?\d[\w-]*"),  # letter-led identifiers: B2B, Q1, COVID-19
+]
+DIGIT_RE = re.compile(r"\d")
+# Sentences that report a gap rather than a fact need no source.
+GAP_RE = re.compile(
+    r"\b(?:no (?:data|source|sources|information|evidence)|not (?:found|available|published)"
+    r"|could not|couldn't|cannot|unknown|unclear)\b",
+    re.IGNORECASE,
+)
+MIN_FACT_WORDS = 4
 
 
 class Invalid(Exception):
@@ -95,14 +133,126 @@ def _sections(md: str) -> dict[str, str]:
     }
 
 
-def validate_research(path: Path, max_words: int | None = None) -> list[CandidateClaim]:
-    """Check a research subagent's Markdown against the output contract (§6 stage 2)."""
+def _units(section: str) -> list[tuple[str, str]]:
+    """Split a section into ("prose", paragraph) and ("quote", block) units, in order.
+
+    Blank lines, headings and list items start a new paragraph; consecutive '>' lines are one quote.
+    """
+    units: list[tuple[str, str]] = []
+    para: list[str] = []
+
+    def flush() -> None:
+        if para:
+            units.append(("prose", " ".join(para)))
+            para.clear()
+
+    for line in FENCED_RE.sub("", section).splitlines():
+        s = line.strip()
+        if not s or s.startswith("#"):
+            flush()
+        elif s.startswith(">"):
+            flush()
+            if units and units[-1][0] == "quote":
+                units[-1] = ("quote", units[-1][1] + " " + s.lstrip("> "))
+            else:
+                units.append(("quote", s.lstrip("> ")))
+        else:
+            if LIST_ITEM_RE.match(s):
+                flush()
+                s = LIST_ITEM_RE.sub("", s)
+            para.append(s)
+    flush()
+    return units
+
+
+def has_figure(sentence: str) -> bool:
+    """True if the sentence has a digit outside years, dates, claim ids, identifiers and URLs."""
+    for pattern in NOT_A_FIGURE_RES:
+        sentence = pattern.sub(" ", sentence)
+    return bool(DIGIT_RE.search(sentence))
+
+
+def _short(sentence: str, n: int = 80) -> str:
+    return sentence if len(sentence) <= n else sentence[: n - 1] + "…"
+
+
+def check_prose(md: str) -> tuple[list[str], list[str]]:
+    """Bare-figure problems and missing-[src: …] warnings for the body sections of a research file."""
+    problems: list[str] = []
+    warnings: list[str] = []
+    for name, body in _sections(md).items():
+        if name in UNCHECKED_SECTIONS:
+            continue
+        units = _units(body)
+        for i, (kind, text) in enumerate(units):
+            if kind != "prose":
+                continue
+            sentences = SENTENCE_SPLIT_RE.split(text)
+            quoted = i + 1 < len(units) and units[i + 1][0] == "quote"
+            for j, sentence in enumerate(sentences):
+                if has_figure(sentence) and not (quoted and j == len(sentences) - 1):
+                    problems.append(
+                        f"'## {name}': a figure without a '> quote' block right after its sentence: "
+                        f"{_short(sentence)!r}"
+                    )
+                if (
+                    not SRC_TAG_RE.search(sentence)
+                    and len(sentence.split()) >= MIN_FACT_WORDS
+                    and not GAP_RE.search(sentence)
+                ):
+                    warnings.append(f"'## {name}': a factual sentence without [src: …]: {_short(sentence)!r}")
+    return problems, warnings
+
+
+def normalize_url(url: str) -> str:
+    return url.rstrip(".,;:").split("#", 1)[0].rstrip("/")
+
+
+def seen_urls(run_dir: Path, agent: str) -> set[str]:
+    """URLs the usage hook logged for this agent's WebSearch results and WebFetch calls."""
+    try:
+        lines = (run_dir / ".seen_urls.txt").read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return set()
+    seen = set()
+    for line in lines:
+        who, sep, url = line.partition("\t")
+        if sep and who == agent:
+            seen.add(normalize_url(url))
+    return seen
+
+
+def check_provenance(md: str, claims: list[CandidateClaim], seen: set[str], agent: str) -> list[str]:
+    """Cited URLs (prose and claim source_url) that the agent never saw and that are not API URLs."""
+    cited = {normalize_url(u) for u in usage.URL_RE.findall(FENCED_JSON_RE.sub("", md))}
+    cited |= {normalize_url(c.source_url) for c in claims}
+    unseen = sorted(u for u in cited if u not in seen and not u.startswith(API_URL_PREFIXES))
+    return [
+        f"cited URL never appeared in {agent}'s search results or fetches (do not invent URLs): {u}"
+        for u in unseen
+    ]
+
+
+def validate_research(
+    path: Path,
+    max_words: int | None = None,
+    seen: set[str] | None = None,
+    warnings: list[str] | None = None,
+) -> list[CandidateClaim]:
+    """Check a research subagent's Markdown against the output contract (§6 stage 2).
+
+    `seen` is the set of URLs the agent saw; by default it is read from the run directory's
+    .seen_urls.txt (path is runs/<run_id>/02_research/<dimension>.md). Heuristic findings that do
+    not fail the file are appended to `warnings` when a list is given.
+    """
     try:
         md = path.read_text(encoding="utf-8")
     except FileNotFoundError:
         raise Invalid(f"{path} does not exist") from None
     problems: list[str] = []
     dimension = path.stem
+    spec = agents.research_agent(dimension)
+    agent = spec.name if spec else f"research-{dimension}"
 
     sections = _sections(md)
     if "candidate claims" not in sections:
@@ -141,15 +291,23 @@ def validate_research(path: Path, max_words: int | None = None) -> list[Candidat
     if words > max_words:
         problems.append(f"prose is {words} words; the limit is {max_words}")
 
+    figure_problems, src_warnings = check_prose(md)
+    problems.extend(figure_problems)
+    if seen is None:
+        seen = seen_urls(path.parent.parent, agent)
+    problems.extend(check_provenance(md, claims, seen, agent))
+    if warnings is not None:
+        warnings.extend(src_warnings)
+
     if problems:
         raise Invalid(f"{path} violates the research output contract:\n" + "\n".join(f"  - {p}" for p in problems))
     return claims
 
 
-def validate_path(path: Path, kind: str | None = None) -> None:
+def validate_path(path: Path, kind: str | None = None, warnings: list[str] | None = None) -> None:
     kind = kind or infer_kind(path)
     if kind == "research":
-        validate_research(path)
+        validate_research(path, warnings=warnings)
     else:
         validate_json(path, kind)
 
@@ -183,18 +341,22 @@ def auto(data: dict[str, Any], stop: bool) -> int:
             targets = [] if out is None else [(out, None)]
 
     errors = []
+    warnings: list[str] = []
     if not stop and not targets:
         errors.append(f"{agent} did not write its output file under {run_dir.name}/debate/")
     for path, kind in targets:
         try:
-            validate_path(path, kind)
+            validate_path(path, kind, warnings)
         except Invalid as e:
             errors.append(str(e))
+    warning_text = "Warnings (not blocking):\n" + "\n".join(f"  - {w}" for w in warnings) if warnings else ""
     if not errors:
         (run_dir / f"VALIDATION_FAILED_{agent}").unlink(missing_ok=True)
+        if warning_text:
+            print(warning_text, file=sys.stderr)
         return hookio.OK
 
-    message = "\n\n".join(errors)
+    message = "\n\n".join([*errors, warning_text] if warning_text else errors)
     if retrying:
         _record_failure(run_dir, agent, message)
         print(f"validation failed again; recorded VALIDATION_FAILED_{agent}", file=sys.stderr)
@@ -217,11 +379,15 @@ def main(argv: list[str] | None = None) -> int:
             hookio.block(str(e))
     if args.path is None:
         parser.error("path is required unless --auto is given")
+    warnings: list[str] = []
     try:
-        validate_path(args.path, args.kind)
+        validate_path(args.path, args.kind, warnings)
     except Invalid as e:
         print(e, file=sys.stderr)
         return 1
+    finally:
+        for w in warnings:
+            print(f"warning: {w}", file=sys.stderr)
     print(f"ok: {args.path}")
     return 0
 

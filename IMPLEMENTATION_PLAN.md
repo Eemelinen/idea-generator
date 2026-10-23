@@ -279,7 +279,7 @@ SQLite tables mirror these: `runs`, `idea_versions`, `stages` (run_id, stage, st
   - `python -m ideaforge.fi.pxweb search "<keyword>"` → candidate StatFin/Luke tables; `... get <table_path> --filter Alue=Rääkkylä,Pohjois-Karjala` → CSV. Output includes the API URL to cite as `source_type: api`.
   - `python -m ideaforge.fi.prh search --name "<text>" | --industry <TOL> --municipality Rääkkylä` → companies in that industry/area (count, names, registration dates, status). Use for competition density and "has this been tried here".
   - `python -m ideaforge.fi.eurostat get <dataset> --geo FI`.
-- `SubagentStop` hook: runs `validate_file.py --kind research runs/<run_id>/02_research/<dimension>.md` (checks the JSON block parses as `list[Claim]`, word limit, no bare numbers without a quote). On failure the orchestrator re-launches that subagent once with the validator's error message appended; second failure → `INSUFFICIENT_DATA` for that dimension.
+- `SubagentStop` hook: runs `validate_file.py --kind research runs/<run_id>/02_research/<dimension>.md` (checks the JSON block parses as `list[Claim]`, word limit, no bare numbers without a quote, every cited URL in the agent's `.seen_urls.txt` or an `ideaforge.fi` API URL; sentences without `[src: …]` are warnings). On failure the orchestrator re-launches that subagent once with the validator's error message appended; second failure → `INSUFFICIENT_DATA` for that dimension.
 
 ### Stage 3 — Claim extraction and verification (Python + one subagent pass)
 
