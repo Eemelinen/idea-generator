@@ -418,7 +418,9 @@
       ],
       "evidence": [
         "2026-10-23 pnpm check → pass (commit 1888d4d)",
-        "2026-10-23 uv run pytest tests/test_versioning.py → pass (commit 1888d4d)"
+        "2026-10-23 uv run pytest tests/test_versioning.py → pass (commit 1888d4d)",
+        "2026-10-23 pnpm check → pass (commit 9e54803)",
+        "2026-10-23 uv run pytest tests/test_versioning.py → pass (commit 9e54803)"
       ],
       "attempts": 0,
       "notes": ""

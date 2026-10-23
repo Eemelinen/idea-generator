@@ -21,7 +21,7 @@ Repository-local session log. Read it at clock-in, update it at clock-out (AGENT
 - Queue: 29 features (`pnpm harness:feature list`), 18 unattended and 7 human-only among the 25 open.
   - Ready now, unattended: F-021 (debate anonymization + validation), F-025 (eval checker) and F-028 (review scores + status diff; now unblocked by F-019). F-018 (starttiraha draft) also needs F-002 (human). F-008 needs F-004/F-005 (behind F-003); F-012 and F-013 (the live Phase 2 run) also wait on F-003-era work.
   - Ready now, human-only: F-002 (§13 decisions), F-003 (record API fixtures). Both gate later work.
-- Last verified: branch `feat/F-019` on 2026-10-23, `pnpm harness:verify F-019` green (`pnpm check` = Prettier, `harness:check` and 643 pytest tests passed, 1 Windows-only skip; `tests/test_versioning.py` 20 passed, 97 % coverage of `meta.py`) on commit 1888d4d. Evidence for the other passing features is in `feature_list.json`.
+- Last verified: branch `feat/F-019` on 2026-10-23, `pnpm harness:verify F-019` green (`pnpm check` = Prettier, `harness:check` and 646 pytest tests passed, 1 Windows-only skip; `tests/test_versioning.py` 23 passed) on commit 9e54803 (first run on 1888d4d also green). Evidence for the other passing features is in `feature_list.json`.
 - Session 002 (interactive: shared harness): the copied harness is replaced by `@eemelinen/harness` (devDependency, tag `v0.2.0`; the CLI behind every `pnpm harness:*`, new `pnpm harness:doctor`, also run by `./init.sh`) and the plugin `harness@eemelinen-harness` (skills `/harness:clock-in`, `/harness:verify-feature`, `/harness:clock-out`, agent `harness:evaluator`, hooks); the pipeline hooks are unchanged. Project rules live in `harness.config.json` and `docs/harness/generator-notes.md`. The evaluator is no longer generated (`agents.AGENTS["harness:evaluator"]`, 17 generated agents). D-007.
 - Current blocker: none in the repo.
   - Host: `uv`, `claude` and `gh` are installed but not on the Git Bash `PATH` (`~/.local/bin`, `C:\Program Files\GitHub CLI`). The pipeline hooks fail open without `uv`. `gh` is already logged in (account Eemelinen, keyring).
@@ -53,7 +53,7 @@ Repository-local session log. Read it at clock-in, update it at clock-out (AGENT
   - The skill accepts `--from` anywhere in the arguments and explains exit 2.
   - The `config_commit` test asserts `PROVENANCE_PATHS`.
   - Not re-reviewed: the driver's own evaluator runs next.
-- Verification run: `pnpm harness:verify F-019` on 1888d4d → `pnpm check` (643 passed, 1 skipped) and `uv run pytest tests/test_versioning.py` (20 passed); re-run after the fixes (below).
+- Verification run: `pnpm harness:verify F-019` on 1888d4d → `pnpm check` (643 passed, 1 skipped) and `uv run pytest tests/test_versioning.py` (20 passed); re-run on 9e54803 after the fixes → `pnpm check` (646 passed, 1 skipped) and the focused step (23 passed).
 - Next best step: F-021, F-025 or F-028 (IF-504 `/status` diff between versions, now that versions exist).
 
 ### Session 013 — 2026-10-23 (driver-run: F-017 report rendering)
