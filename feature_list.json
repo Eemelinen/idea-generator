@@ -196,7 +196,7 @@
       "area": "observability",
       "title": "Usage report and basic status",
       "user_visible_behavior": "`scripts/usage_report.py <run_id>` prints tool calls, searches, fetches and approximate tokens per stage and per agent and lists budget markers; `/status` lists recent runs and their stages, and `/status <run_id>` shows claims per dimension by verification state, fired kill flags, failure and budget markers and the usage summary.",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": ["F-001"],
       "ticket": "IF-212",
       "spec": "docs/TICKETS.md#if-212-usage-report-and-basic-status",

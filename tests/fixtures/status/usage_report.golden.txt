@@ -1,0 +1,24 @@
+usage for 20261023-100000-sauna-cabins: 12 tool calls, 4 searches, 2 fetches, ~20290 tokens
+warning: skipped 1 malformed line(s) in usage.jsonl
+
+per stage
+stage               calls  searches  fetches  ~tokens
+intake                  1         0        0      350
+plan                    1         0        0     1200
+research:market         3         1        1     8300
+research:pricing        3         2        1     7700
+research:killcause      2         1        0     2100
+verify                  1         0        0      600
+(no stage)              1         0        0       40
+total                  12         4        2    20290
+
+per agent
+agent               calls  searches  fetches  ~tokens
+main                    5         0        0     2490
+research-killcause      1         1        0     1800
+research-market         3         1        1     8300
+research-pricing        3         2        1     7700
+total                  12         4        2    20290
+
+budget markers
+BUDGET_EXCEEDED_research-pricing: WebSearch: 9 > 8

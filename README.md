@@ -27,7 +27,10 @@ Inside Claude Code, in this directory:
 /debate <run_id>             # Phase 4
 ```
 
-Status: Phase 1 (the skeleton) is done; of Phase 2, the research validator and claim verification (`uv run python scripts/verify_claims.py <run_id>`) are built. See `docs/TICKETS.md` for what comes next.
+Status: Phase 1 (the skeleton) is done; of Phase 2, the research validator, claim verification (`uv run python scripts/verify_claims.py <run_id>`), the usage report and basic `/status` are built. See `docs/TICKETS.md` for what comes next.
+
+- `uv run python scripts/usage_report.py <run_id>`: tool calls, searches, fetches and approximate tokens per stage and per agent, plus the run's `BUDGET_EXCEEDED_*` markers.
+- `/status` (`uv run python scripts/status.py [run_id] [--limit N]`): the recent runs and their stages; with a run id, its stages, claims per dimension by verification state, kill flags fired, validation and budget markers and the usage summary.
 
 ## Development
 
