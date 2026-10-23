@@ -367,7 +367,7 @@
       "area": "report",
       "title": "Report rendering with Finland and Rääkkylä sections",
       "user_visible_behavior": "`scripts/render_report.py <run_id>` writes an immutable `05_report.md`: verdict, score table with cap labels, kill triggers, unit economics and sensitivity, dimension sections, Finland funding fit (each item backed by an official-source claim or shown as an unverified gap), Rääkkylä notes, risk register, sources and usage summary.",
-      "status": "in_progress",
+      "status": "passing",
       "depends_on": ["F-009", "F-016"],
       "ticket": "IF-305",
       "spec": "docs/TICKETS.md#if-305-report-rendering-with-finland-and-rääkkylä-sections",
@@ -375,7 +375,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_report.py (snapshot; under 3 sources capped at 2 with a label; funding gap rendered, never a finland.yaml value; overwrite refused)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-23 pnpm check → pass (commit 3fff495)",
+        "2026-10-23 uv run pytest tests/test_report.py → pass (commit 3fff495)"
+      ],
       "attempts": 0,
       "notes": "Absorbs IF-306 (Finland funding fit and Rääkkylä sections)."
     },
