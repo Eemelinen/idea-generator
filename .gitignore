@@ -20,5 +20,5 @@ ideaforge.db-*
 node_modules/
 coverage/
 
-# Harness traces, run log and stop-hook counters (scripts/harness-loop.ts)
+# Harness traces, run log and stop-hook counters (pnpm harness:loop)
 .harness/
