@@ -204,3 +204,20 @@ def test_main_exits_2_with_reason(project, monkeypatch, capsys):
 def test_read_only_filters_are_for_the_evaluator_only(project):
     assert guard.check_bash(bash("cat x | head -3", **RESEARCH)) is not None
     assert guard.check_bash(bash("git log | tail -5")) is not None
+
+
+# Each of these runs `rm -rf src` (or writes a file) in bash while looking like an allowed command
+# to a quote-unaware reading: escaped quotes, ANSI-C quoting, comments, a lone `&`, process substitution.
+@pytest.mark.parametrize("cmd", [
+    "cat \\'; rm -rf src; cat \\'",
+    "cat \\' > src/x.py \\'",
+    "cat $'\\'' ; rm -rf src ; $'\\''",
+    "cat x #'\nrm -rf src\n'",
+    "cat x & rm -rf src",
+    "cat <(rm -rf src)",
+    "git status >(rm -rf src)",
+    "cat <<EOF\n'\nEOF\nrm -rf src\ncat <<EOF\n'\nEOF",
+])
+@pytest.mark.parametrize("who", [EVALUATOR, RESEARCH, {}])
+def test_quote_tricks_do_not_hide_commands(project, cmd, who):
+    assert guard.check_bash(bash(cmd, **who)) is not None
