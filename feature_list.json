@@ -227,7 +227,9 @@
       ],
       "evidence": [
         "2026-10-23 pnpm check → pass (working tree on 3ee220f)",
-        "2026-10-23 uv run pytest tests/test_runs.py → pass (working tree on 3ee220f)"
+        "2026-10-23 uv run pytest tests/test_runs.py → pass (working tree on 3ee220f)",
+        "2026-10-23 pnpm check → pass (working tree on bf11ca4)",
+        "2026-10-23 uv run pytest tests/test_runs.py → pass (working tree on bf11ca4)"
       ],
       "attempts": 0,
       "notes": "Absorbs the Python side of IF-507 (crash-resume test). The manual Claude Code crash test moved to F-013."

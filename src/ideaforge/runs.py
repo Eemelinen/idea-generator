@@ -121,16 +121,19 @@ def _check_stage(stage: str) -> None:
         raise StageError(f"unknown stage {stage!r}; choose from {', '.join(STAGES)}")
 
 
-def _check_run(run_id: str) -> Path:
+def _run_dir(run_id: str) -> Path:
     try:
-        d = run_dir(run_id)
+        return run_dir(run_id)
     except ValueError as e:
         raise StageError(str(e)) from None
+
+
+def _check_run(run_id: str) -> None:
+    d = _run_dir(run_id)
     with db.session() as conn:
         known = conn.execute("SELECT 1 FROM runs WHERE run_id=?", (run_id,)).fetchone()
     if known is None or not d.is_dir():
         raise StageError(f"unknown run {run_id!r} (needs a runs/ directory and a db row; use new_run.py)")
-    return d
 
 
 def statuses(run_id: str) -> dict[str, str]:
@@ -144,7 +147,7 @@ def output_problems(run_id: str, stage: str) -> list[str]:
     from ideaforge import validate_file  # imports this module
 
     _check_stage(stage)
-    d = run_dir(run_id)
+    d = _run_dir(run_id)
     problems = []
     for rel, kind in STAGE_OUTPUTS[stage]:
         path = d / rel
@@ -164,9 +167,9 @@ def output_problems(run_id: str, stage: str) -> list[str]:
 def is_complete(run_id: str, stage: str, status: str | None = None) -> bool:
     """insufficient_data, or done with an output that exists and validates."""
     status = status or statuses(run_id)[stage]
-    if status == "insufficient_data":
-        return True
-    return status == "done" and not output_problems(run_id, stage)
+    if status not in COMPLETE:
+        return False
+    return status == "insufficient_data" or not output_problems(run_id, stage)
 
 
 def _group_of(stage: str) -> int:

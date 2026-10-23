@@ -6,12 +6,14 @@ research validator, and their example.fi URLs are not real sources.
 
 import json
 import shutil
+from pathlib import Path
 
 import pytest
 
 import run_stage
 from conftest import FIXTURES
 from ideaforge import agents, db, runs
+from ideaforge import validate_file as vf
 from ideaforge.schemas import RESEARCH_DIMENSIONS
 
 RUN = "20261023-120000-stage-test"
@@ -90,6 +92,20 @@ def row(stage):
 def test_every_stage_has_outputs_and_a_group():
     assert set(runs.STAGE_OUTPUTS) == set(runs.STAGES)
     assert [s for group in runs.STAGE_GROUPS for s in group] == runs.STAGES
+
+
+def test_stage_outputs_agree_with_the_validator_file_map():
+    for stage, outputs in runs.STAGE_OUTPUTS.items():
+        for rel, kind in outputs:
+            if kind == "research":
+                assert vf.infer_kind(Path("runs/x") / rel) == "research", stage
+            elif kind != "markdown":
+                assert vf.STAGE_FILES[rel] == kind, stage
+
+
+def test_bad_run_id_is_a_stage_error(project):
+    with pytest.raises(runs.StageError, match="not a valid run id"):
+        runs.is_complete("../etc", "intake", "done")
 
 
 def test_new_run_starts_at_intake(run):

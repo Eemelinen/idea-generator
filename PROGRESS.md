@@ -15,7 +15,7 @@ Repository-local session log. Read it at clock-in, update it at clock-out (AGENT
 - Queue: 29 features (`pnpm harness:feature list`), 20 unattended and 7 human-only among the 27 open.
   - Ready now, unattended: F-014 (scoring), F-015 (economics), F-021 (debate anonymization + validation). F-011 (skills, stages 0–3) is ready once F-010 merges; F-008 needs F-004/F-005 (behind F-003).
   - Ready now, human-only: F-002 (§13 decisions), F-003 (record API fixtures). Both gate later work.
-- Last verified: branch `feat/F-010` on 2026-10-23, `pnpm harness:verify F-010` green (`pnpm check` = Prettier, `harness:check` and 302 pytest tests passed, 1 Windows-only skip; `tests/test_runs.py` 14 passed). Evidence for the other passing features is in `feature_list.json`.
+- Last verified: branch `feat/F-010` on 2026-10-23, `pnpm harness:verify F-010` green (`pnpm check` = Prettier, `harness:check` and 304 pytest tests passed, 1 Windows-only skip; `tests/test_runs.py` 16 passed). Evidence for the other passing features is in `feature_list.json`.
 - Session 002 (interactive: shared harness): the copied harness is replaced by `@eemelinen/harness` (devDependency, tag `v0.2.0`; the CLI behind every `pnpm harness:*`, new `pnpm harness:doctor`, also run by `./init.sh`) and the plugin `harness@eemelinen-harness` (skills `/harness:clock-in`, `/harness:verify-feature`, `/harness:clock-out`, agent `harness:evaluator`, hooks); the pipeline hooks are unchanged. Project rules live in `harness.config.json` and `docs/harness/generator-notes.md`. The evaluator is no longer generated (`agents.AGENTS["harness:evaluator"]`, 17 generated agents). D-007.
 - Current blocker: none in the repo.
   - Host: `uv`, `claude` and `gh` are installed but not on the Git Bash `PATH` (`~/.local/bin`, `C:\Program Files\GitHub CLI`). The pipeline hooks fail open without `uv`. `gh` is already logged in (account Eemelinen, keyring).
@@ -36,10 +36,11 @@ Repository-local session log. Read it at clock-in, update it at clock-out (AGENT
 - Completed:
   - `runs.py`: `STAGE_OUTPUTS` (stage → output file(s) + validator kind), `STAGE_GROUPS`, `StageError`, `statuses`, `output_problems`, `is_complete`, `next_stages`, `begin`, `finish`, `mark_insufficient`, `resume`. Validation reuses `validate_file.validate_path` (imported lazily; `validate_file` imports `runs`).
   - `scripts/run_stage.py <run_id> <stage> --begin|--finish|--insufficient-data`, `<run_id> --resume|--next` (exit 1 with `error:` on a refused transition or an invalid output).
-  - `tests/test_runs.py` (14 tests, synthetic research files): transitions, earlier-group gating, done needs a valid file (also after the fact), synthesize needs both files, blank report, `insufficient_data`, crash reset, the IF-507 mid-stage-2 resume, CLI.
+  - `tests/test_runs.py` (16 tests, synthetic research files): transitions, earlier-group gating, done needs a valid file (also after the fact), synthesize needs both files, blank report, `insufficient_data`, crash reset, the IF-507 mid-stage-2 resume, `STAGE_OUTPUTS` agrees with `validate_file.STAGE_FILES`, CLI.
   - Docs: README usage line, §1 layout (`run_stage.py`), TICKETS.md plan note 18 and the IF-214 manual crash-test notes; `db.stage_done` docstring points at `runs.is_complete`.
 - Choices (no one to ask): plan note 18. The notable ones: resume is an explicit `--resume`, not part of `--next` (research stages are legitimately running in parallel); a crashed `running` stage with a valid file becomes `done` instead of being re-run; `05_report.md` only has to be non-blank until IF-303 gives it a check; `--insufficient-data` is research-only.
-- Verification run: `pnpm harness:verify F-010` → `pnpm check` (302 passed, 1 skipped) and `uv run pytest tests/test_runs.py` (14 passed).
+- Evaluator (fresh context): Revise, with maintainability at 1 (an unused `COMPLETE` constant). Fixed in a second commit: `is_complete` uses `COMPLETE`; `output_problems` / `is_complete` raise `StageError` for a malformed run id; `_check_run` returns nothing; a test ties `STAGE_OUTPUTS` to `validate_file.STAGE_FILES`; plan note 18 says a reset does not cascade to later stages.
+- Verification run: `pnpm harness:verify F-010` → `pnpm check` (304 passed, 1 skipped) and `uv run pytest tests/test_runs.py` (16 passed).
 - Next best step: F-011 (skills for stages 0–3) on top of `run_stage.py`.
 
 ### Session 006 — 2026-10-23 (driver-run: F-009 usage report and basic status)
