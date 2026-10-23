@@ -1,0 +1,24 @@
+{
+  "risks": [
+    {
+      "risk": "Synthetic: a similar business closed nearby.",
+      "dimension": "killcause",
+      "likelihood": 3,
+      "impact": 4,
+      "mitigation": "Synthetic mitigation.",
+      "claim_ids": [
+        "killcause-001"
+      ]
+    },
+    {
+      "risk": "Synthetic: cites an id that does not exist.",
+      "dimension": "market",
+      "likelihood": 2,
+      "impact": 2,
+      "mitigation": "Synthetic mitigation.",
+      "claim_ids": [
+        "market-404"
+      ]
+    }
+  ]
+}

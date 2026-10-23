@@ -372,6 +372,8 @@ def auto(data: dict[str, Any], stop: bool) -> int:
         agent = spec.name
         if spec.kind == "research":
             targets = [(agents.research_output(run_dir, spec), "research")]
+        elif spec.kind == "synthesizer":
+            targets = [(path, None) for path in agents.synthesizer_outputs(run_dir)]
         else:
             out = agents.latest_debate_output(run_dir, spec)
             targets = [] if out is None else [(out, None)]

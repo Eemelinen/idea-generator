@@ -6,8 +6,9 @@
 Policy (exit 2 = deny, reason on stderr):
 - Writes outside the project root, or into .git/, are always denied.
 - Subagents are always strict: a research agent may write only its own
-  runs/<run_id>/02_research/<dimension>.md, a debate agent only under
-  runs/<run_id>/debate/, any other subagent only under runs/ or cache/.
+  runs/<run_id>/02_research/<dimension>.md, the synthesizer only
+  runs/<run_id>/04_scores_proposed.json and 04_risks.json, a debate agent only
+  under runs/<run_id>/debate/, any other subagent only under runs/ or cache/.
 - The main session is strict (runs/ and cache/ only) unless it is a development
   session: the dev marker file .ideaforge-dev exists at the project root, or the
   harness loop driver started it (HARNESS_LOOP=1, docs/DECISIONS.md D-005). A
@@ -113,6 +114,14 @@ def check_write(data: dict[str, Any]) -> str | None:
             allowed = agents.research_output(runs_dir / run_id, spec)
             if target != allowed.resolve():
                 return f"write denied: {spec.name} may only write {allowed.relative_to(root).as_posix()}"
+            return None
+        if spec is not None and spec.kind == "synthesizer":
+            if run_id is None:
+                return "write denied: no active run (runs/.active) for the synthesizer"
+            outputs = agents.synthesizer_outputs(runs_dir / run_id)
+            if target not in [p.resolve() for p in outputs]:
+                names = " and ".join(p.relative_to(root).as_posix() for p in outputs)
+                return f"write denied: the synthesizer may only write {names}"
             return None
         if spec is not None and spec.kind in ("debate", "judge"):
             if run_id is None:

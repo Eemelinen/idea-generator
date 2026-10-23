@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from ideaforge.config import ROOT
-from ideaforge.schemas import Claim
+from ideaforge.schemas import Claim, DimensionScore
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (
@@ -281,6 +281,25 @@ def upsert_source(
             """,
             (url, domain, content_sha, cache_path, fetched_at, http_status),
         )
+
+
+def replace_scores(run_id: str, scores: Iterable[DimensionScore]) -> int:
+    """Replace a run's `scores` rows with the final score sheet's (one row per dimension)."""
+    rows = [
+        (
+            run_id, s.dimension, s.proposed_score, s.final_score, s.cap_reason, s.status,
+            s.justification, json.dumps(s.supporting_claim_ids),
+        )
+        for s in scores
+    ]
+    with session() as conn:
+        conn.execute("DELETE FROM scores WHERE run_id=?", (run_id,))
+        conn.executemany(
+            "INSERT INTO scores(run_id, dimension, proposed_score, final_score, cap_reason, status,"
+            " justification, claim_ids) VALUES (?,?,?,?,?,?,?,?)",
+            rows,
+        )
+    return len(rows)
 
 
 def stage_set(run_id: str, stage: str, status: str) -> None:

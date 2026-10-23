@@ -73,7 +73,8 @@ ideaforge/
 │       ├── debate-customer.md
 │       ├── debate-accountant.md
 │       ├── debate-operator.md
-│       └── debate-judge.md
+│       ├── debate-judge.md
+│       └── synthesizer.md         # stage 5 (IF-304); reads only 04_synthesis_input.json
 ├── agent_templates/               # source templates for the above (edit these, not .claude/agents)
 ├── prompts/                       # long prompt bodies, versioned in git
 ├── src/ideaforge/
@@ -84,6 +85,7 @@ ideaforge/
 │   ├── verify.py                  # quote verification, conflict detection, source typing
 │   ├── scoring.py                 # weighted score, caps, kill triggers, verdict
 │   ├── economics.py               # unit economics calculator
+│   ├── synthesis.py               # stage 5: synthesizer input, score run (score_run.py)
 │   ├── report.py                  # Markdown report renderer
 │   ├── debate.py                  # debate protocol validator + convergence check
 │   ├── usage.py                   # JSONL log of tool calls; per-run tallies
@@ -98,6 +100,7 @@ ideaforge/
 │   ├── new_run.py                 # create run dir + db row, print run_id
 │   ├── run_stage.py               # stage state machine: --begin/--finish/--insufficient-data/--resume/--next
 │   ├── verify_claims.py           # stage 3 verification over a run
+│   ├── synthesis_input.py         # stage 5: the synthesizer's only input file
 │   ├── score_run.py               # stage 5 scoring
 │   ├── render_report.py
 │   ├── debate_validate.py         # validate a round's rebuttals; reject unsupported stance changes
@@ -112,6 +115,9 @@ ideaforge/
 │       ├── 02_research/<dimension>.md          # subagent prose with inline citations
 │       ├── 03_claims/<dimension>.json          # extracted claims
 │       ├── 03_claims/verified.json
+│       ├── 04_synthesis_input.json             # spec + verified/conflict claims + rubric
+│       ├── 04_scores_proposed.json
+│       ├── 04_risks.json
 │       ├── 04_scores.json
 │       ├── 05_report.md
 │       ├── debate/round0/<role>.json
@@ -238,7 +244,7 @@ Claude Code has no hard `max_uses` for built-in tools, so these are enforced two
 
 Pydantic models (all with `model_config = ConfigDict(extra="forbid")`):
 
-- `IdeaSpec`: `idea_id`, `title`, `one_liner`, `customer`, `problem`, `solution`, `revenue_model`, `geography` (default: Rääkkylä → North Karelia → Finland → online), `founder_constraints` {hours_per_week, capital_eur, skills[], goal: side_income|full_time|starttiraha}, `clarifications[]` (Q/A pairs), `version`.
+- `IdeaSpec`: `idea_id`, `title`, `one_liner`, `customer`, `problem`, `solution`, `revenue_model`, `geography` (default: Rääkkylä → North Karelia → Finland → online), `founder_constraints` {hours_per_week, capital_eur, skills[], goal: side_income|full_time|starttiraha}, `clarifications[]` (Q/A pairs), `kill_trigger_overrides[]`, `vat_registered` (default true; economics.py), `version`.
 - `ResearchPlan`: per dimension: `questions[]`, `search_strategy`, `preferred_domains[]`, `evidence_needed`.
 - `Claim`: `claim_id` (e.g. `competition-007`), `dimension`, `statement`, `value: float|None`, `unit`, `source_url`, `source_title`, `quote` (≤ 60 words), `published_date|None`, `retrieved_at`, `source_type` (official|industry|news|forum|vendor|api), `confidence` (0–1), `flags[]` (kill-trigger names), `verification` (pending|verified|unverified|conflict).
 - `DimensionScore`: `dimension`, `proposed_score` (0–5, model), `justification`, `supporting_claim_ids[]`, `final_score` (Python), `cap_reason|None`, `status` (scored|insufficient_data).
@@ -300,13 +306,13 @@ Already written by stage 3. `/status <run_id>` prints: claims per dimension (ver
 
 ### Stage 5 — Synthesis and scoring
 
-1. Orchestrator (role `synthesizer`) receives **only** `00_spec.json` + `verified.json` (verified and conflict claims; unverified excluded) + rubric. It writes `04_scores_proposed.json` (`list[DimensionScore]` with `proposed_score`, `justification`, `supporting_claim_ids`) and `04_risks.json`. Rule in prompt: every justification must cite at least one `claim_id`; scores for dimensions with no verified claims must be proposed as 0 with justification "no verified evidence".
+1. The `synthesizer` subagent (role `synthesizer`; a generated agent, not the orchestrator, see TICKETS.md plan note 22) receives **only** `04_synthesis_input.json`, which `scripts/synthesis_input.py <run_id>` builds from `00_spec.json` + `verified.json` (verified and conflict claims; unverified and pending excluded) + rubric. It writes `04_scores_proposed.json` (`list[DimensionScore]` with `proposed_score`, `justification`, `supporting_claim_ids`, plus `unit_economics_inputs`: economics role → claim ids) and `04_risks.json`. Rule in prompt: every justification must cite at least one `claim_id`; scores for dimensions with no verified claims must be proposed as 0 with justification "no verified evidence".
 2. `scripts/score_run.py <run_id>`:
-   - Validates that every cited `claim_id` exists and is verified; drops citations that aren't.
+   - Validates that every cited `claim_id` exists and is verified; drops citations that aren't. A proposal with no verified citation left is set to 0 ("no verified evidence").
    - Applies evidence rules → caps (`final_score = min(proposed, 2)` + `cap_reason`, `status = insufficient_data`).
    - Fires kill triggers from claim flags; any fired trigger forces verdict `NO_GO` unless the user has explicitly overridden in the spec.
    - Computes `weighted_total` (0–5) and verdict: ≥3.5 GO, 2.5–3.5 PIVOT, <2.5 NO_GO; if ≥3 dimensions are `insufficient_data` → `INSUFFICIENT_DATA`.
-   - Runs `economics.py` on numeric claims (price, COGS, CAC proxy, fixed costs, volume assumptions) → contribution margin, break-even units/month, payback months, and a sensitivity table (±30% on price and volume). Missing inputs are listed, not guessed.
+   - Runs `economics.py` on numeric claims (price, COGS, CAC proxy, fixed costs, volume assumptions) → contribution margin, break-even units/month, payback months, and a sensitivity table (±30% on price and volume). Missing inputs are listed, not guessed. The inputs are the synthesizer's `unit_economics_inputs`; a negative margin fires `negative_contribution_margin` only when they were assigned and every assigned per-unit cost reads as per unit sold (otherwise economics.py's automatic pick or an odd unit is reported but cannot force NO_GO).
    - Writes `04_scores.json`.
 3. `scripts/render_report.py <run_id>` → `05_report.md` with sections: Verdict & one-paragraph why · Score table · Kill triggers · Unit economics · Dimension sections (findings, cited claim ids, gaps) · Finland funding fit (starttiraha / Leader / elinvoimakeskus / Finnvera eligibility notes, each with its official-source claim) · Rääkkylä location notes · Risk register · Starttiraha-format business plan draft (liiketoimintasuunnitelma skeleton + kannattavuuslaskelma from `economics.py`) · Sources (url, title, retrieved_at, verification state) · Usage summary.
 4. Orchestrator shows the verdict and offers `/debate <run_id>`.

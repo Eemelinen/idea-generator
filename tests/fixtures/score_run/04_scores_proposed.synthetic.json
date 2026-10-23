@@ -1,0 +1,122 @@
+{
+  "scores": [
+    {
+      "dimension": "customer",
+      "proposed_score": 4,
+      "justification": "Synthetic justification citing customer-001, customer-002, customer-003, customer-004, customer-999.",
+      "supporting_claim_ids": [
+        "customer-001",
+        "customer-002",
+        "customer-003",
+        "customer-004",
+        "customer-999"
+      ]
+    },
+    {
+      "dimension": "market",
+      "proposed_score": 4,
+      "justification": "Synthetic justification citing market-001, market-002, market-003, market-004.",
+      "supporting_claim_ids": [
+        "market-001",
+        "market-002",
+        "market-003",
+        "market-004"
+      ]
+    },
+    {
+      "dimension": "competition",
+      "proposed_score": 4,
+      "justification": "Synthetic justification citing competition-001, competition-002, competition-003.",
+      "supporting_claim_ids": [
+        "competition-001",
+        "competition-002",
+        "competition-003"
+      ]
+    },
+    {
+      "dimension": "pricing",
+      "proposed_score": 4,
+      "justification": "Synthetic justification citing pricing-001, pricing-002, pricing-003.",
+      "supporting_claim_ids": [
+        "pricing-001",
+        "pricing-002",
+        "pricing-003"
+      ]
+    },
+    {
+      "dimension": "unit_economics",
+      "proposed_score": 4,
+      "justification": "Synthetic justification citing unit_economics-001, unit_economics-002, unit_economics-003.",
+      "supporting_claim_ids": [
+        "unit_economics-001",
+        "unit_economics-002",
+        "unit_economics-003"
+      ]
+    },
+    {
+      "dimension": "gtm",
+      "proposed_score": 4,
+      "justification": "Synthetic justification citing gtm-001, gtm-002, gtm-003.",
+      "supporting_claim_ids": [
+        "gtm-001",
+        "gtm-002",
+        "gtm-003"
+      ]
+    },
+    {
+      "dimension": "regulation",
+      "proposed_score": 4,
+      "justification": "Synthetic justification citing regulation-001, regulation-002, regulation-003.",
+      "supporting_claim_ids": [
+        "regulation-001",
+        "regulation-002",
+        "regulation-003"
+      ]
+    },
+    {
+      "dimension": "financing",
+      "proposed_score": 4,
+      "justification": "Synthetic justification citing financing-001, financing-002, financing-003.",
+      "supporting_claim_ids": [
+        "financing-001",
+        "financing-002",
+        "financing-003"
+      ]
+    },
+    {
+      "dimension": "location",
+      "proposed_score": 4,
+      "justification": "Synthetic justification citing location-001, location-002, location-003.",
+      "supporting_claim_ids": [
+        "location-001",
+        "location-002",
+        "location-003"
+      ]
+    },
+    {
+      "dimension": "founder_risk",
+      "proposed_score": 2,
+      "justification": "Synthetic: cites only an unknown id (founder_risk-404).",
+      "supporting_claim_ids": [
+        "founder_risk-404"
+      ]
+    }
+  ],
+  "unit_economics_inputs": {
+    "price": [
+      "pricing-001"
+    ],
+    "variable_cost": [
+      "unit_economics-004"
+    ],
+    "fixed_costs": [
+      "unit_economics-002"
+    ],
+    "volume": [
+      "unit_economics-005"
+    ],
+    "vat_rate": [
+      "regulation-004"
+    ]
+  }
+}

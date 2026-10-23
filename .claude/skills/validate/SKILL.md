@@ -59,6 +59,8 @@ that first, never work around it.
      `config/founder.yaml`, overridden by the user's answers.
    - `clarifications`: one `{question, answer}` per question asked (max 5).
    - `kill_trigger_overrides`: `[]` unless the user explicitly accepts a kill-trigger risk.
+   - `vat_registered`: `true` (prices and costs net of VAT) unless the user says the business
+     stays under the VAT registration threshold and will not register.
    - `version`: 1 (a run created with `new_run.py --from` uses the parent's version + 1).
 5. `uv run python -m ideaforge.validate_file --kind spec runs/<run_id>/00_spec.json`; on
    exit 1 fix the file and validate again.
@@ -171,4 +173,5 @@ that first, never work around it.
    dimension and verification state, kill flags, markers, usage).
 2. Check `ls runs/<run_id>/` once more for `BUDGET_EXCEEDED_*` and `VALIDATION_FAILED_*`.
 3. Tell the user the run id and that this skill ends after stage 3; `/validate <run_id>` or
-   `/research <run_id>` re-runs whatever is incomplete and skips the rest.
+   `/research <run_id>` re-runs whatever is incomplete and skips the rest, and
+   `/synthesize <run_id>` runs stage 5 (proposed scores, risks, the score sheet and verdict).

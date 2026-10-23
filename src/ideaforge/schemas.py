@@ -60,6 +60,13 @@ VerificationState = Literal["pending", "verified", "unverified", "conflict"]
 Persona = Literal["founder", "investor", "customer", "accountant", "operator"]
 Goal = Literal["side_income", "full_time", "starttiraha"]
 VerdictLabel = Literal["GO", "PIVOT", "NO_GO", "INSUFFICIENT_DATA"]
+# Input roles of economics.py (economics.ROLES); the synthesizer assigns claim ids to them.
+EconomicsRole = Literal[
+    "price", "variable_cost", "variable_cost_pct", "fixed_costs", "cac", "volume",
+    "purchases_per_customer", "vat_rate",
+]
+# Roles whose claims are summed (economics.ADDITIVE_ROLES); every other role takes one claim.
+ADDITIVE_ECONOMICS_ROLES = ("variable_cost", "variable_cost_pct", "fixed_costs")
 
 Score = Annotated[float, Field(ge=0, le=5)]
 Unit01 = Annotated[float, Field(ge=0, le=1)]
@@ -101,6 +108,9 @@ class IdeaSpec(Strict):
     # Kill triggers the user has explicitly accepted the risk of; score_run.py will not
     # force NO_GO for these.
     kill_trigger_overrides: list[KillTrigger] = []
+    # Whether the business charges VAT (economics.py: net amounts if registered; the price as
+    # quoted and costs grossed up if not). The founder's choice, not research, so it lives here.
+    vat_registered: bool = True
     version: Annotated[int, Field(ge=1)] = 1
 
 
@@ -202,6 +212,20 @@ class ProposedScores(Strict):
     """04_scores_proposed.json, written by the synthesizer."""
 
     scores: list[DimensionScore]
+    # Unit-economics input role → the claim ids that supply it (economics.unit_economics
+    # `assignments`). Empty: economics.py picks automatically, and score_run.py then lets no
+    # computed kill trigger force NO_GO (TICKETS.md plan notes 21–22).
+    unit_economics_inputs: dict[EconomicsRole, list[str]] = {}
+
+    @model_validator(mode="after")
+    def _one_score_per_dimension_and_claim_per_role(self) -> ProposedScores:
+        seen = [s.dimension for s in self.scores]
+        if len(seen) != len(set(seen)):
+            raise ValueError("each dimension may be scored only once")
+        for role, ids in self.unit_economics_inputs.items():
+            if role not in ADDITIVE_ECONOMICS_ROLES and len(ids) > 1:
+                raise ValueError(f"unit_economics_inputs.{role} takes at most one claim id, got {len(ids)}")
+        return self
 
 
 class RiskItem(Strict):

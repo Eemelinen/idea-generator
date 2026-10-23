@@ -9,9 +9,9 @@ def frontmatter(text):
     return yaml.safe_load(fm), body
 
 
-def test_renders_17_agents_all_on_opus():
+def test_renders_18_agents_all_on_opus():
     rendered = gen_agents.render_all()
-    assert len(rendered) == 17
+    assert len(rendered) == 18
     for path, text in rendered.items():
         fm, body = frontmatter(text)
         assert fm["name"] == path.stem
