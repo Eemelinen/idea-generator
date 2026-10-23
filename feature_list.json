@@ -346,7 +346,7 @@
       "area": "scoring",
       "title": "Synthesis and score run",
       "user_visible_behavior": "`/synthesize <run_id>` writes `04_scores_proposed.json` and `04_risks.json` from only the spec, verified and conflict claims and the rubric, citing a claim id for every justification; `scripts/score_run.py <run_id>` drops non-existent or unverified citations, applies scoring and economics and writes `04_scores.json` and the scores table.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-014", "F-015"],
       "ticket": "IF-304",
       "spec": "docs/TICKETS.md#if-304-synthesis-and-score-run",
@@ -354,7 +354,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_score_run.py tests/test_skills.py (end to end on fixtures; permit_impossible flips the verdict to NO_GO; unverified citations dropped)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-23 pnpm check → pass (working tree on 5955d0c)",
+        "2026-10-23 uv run pytest tests/test_score_run.py tests/test_skills.py → pass (working tree on 5955d0c)"
+      ],
       "attempts": 0,
       "notes": "Absorbs IF-301 (synthesizer and /synthesize)."
     },
