@@ -167,6 +167,7 @@ def test_robots_txt_semantics(project, robots, allowed):
         HttpResponse(200, "<html><body><script>render()</script></body></html>"),
         HttpResponse(200, "%PDF-1.7 binary", "application/pdf"),
         FetchError("ReadTimeout: timed out after 10 s"),
+        ValueError("synthetic unexpected error"),
     ],
 )
 def test_unfetchable_pages(project, response):
@@ -176,10 +177,22 @@ def test_unfetchable_pages(project, response):
     assert not verify.cache_path(url).exists()
 
 
-def test_text_responses_are_used_as_is(project):
+@pytest.mark.parametrize("ctype", ["application/json; charset=utf-8", "application/ld+json", "text/csv", "text/markdown"])
+def test_text_responses_are_used_as_is(project, ctype):
     url = "https://pxdata.stat.fi/PXWeb/api/v1/fi/synthetic.px"
-    page = Fetcher(FakeWeb({url: HttpResponse(200, '{"value": [1975]}', "application/json; charset=utf-8")}), record_sources=False).get(url)
+    page = Fetcher(FakeWeb({url: HttpResponse(200, '{"value": [1975]}', ctype)}), record_sources=False).get(url)
     assert page.status == "ok" and page.text == '{"value": [1975]}'
+
+
+def test_quote_outside_the_main_content_still_matches(project):
+    url = "https://example.fi/sidebar"
+    body = (
+        "<article><h1>Synthetic article</h1>" + "<p>Long synthetic main text about lakeside cabins.</p>" * 20
+        + "</article><aside><p>Synthetic info box: kunnan asukasluku on 1 975.</p></aside>"
+    )
+    page = Fetcher(FakeWeb({url: html(body)}), record_sources=False).get(url)
+    assert verify.quote_matches("kunnan asukasluku on 1 975", page.text)
+    assert not list(verify.cache_path(url).parent.glob("*.tmp"))
 
 
 def test_requests_get_sends_ua_and_timeout(monkeypatch):
@@ -321,6 +334,7 @@ def test_verify_run_end_to_end(run):
     assert (bad["http_status"], bad["cache_path"], bad["content_sha"]) == (403, None, None)
 
     summary = verify.summary(result)
+    assert "gtm: 0 claims" in summary
     assert "regulation: 1 verified, 3 unverified (1 unfetchable, 1 robots-disallowed)" in summary
     assert summary.endswith("total: 2/5 verified")
 
@@ -332,6 +346,8 @@ def test_rerun_uses_the_cache_and_retries_failures(run):
     assert "https://example.fi/mokki-123" not in web.calls
     assert "https://www.vero.fi/synthetic-alv" not in web.calls
     assert "https://forbidden.example.fi/x" in web.calls
+    claims = {c["claim_id"]: c for c in json.loads((run / "03_claims" / "verified.json").read_text(encoding="utf-8"))}
+    assert claims["pricing-001"]["verification"] == claims["regulation-001"]["verification"] == "verified"
     with db.session() as conn:
         assert conn.execute("SELECT COUNT(*) FROM claims WHERE run_id=?", (RUN_ID,)).fetchone()[0] == 5
 

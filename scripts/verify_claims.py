@@ -9,7 +9,7 @@ cache/), marks each claim verified or unverified by fuzzy quote match, and write
 
 Prints one summary line per dimension on stdout and warnings (unparseable claim blocks,
 unfetchable or robots-disallowed sources) on stderr. Exit 0 once verified.json is written,
-1 when the run does not exist.
+1 when the run is unknown (bad id, no directory, no DB row) or has no 02_research/.
 """
 
 from __future__ import annotations

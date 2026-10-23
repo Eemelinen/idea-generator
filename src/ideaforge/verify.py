@@ -13,6 +13,7 @@ the network. API re-query and conflict detection (IF-209) build on this module.
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 import unicodedata
 from collections.abc import Callable
@@ -23,6 +24,7 @@ from typing import Literal
 from urllib.parse import urlsplit
 from urllib.robotparser import RobotFileParser
 
+import lxml.html
 import requests
 import trafilatura
 from pydantic import TypeAdapter
@@ -37,8 +39,11 @@ TIMEOUT_S = 10
 MATCH_THRESHOLD = 90.0
 # Flags this module owns: recomputed on every run, never taken from a research agent.
 FETCH_FLAGS = ("unfetchable", "robots_disallowed")
-# Response types whose body is already text; anything else non-HTML (PDF, images) is unfetchable.
-TEXT_TYPES = ("text/plain", "text/csv", "application/json", "application/xml", "text/xml")
+# HTML is reduced to its text; other text types (text/*, JSON, XML) are matched as they are;
+# anything else (PDF, images) is unfetchable.
+HTML_TYPES = ("", "text/html", "application/xhtml+xml")
+TEXT_TYPES = ("text/", "application/json", "application/xml")
+TEXT_SUFFIXES = ("+json", "+xml")
 # A page whose only text asks for JavaScript is a JS-only page, not its content.
 JS_ONLY_RE = re.compile(r"enable javascript|javascript (?:is )?(?:required|disabled)|ota javascript käyttöön", re.I)
 JS_ONLY_MAX_CHARS = 300
@@ -167,15 +172,26 @@ def _now() -> datetime:
     return datetime.now(UTC).replace(microsecond=0)
 
 
+def page_text(html: str) -> str:
+    """All visible text of an HTML page, not just trafilatura's main-content extract.
+
+    A quote from an info box, table or sidebar is still on the page, and boilerplate around it
+    cannot make a wrong quote match. Scripts and styles are dropped first so a JS-only page stays
+    empty (its <noscript> notice remains for JS_ONLY_RE).
+    """
+    tree = lxml.html.fromstring(html)
+    for el in tree.xpath("//script|//style|//template"):
+        el.drop_tree()
+    return trafilatura.html2txt(tree, clean=False)
+
+
 def extract_text(resp: HttpResponse) -> str | None:
     """Readable text of a response, or None when there is none to match against."""
     ctype = resp.content_type.split(";", 1)[0].strip().lower()
-    if ctype.startswith(TEXT_TYPES):
+    if ctype in HTML_TYPES:
+        text = page_text(resp.text) or trafilatura.extract(resp.text, favor_recall=True, include_tables=True)
+    elif ctype.startswith(TEXT_TYPES) or ctype.endswith(TEXT_SUFFIXES):
         text = resp.text
-    elif ctype in ("", "text/html", "application/xhtml+xml"):
-        text = trafilatura.extract(resp.text, favor_recall=True, include_tables=True) or trafilatura.html2txt(
-            resp.text
-        )
     else:
         return None
     text = (text or "").strip()
@@ -212,18 +228,26 @@ class Fetcher:
         fetched_at = _now()
         try:
             resp = self.http_get(url)
-        except (FetchError, requests.RequestException, OSError) as e:
+        except Exception as e:  # one bad source must not cost the whole run its verified.json
             self._record(url, None, fetched_at, None)
-            return Page(url, "unfetchable", fetched_at, detail=str(e))
+            return Page(url, "unfetchable", fetched_at, detail=f"{type(e).__name__}: {e}")
         if resp.status >= 400:
             self._record(url, None, fetched_at, resp.status)
             return Page(url, "unfetchable", fetched_at, detail=f"HTTP {resp.status}")
-        text = extract_text(resp)
+        try:
+            text = extract_text(resp)
+        except Exception as e:
+            text, problem = None, f"text extraction failed: {type(e).__name__}: {e}"
+        else:
+            problem = f"no extractable text ({resp.content_type or 'no type'})"
         if text is None:
             self._record(url, None, fetched_at, resp.status)
-            return Page(url, "unfetchable", fetched_at, detail=f"no extractable text ({resp.content_type or 'no type'})")
+            return Page(url, "unfetchable", fetched_at, detail=problem)
+        # Write then rename, so a killed run never leaves a truncated page that counts as cached.
         cached.parent.mkdir(parents=True, exist_ok=True)
-        cached.write_text(text, encoding="utf-8")
+        tmp = cached.with_suffix(".tmp")
+        tmp.write_text(text, encoding="utf-8")
+        os.replace(tmp, cached)
         self._record(url, text, fetched_at, resp.status)
         return Page(url, "ok", fetched_at, text)
 
@@ -239,7 +263,7 @@ class Fetcher:
             parser: RobotFileParser | None = RobotFileParser(origin + "/robots.txt")
             try:
                 resp = self.http_get(origin + "/robots.txt")
-            except (FetchError, requests.RequestException, OSError):
+            except Exception:  # unreachable robots.txt: see robots_allowed docstring
                 parser = None
             else:
                 if resp.status in (401, 403):
@@ -304,7 +328,7 @@ def verify_claim(claim: Claim, page: Page) -> Claim:
 @dataclass
 class VerifyResult:
     claims: list[Claim]
-    files: dict[str, int]  # research file stem → claims parsed
+    files: list[str]  # research file stems, including files that yielded no claims
     warnings: list[str]
 
 
@@ -363,17 +387,20 @@ def verify_run(run_id: str, http_get: HttpGet | None = None) -> VerifyResult:
 
     _write_claims(run_dir / "03_claims" / "verified.json", verified)
     db.upsert_claims(run_id, verified)
-    return VerifyResult(verified, {k: len(v) for k, v in parsed.items()}, warnings)
+    return VerifyResult(verified, list(parsed), warnings)
 
 
 def summary(result: VerifyResult) -> str:
-    """One line per research file: verified / unverified counts and fetch flags."""
+    """One line per dimension (every research file, even one without claims): counts and fetch flags."""
     lines = []
-    by_dim: dict[str, list[Claim]] = {}
+    by_dim: dict[str, list[Claim]] = {stem: [] for stem in result.files}
     for c in result.claims:
         by_dim.setdefault(c.dimension, []).append(c)
     for dim in sorted(by_dim):
         cs = by_dim[dim]
+        if not cs:
+            lines.append(f"{dim}: 0 claims")
+            continue
         n = {s: sum(c.verification == s for c in cs) for s in ("verified", "unverified")}
         f = {fl: sum(fl in c.flags for c in cs) for fl in FETCH_FLAGS}
         lines.append(
