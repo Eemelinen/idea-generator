@@ -303,6 +303,7 @@ def stage_set(run_id: str, stage: str, status: str) -> None:
 
 
 def stage_done(run_id: str, stage: str) -> bool:
+    """The stored status only; runs.is_complete also requires the output file to validate."""
     with session() as conn:
         row = conn.execute(
             "SELECT status FROM stages WHERE run_id=? AND stage=?", (run_id, stage)
