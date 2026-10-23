@@ -11,7 +11,7 @@ Repository-local session log. Read it at clock-in, update it at clock-out (AGENT
 - Queue: 29 features (`pnpm harness:feature list`), 20 unattended and 7 human-only among the 27 open.
   - Ready now, unattended: F-006 (research validator), F-007 (claim verification), F-009 (usage report + status), F-010 (stage state machine), F-014 (scoring), F-015 (economics), F-021 (debate anonymization + validation).
   - Ready now, human-only: F-002 (§13 decisions), F-003 (record API fixtures). Both gate later work.
-- Last verified commit: see Session 001 below and the F-000 / F-001 evidence in `feature_list.json`.
+- Last verified commit: `db97340` (working tree with only `feature_list.json` changed by activate/verify). `pnpm harness:verify F-000` and `F-001` ran green on 2026-10-23: `pnpm check` = 25 Vitest + 124 pytest tests in about 14 s. The evidence lines are in `feature_list.json`.
 - Current blocker: none in the repo.
   - Host: `uv`, `claude` and `gh` are installed but not on the Git Bash `PATH` (`~/.local/bin`, `C:\Program Files\GitHub CLI`). The pipeline hooks fail open without `uv`.
   - GitHub branch protection does not exist yet, so `harness.config.json` keeps `merge: "wait"`.

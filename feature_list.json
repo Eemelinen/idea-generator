@@ -19,10 +19,13 @@
       "area": "harness",
       "title": "Agent harness bootstrap",
       "user_visible_behavior": "A fresh coding-agent session can answer what the repo does, how to start it, how to verify it, what is unfinished and what to do next, using only AGENTS.md, PROGRESS.md and this file. `./init.sh` installs both toolchains and runs L1; `pnpm harness:*` changes feature state; the hooks, skills, evaluator and commit gates are wired.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [],
       "verification": ["L1: pnpm check", "L1: pnpm harness:check"],
-      "evidence": [],
+      "evidence": [
+        "2026-10-23 pnpm check → pass (working tree on db97340)",
+        "2026-10-23 pnpm harness:check → pass (working tree on db97340)"
+      ],
       "attempts": 0,
       "notes": "Ported from the Metsävahti harness (tag harness-reference, docs/harness/porting-guide.md). Decisions D-001–D-006."
     },
@@ -32,7 +35,7 @@
       "area": "skeleton",
       "title": "Phase 1 skeleton",
       "user_visible_behavior": "The repo layout, configs, Pydantic schemas, SQLite store, agent generation, pipeline hooks and `new_run.py` exist and are tested: every fixture validates, `gen_agents.py` renders every agent from `config/models.yaml` (all `opus`), and the guard denies a write outside the allowed paths.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [],
       "ticket": "IF-101",
       "spec": "docs/TICKETS.md#if-101-phase-1-skeleton",
@@ -40,7 +43,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_config.py tests/test_schemas.py tests/test_db.py tests/test_gen_agents.py tests/test_guard.py tests/test_usage.py tests/test_validate_file.py tests/test_new_run.py (Phase 1 acceptance: schemas, generated agents on opus, guard denies writes outside the allowed paths)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-23 pnpm check → pass (working tree on db97340)",
+        "2026-10-23 uv run pytest tests/test_config.py tests/test_schemas.py tests/test_db.py tests/test_gen_agents.py tests/test_guard.py tests/test_usage.py tests/test_validate_file.py tests/test_new_run.py → pass (working tree on db97340)"
+      ],
       "attempts": 0,
       "notes": "Absorbs IF-101–IF-107, built before the harness existed; this feature records their acceptance as evidence."
     },
