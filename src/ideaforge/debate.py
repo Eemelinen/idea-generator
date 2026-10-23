@@ -43,11 +43,24 @@ _NUMBER_RE = re.compile(r"\d")
 _ROLE = "|".join(PERSONAS)
 # Self-labels that would tell the reader which persona wrote a position. Persona names as plain
 # words stay: "customer", "founder" and "operator" are also ordinary words in a business plan
-# (and "customer" is a dimension), so only explicit labels are replaced.
+# (and "customer" is a dimension), so only labelling phrases are replaced: "debate-<role>",
+# "<role> persona / lens / here", "as (the|a|an) <role>", "from the <role>'s perspective",
+# "I am / I'm / I, the <role>", and the Finnish essive self-labels ("sijoittajana", …).
+# "yrittäjänä" and "asiakkaana" stay: Finnish plans use them for the real founder and customers.
+_A = r"(?:the\s+|an?\s+|my\s+|our\s+|this\s+|your\s+)"
+_FI_ROLE = r"(?:perustaja|sijoittaja|kirjanpitäjä|tilintarkastaja|operaattori)"
 _SELF_LABEL_RES = (
     re.compile(rf"\bdebate-(?:{_ROLE})\b", re.IGNORECASE),
-    re.compile(rf"\b(?:the\s+|an?\s+|my\s+|our\s+|this\s+)?(?:{_ROLE})(?:'s)?\s+(?:persona|lens)\b", re.IGNORECASE),
-    re.compile(rf"\b(?:I\s+am|I'm|speaking\s+as)\s+(?:the\s+|an?\s+)?(?:{_ROLE})\b", re.IGNORECASE),
+    re.compile(rf"\b{_A}?(?:{_ROLE})(?:'s)?\s+(?:persona|lens)\b", re.IGNORECASE),
+    re.compile(rf"\b(?:I\s+am|I'm|I,|speaking\s+as)\s+{_A}?(?:{_ROLE})\b(?:'s)?", re.IGNORECASE),
+    re.compile(rf"\bas\s+{_A}(?:{_ROLE})\b(?:'s)?", re.IGNORECASE),
+    re.compile(
+        rf"\bfrom\s+{_A}?(?:{_ROLE})(?:'s|s')?\s+(?:perspective|point\s+of\s+view|view|side|standpoint|angle)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(rf"\b(?:{_ROLE})\s+here\b", re.IGNORECASE),
+    re.compile(rf"\b(?:minä|mä)\s+(?:olen\s+)?(?:{_FI_ROLE}|yrittäjä|asiakas)\b", re.IGNORECASE),
+    re.compile(rf"\b{_FI_ROLE}na\b", re.IGNORECASE),
 )
 REDACTED = "[persona]"
 
@@ -136,9 +149,12 @@ def ensure_mapping(run_id: str, seed: int | None = None) -> dict[str, str]:
     file_seed = None
     if path.exists():
         try:
-            file_seed = int(json.loads(path.read_text(encoding="utf-8"))["seed"])
+            stored_file = json.loads(path.read_text(encoding="utf-8"))
+            file_seed = int(stored_file["seed"])
         except (ValueError, KeyError, TypeError) as e:
             raise DebateError(f"{path} is not valid: {e}") from None
+        if stored_file.get("mapping") != mapping_for(file_seed):
+            raise DebateError(f"the mapping in {path} does not match its seed {file_seed}")
     db_seed = _stored_seed(run_id)
     if file_seed is not None and db_seed is not None and file_seed != db_seed:
         raise DebateError(f"seed in {path} ({file_seed}) differs from the debates row ({db_seed})")
@@ -214,7 +230,7 @@ def anonymize(run_id: str, round_no: int, *, seed: int | None = None) -> AnonRes
         raise DebateError(f"{d} does not exist")
     mapping = ensure_mapping(run_id, seed)
     model = Position if round_no == 0 else Rebuttal
-    excluded = rejected_roles(run_id, round_no) if round_no > 0 else []
+    excluded = [r for r in rejected_roles(run_id, round_no) if (d / f"{r}.json").exists()] if round_no > 0 else []
     turns: dict[str, Position | Rebuttal] = {}
     raws: dict[str, str] = {}
     missing = []

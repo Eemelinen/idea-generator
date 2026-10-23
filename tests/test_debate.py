@@ -60,7 +60,9 @@ def test_conflicting_seed_is_refused(debate_run):
 
 def test_mapping_file_and_db_disagreeing_is_an_error(debate_run):
     debate.anonymize(DEBATE_RUN, 0, seed=1)
-    (debate_run / "debate" / ".mapping.json").write_text('{"seed": 7, "mapping": {}}', encoding="utf-8")
+    (debate_run / "debate" / ".mapping.json").write_text(
+        json.dumps({"seed": 7, "mapping": debate.mapping_for(7)}), encoding="utf-8"
+    )
     with pytest.raises(debate.DebateError, match="differs"):
         debate.anonymize(DEBATE_RUN, 0)
 
@@ -122,6 +124,77 @@ def test_self_labels_are_redacted(debate_run):
     text = json.dumps(anon_file(debate_run))
     assert "accountant" not in text.lower()
     assert "[persona]" in text
+
+
+SELF_LABELS = [
+    ("As the investor, I would not fund this.", "[persona], I would not fund this."),
+    ("As an accountant I flag VAT.", "[persona] I flag VAT."),
+    ("From an investor's perspective the market is thin.", "[persona] the market is thin."),
+    ("From the operator point of view, winter is hard.", "[persona], winter is hard."),
+    ("Customer here: too pricey.", "[persona]: too pricey."),
+    ("I, the founder, disagree.", "[persona], disagree."),
+    ("Speaking as operator, no.", "[persona], no."),
+    ("I'm the Accountant's voice.", "[persona] voice."),
+    ("Sijoittajana en rahoittaisi tätä.", "[persona] en rahoittaisi tätä."),
+    ("Minä olen kirjanpitäjä ja ALV on riski.", "[persona] ja ALV on riski."),
+]
+
+
+@pytest.mark.parametrize(("text", "redacted"), SELF_LABELS)
+def test_scrub_self_labels(text, redacted):
+    assert debate.scrub(text) == redacted
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Test the customer price with ten bookings.",
+        "The founder role needs 20 hours a week.",
+        "Yrittäjänä toimiminen vaatii starttirahan.",
+        "Asiakkaana mökkiläinen maksaa 90 euroa.",
+        "Price it for the customer segment that drives.",
+    ],
+)
+def test_scrub_keeps_plain_role_words(text):
+    assert debate.scrub(text) == text
+
+
+def test_role_bearing_text_is_redacted_in_every_field(debate_run):
+    write_role(debate_run, 0, "investor", debate_position(
+        "investor",
+        objections=[{"text": "As the investor, I see a thin market.", "claim_ids": ["market-001"]}],
+        proposed_change="From an investor's perspective, cut the build cost.",
+    ))
+    debate.anonymize(DEBATE_RUN, 0, seed=4)
+    write_role(debate_run, 1, "investor", {
+        "role": "investor",
+        "round": 1,
+        "responses": [{
+            "target_position_id": "P1" if debate.mapping_for(4)["investor"] != "P1" else "P2",
+            "stance": "disagree",
+            "basis": {"evidence_gap": "As an investor I miss churn data.",
+                      "computation": "I, the investor, compute pricing-001 * 2 = 180"},
+        }],
+        "updated_change": "Investor here: open in May only.",
+        "updated_change_basis": {"evidence_gap": "Speaking as investor, none."},
+        "mini_research": {"question": "As the investor: what is the churn?", "dimension": "market",
+                          "requested_by": "investor"},
+    })
+    debate.anonymize(DEBATE_RUN, 1)
+    for round_no in (0, 1):
+        text = json.dumps(anon_file(debate_run, round_no), ensure_ascii=False)
+        assert "investor" not in text.lower(), round_no
+        assert "[persona]" in text
+
+
+def test_mapping_file_that_does_not_match_its_seed_is_an_error(debate_run):
+    debate.anonymize(DEBATE_RUN, 0, seed=1)
+    path = debate_run / "debate" / ".mapping.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["mapping"] = debate.mapping_for(2)
+    path.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(debate.DebateError, match="does not match its seed"):
+        debate.anonymize(DEBATE_RUN, 0)
 
 
 def test_plain_words_that_are_also_role_names_stay(debate_run):
