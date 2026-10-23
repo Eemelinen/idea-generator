@@ -167,8 +167,8 @@
         "2026-10-23 pnpm check → pass (working tree on c56a73c)",
         "2026-10-23 uv run pytest tests/test_verify.py → pass (working tree on c56a73c)"
       ],
-      "attempts": 0,
-      "notes": ""
+      "attempts": 1,
+      "notes": "Attempt 1 failed 2026-10-23: evaluator: Revise"
     },
     {
       "id": "F-008",
