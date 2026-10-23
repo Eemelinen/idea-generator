@@ -25,7 +25,7 @@ Arguments: `$ARGUMENTS`
   2. Show the `reset:` lines to the user, then continue with the first stage whose group
      `--next` lists. Skip every stage it does not list: those are complete. When it lists
      `synthesize` or nothing, stages 0–3 are complete: go straight to **End**.
-- **New version** when the arguments start with `--from <parent_run_id>`: the run is the
+- **New version** when the arguments contain `--from <parent_run_id>` (anywhere): the run is the
   parent's next idea version, a new run `<parent_run_id>-vN` (the parent's `-vN` suffix is
   replaced) linked through `idea_versions.parent`. The parent run stays immutable: never write,
   re-run or resume anything under `runs/<parent_run_id>/`.
@@ -33,7 +33,9 @@ Arguments: `$ARGUMENTS`
      given), or `uv run python scripts/new_run.py --from <parent_run_id> '<idea text>'` when
      the user gave a revised idea text after the run id (same quoting rules as a new run).
      Without a text the new version keeps the parent's idea text. It prints only the new run
-     id and makes it the active run; exit 2 means the parent is unknown.
+     id and makes it the active run. The new version keeps the parent's budget preset and
+     `--as-of` date unless `--preset` is given. Exit 2 prints why (unknown parent, empty idea
+     text, unknown preset): tell the user and stop.
   2. Read-only context for Stage 0: `runs/<parent_run_id>/00_spec.json`, and when they exist
      `runs/<parent_run_id>/05_report.md` and `runs/<parent_run_id>/debate/revised_plan.md`.
      Ask only about what the revision changes; reuse the parent's answers otherwise.

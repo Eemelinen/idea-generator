@@ -10,6 +10,7 @@ import re
 import shutil
 import subprocess
 from datetime import UTC, datetime
+from pathlib import Path
 
 import new_run
 import pytest
@@ -89,6 +90,9 @@ def test_meta_records_provenance(project, capsys, claude_version):
 
 
 def test_config_commit_is_the_last_change_to_prompts_or_config(project):
+    # The sources of every prompt and agent file; a path missing here would go unrecorded.
+    assert meta.PROVENANCE_PATHS == ("config", "prompts", "agent_templates")
+    assert all((config.CONFIG_DIR.parent / p).is_dir() for p in meta.PROVENANCE_PATHS)
     paths = subprocess.run(
         ["git", "log", "-1", "--format=%H", "--", "config", "prompts", "agent_templates"],
         cwd=config.CONFIG_DIR.parent, capture_output=True, text=True, check=True,
@@ -152,6 +156,34 @@ def test_stage_transitions_refresh_updated_at_only(project, capsys, claude_versi
     assert datetime.fromisoformat(read_meta(run_id)["updated_at"]) == later
 
 
+def test_touch_fails_soft_when_the_write_fails(project, capsys, monkeypatch):
+    run_id = create(capsys, "vegan bakery")
+    d = config.RUNS_DIR / run_id
+    before = (d / "meta.json").read_bytes()
+
+    def locked(src, dst):  # e.g. a reader holding meta.json open on Windows
+        raise PermissionError(13, "in use", str(dst))
+
+    monkeypatch.setattr(meta.os, "replace", locked)
+    assert meta.touch(d) is False
+    runs.begin(run_id, "intake")  # the stage transition still succeeds
+    assert runs.statuses(run_id)["intake"] == "running"
+    assert (d / "meta.json").read_bytes() == before
+    assert sorted(p.name for p in d.iterdir() if p.name.endswith(".tmp")) == []
+
+
+def test_write_uses_a_unique_temp_file(project, capsys, monkeypatch):
+    run_id = create(capsys, "vegan bakery")
+    d = config.RUNS_DIR / run_id
+    seen = []
+    real = meta.os.replace
+    monkeypatch.setattr(meta.os, "replace", lambda src, dst: (seen.append(Path(src).name), real(src, dst)))
+    meta.touch(d)
+    meta.touch(d)
+    assert len(seen) == 2 and seen[0] != seen[1] and all(n.startswith(".meta.") for n in seen)
+    RunMeta.model_validate(read_meta(run_id))
+
+
 def test_touch_leaves_a_foreign_meta_alone(tmp_path):
     (tmp_path / "meta.json").write_text('{"budget_preset": "economy"}', encoding="utf-8")
     assert meta.touch(tmp_path) is False
@@ -163,10 +195,9 @@ def test_meta_schema_ties_version_to_parent():
     base = {"run_id": "r", "created_at": "2026-10-23T12:00:00Z", "models": {}, "budget_preset": "standard"}
     RunMeta.model_validate(base)
     RunMeta.model_validate({**base, "version": 2, "parent_run_id": "p"})
+    RunMeta.model_validate({**base, "parent_run_id": "p"})  # a child run made before IF-308
     with pytest.raises(ValueError):
         RunMeta.model_validate({**base, "version": 2})
-    with pytest.raises(ValueError):
-        RunMeta.model_validate({**base, "parent_run_id": "p"})
 
 
 # ---------------------------------------------------------------- validate --from
@@ -197,6 +228,17 @@ def test_v2_takes_a_revised_idea_text(project, capsys):
     child = create(capsys, "--from", parent, "vegan bakery with a lunch counter", "--preset", "economy")
     assert "lunch counter" in (config.RUNS_DIR / child / "idea.md").read_text(encoding="utf-8")
     assert read_meta(child)["budget_preset"] == "economy"
+
+
+def test_v2_inherits_preset_and_as_of(project, capsys):
+    parent = create(capsys, "vegan bakery", "--preset", "deep", "--as-of", "2025-06-01")
+    child = create(capsys, "--from", parent)
+    assert (read_meta(child)["budget_preset"], read_meta(child)["as_of"]) == ("deep", "2025-06-01")
+    with db.session() as conn:
+        row = conn.execute("SELECT budget_preset, as_of FROM runs WHERE run_id=?", (child,)).fetchone()
+    assert tuple(row) == ("deep", "2025-06-01")
+    other = create(capsys, "--from", parent, "--preset", "economy", "--as-of", "2026-01-01")
+    assert (read_meta(other)["budget_preset"], read_meta(other)["as_of"]) == ("economy", "2026-01-01")
 
 
 def test_versions_never_reuse_a_run_id(project, capsys):

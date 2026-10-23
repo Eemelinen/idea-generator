@@ -14,6 +14,7 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 from datetime import UTC, date, datetime
 from pathlib import Path
 
@@ -109,10 +110,16 @@ def build(
 
 
 def write(run_dir: Path, meta: RunMeta) -> Path:
+    """Atomic: a unique temp file renamed into place, so concurrent writers never truncate it."""
     path = run_dir / "meta.json"
-    tmp = path.with_name("meta.json.tmp")
-    tmp.write_text(meta.model_dump_json(indent=2) + "\n", encoding="utf-8")
-    tmp.replace(path)
+    fd, tmp = tempfile.mkstemp(dir=run_dir, prefix=".meta.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(meta.model_dump_json(indent=2) + "\n")
+        os.replace(tmp, path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
     return path
 
 
@@ -121,10 +128,14 @@ def load(run_dir: Path) -> RunMeta:
 
 
 def touch(run_dir: Path, now: datetime | None = None) -> bool:
-    """Set `updated_at`; a missing or invalid meta.json is left alone (False)."""
+    """Set `updated_at`; False when meta.json is missing or invalid or cannot be written.
+
+    Called after the stage state is committed, so it must never raise: a lost `updated_at`
+    (e.g. a reader holding the file open on Windows) is harmless, a crashed `--finish` is not.
+    """
     try:
         meta = load(run_dir)
+        write(run_dir, meta.model_copy(update={"updated_at": now or datetime.now(UTC)}))
     except (OSError, ValueError, ValidationError):
         return False
-    write(run_dir, meta.model_copy(update={"updated_at": now or datetime.now(UTC)}))
     return True

@@ -389,8 +389,9 @@ class RunMeta(Strict):
 
     @model_validator(mode="after")
     def _version_has_parent(self) -> RunMeta:
-        if (self.version > 1) != (self.parent_run_id is not None):
-            raise ValueError("version > 1 needs a parent_run_id, and version 1 must not have one")
+        # A parent with version 1 is allowed: child runs made before IF-308 have no `version`.
+        if self.version > 1 and self.parent_run_id is None:
+            raise ValueError("version > 1 needs a parent_run_id")
         return self
 
 

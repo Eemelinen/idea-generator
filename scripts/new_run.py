@@ -5,7 +5,8 @@
     uv run python scripts/new_run.py --from <parent_run_id> ["<revised idea text>"]
 
 With --from the run is the parent's next idea version, `<parent id>-v<N>` (`runs.child_run`),
-linked through `idea_versions.parent`; the idea text defaults to the parent's, and the parent's
+linked through `idea_versions.parent`; the idea text, budget preset and as-of date default to the
+parent's, and the parent's
 directory, rows and report are never touched. meta.json records the provenance (`ideaforge.meta`).
 Prints the run_id on stdout (and nothing else) so callers can capture it.
 """
@@ -19,10 +20,12 @@ from datetime import date
 from ideaforge import config, db, meta, runs
 
 
-def parent_idea_text(parent: str) -> str | None:
+def parent_row(parent: str):
+    """The parent's `runs` row: idea text, budget preset and as-of date a new version inherits."""
     with db.session() as conn:
-        row = conn.execute("SELECT idea_text FROM runs WHERE run_id=?", (parent,)).fetchone()
-    return row["idea_text"] if row else None
+        return conn.execute(
+            "SELECT idea_text, budget_preset, as_of FROM runs WHERE run_id=?", (parent,)
+        ).fetchone()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -33,20 +36,25 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--as-of", type=date.fromisoformat, default=None, help="back-test date")
     args = parser.parse_args(argv)
 
-    budget = config.budget()
-    preset = args.preset or budget.default_preset
-    if preset not in budget.presets:
-        parser.error(f"unknown preset {preset!r}; choose from {sorted(budget.presets)}")
-
     db.init()
-    idea = args.idea
+    idea, preset, as_of = args.idea, args.preset, args.as_of
     if args.parent:
         try:
             run_id, version, idea_id = runs.child_run(args.parent)
         except ValueError as e:
             parser.error(str(e))
+        row = parent_row(args.parent)
         if idea is None or not idea.strip():
-            idea = parent_idea_text(args.parent)
+            idea = row["idea_text"]
+        # A revision of a back-test stays a back-test, at the parent's budget, unless overridden.
+        preset = preset or row["budget_preset"]
+        if as_of is None and row["as_of"]:
+            as_of = date.fromisoformat(row["as_of"])
+
+    budget = config.budget()
+    preset = preset or budget.default_preset
+    if preset not in budget.presets:
+        parser.error(f"unknown preset {preset!r}; choose from {sorted(budget.presets)}")
     if idea is None or not idea.strip():
         parser.error("idea text must not be empty")
     if not args.parent:
@@ -61,7 +69,7 @@ def main(argv: list[str] | None = None) -> int:
         version=version,
         parent_run_id=args.parent,
         budget_preset=preset,
-        as_of=args.as_of,
+        as_of=as_of,
     )
     meta.write(run_dir, run_meta)
 
@@ -72,7 +80,7 @@ def main(argv: list[str] | None = None) -> int:
         version=version,
         parent=args.parent,
         budget_preset=preset,
-        as_of=args.as_of.isoformat() if args.as_of else None,
+        as_of=as_of.isoformat() if as_of else None,
         stages=runs.STAGES,
     )
     runs.set_active(run_id)
