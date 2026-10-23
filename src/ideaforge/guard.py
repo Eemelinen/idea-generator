@@ -16,7 +16,8 @@ Policy (exit 2 = deny, reason on stderr):
   ideaforge…, uv run python scripts/…, uv run pytest, git, ls, cat) and may not
   fetch from the network, substitute commands or redirect output to files.
   Research agents may only run the ideaforge.fi data tools (plus ls/cat); the
-  harness evaluator may also run the read-only harness checks.
+  harness evaluator may also run the read-only harness checks, pnpm test:py and
+  grep/head/tail/wc. Text inside quotes is not read as `>` or `|`.
 """
 
 from __future__ import annotations
@@ -35,6 +36,8 @@ NETWORK_RE = re.compile(
 )
 SEGMENT_SPLIT_RE = re.compile(r"&&|\|\||[;|\n]")
 SAFE_REDIRECTS_RE = re.compile(r"\d?>&\d|2>\s*(/dev/null|\$null|nul)\b", re.IGNORECASE)
+# A complete '…' or "…" string; an unterminated quote is left alone, so nothing after it hides.
+QUOTED_RE = re.compile(r"'[^']*'|\"(?:[^\"\\]|\\.)*\"")
 
 GENERAL_ALLOW = (
     re.compile(r"^uv\s+run\s+(--quiet\s+|-q\s+)?python\s+-m\s+ideaforge(\.|\s|$)"),
@@ -45,7 +48,9 @@ GENERAL_ALLOW = (
     re.compile(r"^(ls|cat)(\s|$)"),
 )
 HARNESS_ALLOW = GENERAL_ALLOW + (
-    re.compile(r"^pnpm\s+(--silent\s+)?(check|harness:check|harness:feature\s+(show|list|next))(\s|$)"),
+    re.compile(r"^pnpm\s+(--silent\s+)?(check|test:py|harness:check|harness:feature\s+(show|list|next))(\s|$)"),
+    # Read-only filters, mostly the tail of a pipeline (`pnpm check 2>&1 | tail -5`).
+    re.compile(r"^(grep|head|tail|wc)(\s|$)"),
 )
 RESEARCH_ALLOW = (
     re.compile(r"^uv\s+run\s+(--quiet\s+|-q\s+)?python\s+-m\s+ideaforge\.fi\.\w+(\s|$)"),
@@ -138,13 +143,15 @@ def check_bash(data: dict[str, Any]) -> str | None:
         return "command denied: fetch pages with WebFetch or the ideaforge.fi tools so they are logged and cached"
     if "$(" in command or "`" in command:
         return "command denied: command substitution is not allowed"
-    if ">" in SAFE_REDIRECTS_RE.sub("", command):
+    # `>` and `|` inside quotes are pattern text (`git grep -e "a|b"`), not shell operators.
+    unquoted = QUOTED_RE.sub(lambda m: m.group(0)[0] * 2, command)
+    if ">" in SAFE_REDIRECTS_RE.sub("", unquoted):
         return "command denied: redirecting output to files is not allowed; write files with the Write tool"
 
     spec = agents.get(hookio.agent_name(data)) if subagent else None
     kind = spec.kind if spec is not None else None
     allow = {"research": RESEARCH_ALLOW, "harness": HARNESS_ALLOW}.get(kind, GENERAL_ALLOW)
-    for segment in SEGMENT_SPLIT_RE.split(command):
+    for segment in SEGMENT_SPLIT_RE.split(unquoted):
         seg = segment.strip().replace("\\", "/")
         if seg and not any(p.match(seg) for p in allow):
             return f"command denied: {seg!r} is not on the allow-list"
