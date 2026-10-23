@@ -461,7 +461,9 @@
       ],
       "evidence": [
         "2026-10-23 pnpm check → pass (commit cf11fc0)",
-        "2026-10-23 uv run pytest tests/test_debate.py tests/test_debate_validate.py → pass (commit cf11fc0)"
+        "2026-10-23 uv run pytest tests/test_debate.py tests/test_debate_validate.py → pass (commit cf11fc0)",
+        "2026-10-23 pnpm check → pass (commit 12dc951)",
+        "2026-10-23 uv run pytest tests/test_debate.py tests/test_debate_validate.py → pass (commit 12dc951)"
       ],
       "attempts": 0,
       "notes": "Absorbs IF-403 (debate_validate.py)."
