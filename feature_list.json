@@ -451,7 +451,7 @@
       "area": "debate",
       "title": "Debate anonymization and rebuttal validation",
       "user_visible_behavior": "`debate.py anonymize <run_id> <round>` maps roles to P1…P5 with a stored seed and leaks no role names; `scripts/debate_validate.py <run_id> <round>` rejects a stance change without a new claim id or a computation, a disagree without evidence or a gap, unknown or unverified claim ids and a second mini-research request in a round, writing a reason per role.",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": ["F-001"],
       "ticket": "IF-402",
       "spec": "docs/TICKETS.md#if-402-debate-anonymization-and-rebuttal-validation",
