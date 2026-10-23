@@ -1,0 +1,541 @@
+{
+  "project": "idea-generator",
+  "last_updated": "2026-10-23",
+  "rules": {
+    "single_active_feature": true,
+    "passing_requires_evidence": true,
+    "do_not_skip_verification": true
+  },
+  "status_legend": {
+    "not_started": "Work has not begun.",
+    "in_progress": "The feature is the current active task (at most one at a time).",
+    "blocked": "Work cannot continue until the blocker in `notes` is resolved.",
+    "passing": "Required verification ran and the evidence is recorded."
+  },
+  "features": [
+    {
+      "id": "F-000",
+      "priority": 0,
+      "area": "harness",
+      "title": "Agent harness bootstrap",
+      "user_visible_behavior": "A fresh coding-agent session can answer what the repo does, how to start it, how to verify it, what is unfinished and what to do next, using only AGENTS.md, PROGRESS.md and this file. `./init.sh` installs both toolchains and runs L1; `pnpm harness:*` changes feature state; the hooks, skills, evaluator and commit gates are wired.",
+      "status": "not_started",
+      "depends_on": [],
+      "verification": ["L1: pnpm check", "L1: pnpm harness:check"],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Ported from the Metsävahti harness (tag harness-reference, docs/harness/porting-guide.md). Decisions D-001–D-006."
+    },
+    {
+      "id": "F-001",
+      "priority": 1,
+      "area": "skeleton",
+      "title": "Phase 1 skeleton",
+      "user_visible_behavior": "The repo layout, configs, Pydantic schemas, SQLite store, agent generation, pipeline hooks and `new_run.py` exist and are tested: every fixture validates, `gen_agents.py` renders every agent from `config/models.yaml` (all `opus`), and the guard denies a write outside the allowed paths.",
+      "status": "not_started",
+      "depends_on": [],
+      "ticket": "IF-101",
+      "spec": "docs/TICKETS.md#if-101-phase-1-skeleton",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_config.py tests/test_schemas.py tests/test_db.py tests/test_gen_agents.py tests/test_guard.py tests/test_usage.py tests/test_validate_file.py tests/test_new_run.py (Phase 1 acceptance: schemas, generated agents on opus, guard denies writes outside the allowed paths)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Absorbs IF-101–IF-107, built before the harness existed; this feature records their acceptance as evidence."
+    },
+    {
+      "id": "F-002",
+      "priority": 2,
+      "area": "decisions",
+      "title": "Resolve open decisions (§13)",
+      "user_visible_behavior": "The geography ladder, the founder constraints (`config/founder.yaml` with `confirmed: true`), the verdict thresholds and weights, and the report language are the user’s answers, recorded under IF-150 and enforced by `tests/test_config.py`.",
+      "status": "not_started",
+      "depends_on": ["F-001"],
+      "ticket": "IF-150",
+      "spec": "docs/TICKETS.md#if-150-resolve-open-decisions",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_config.py (founder.yaml confirmed, report language set)",
+        "manual: the user answered the four §13 questions and the answers are recorded under IF-150"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Human-only: only the user can answer. Blocks the Phase 2 run (F-013) and the starttiraha draft language (F-018)."
+    },
+    {
+      "id": "F-003",
+      "priority": 3,
+      "area": "fi-data",
+      "title": "Record Finnish open-data API fixtures",
+      "user_visible_behavior": "`scripts/record_fixtures.py` records real StatFin, Luke, PRH and Eurostat responses into `tests/fixtures/api/<source>/` with a meta file per response (URL, request, status, retrieved_at); `tests/test_api_fixtures.py` checks every fixture parses and cites an allow-listed URL.",
+      "status": "not_started",
+      "depends_on": ["F-001"],
+      "ticket": "IF-200",
+      "spec": "docs/TICKETS.md#if-200-record-finnish-open-data-api-fixtures",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_api_fixtures.py (every fixture parses and names its allow-listed request URL)",
+        "manual: fixtures recorded from the live APIs and reviewed (network access needed)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "New ticket (D-006): offline sessions must never invent API responses. Unblocks F-004, F-005 and F-008."
+    },
+    {
+      "id": "F-004",
+      "priority": 4,
+      "area": "fi-data",
+      "title": "PxWeb client (StatFin + Luke)",
+      "user_visible_behavior": "`uv run python -m ideaforge.fi.pxweb search \"<keyword>\"` lists candidate tables and `get <table_path> --filter Alue=…` prints CSV (or `--json`) plus the exact request URL; queries over 100 000 cells are refused with a helpful message; responses are cached for 24 h.",
+      "status": "not_started",
+      "depends_on": ["F-003"],
+      "ticket": "IF-201",
+      "spec": "docs/TICKETS.md#if-201-pxweb-client",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_pxweb.py (search, get CSV plus URL, cell-limit refusal, cache hit on recorded fixtures)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "F-005",
+      "priority": 5,
+      "area": "fi-data",
+      "title": "PRH and Eurostat clients",
+      "user_visible_behavior": "`ideaforge.fi.prh search --industry <TOL> --municipality <name>` (or `--name`, registration date) prints a company count, rows and the request URL; `ideaforge.fi.eurostat get <dataset> --geo FI` returns a JSON-stat table as a DataFrame with its URL; both cache and support `--json`.",
+      "status": "not_started",
+      "depends_on": ["F-003"],
+      "ticket": "IF-202",
+      "spec": "docs/TICKETS.md#if-202-prh-and-eurostat-clients",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_prh.py tests/test_eurostat.py (parsers on recorded fixtures)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Absorbs IF-203 (Eurostat client)."
+    },
+    {
+      "id": "F-006",
+      "priority": 6,
+      "area": "research",
+      "title": "Full research validator",
+      "user_visible_behavior": "`validate_file --kind research` rejects a figure without a following quote block (years, dates and claim ids exempt) and any cited URL that never appeared in the agent’s `.seen_urls.txt` (except `ideaforge.fi` API URLs), and warns about factual sentences without `[src: …]`.",
+      "status": "not_started",
+      "depends_on": ["F-001"],
+      "ticket": "IF-205",
+      "spec": "docs/TICKETS.md#if-205-full-research-validator",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_validate_file.py (table-driven bare-number, src-tag and URL-provenance cases)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "The no-false-rejections check on real files moved to F-013 (IF-216)."
+    },
+    {
+      "id": "F-007",
+      "priority": 7,
+      "area": "verification",
+      "title": "Claim verification: fetch, cache, quote match",
+      "user_visible_behavior": "`uv run python scripts/verify_claims.py <run_id>` turns candidate-claim blocks into `03_claims/<dim>.json`, fetches each source (robots.txt respected, 10 s timeout, cached by URL hash), marks a claim `verified` only when its quote matches the page at partial ratio ≥ 90, flags unfetchable and robots-disallowed sources, types allow-listed domains as `official`, and writes `03_claims/verified.json` plus DB rows.",
+      "status": "not_started",
+      "depends_on": ["F-001"],
+      "ticket": "IF-208",
+      "spec": "docs/TICKETS.md#if-208-claim-verification-fetch-cache-quote-match",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_verify.py (89/90 boundary, normalization, unfetchable, robots, cache hits; no network)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "F-008",
+      "priority": 8,
+      "area": "verification",
+      "title": "API re-query verification and conflict detection",
+      "user_visible_behavior": "Claims with `source_type: api` are re-run through the `fi` client from their URL and stay `verified` only if counts match exactly and floats within ±1 %; same-dimension claims with similar statements whose values differ by more than 25 % are both marked `conflict` and kept, with the source preference order recorded.",
+      "status": "not_started",
+      "depends_on": ["F-004", "F-005", "F-007"],
+      "ticket": "IF-209",
+      "spec": "docs/TICKETS.md#if-209-api-re-query-verification-and-conflict-detection",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_verify.py (api mismatch → unverified; conflict at 24 % no, 26 % yes, non-numeric ignored)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Absorbs IF-210 (conflict detection)."
+    },
+    {
+      "id": "F-009",
+      "priority": 9,
+      "area": "observability",
+      "title": "Usage report and basic status",
+      "user_visible_behavior": "`scripts/usage_report.py <run_id>` prints tool calls, searches, fetches and approximate tokens per stage and per agent and lists budget markers; `/status` lists recent runs and their stages, and `/status <run_id>` shows claims per dimension by verification state, fired kill flags, failure and budget markers and the usage summary.",
+      "status": "not_started",
+      "depends_on": ["F-001"],
+      "ticket": "IF-212",
+      "spec": "docs/TICKETS.md#if-212-usage-report-and-basic-status",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_usage_report.py tests/test_status.py (golden output on fixture JSONL and a fixture DB)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Absorbs IF-213 (/status basic). The live check on a real run moved to F-013."
+    },
+    {
+      "id": "F-010",
+      "priority": 10,
+      "area": "runs",
+      "title": "Stage state machine and resume",
+      "user_visible_behavior": "`scripts/run_stage.py <run_id> <stage> --begin|--finish` drives each stage; a stage counts as done only when its output file exists and validates; re-running a run resets stages left `running` by a crash and continues with only the unfinished stages and dimensions.",
+      "status": "not_started",
+      "depends_on": ["F-001"],
+      "ticket": "IF-214",
+      "spec": "docs/TICKETS.md#if-214-stage-state-machine-and-resume",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_runs.py (transitions, done needs a valid file, crash reset, mid-stage-2 resume)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Absorbs the Python side of IF-507 (crash-resume test). The manual Claude Code crash test moved to F-013."
+    },
+    {
+      "id": "F-011",
+      "priority": 11,
+      "area": "pipeline",
+      "title": "Validate and research skills, stages 0–3",
+      "user_visible_behavior": "`/validate <idea>` runs intake (≤ 5 clarifying questions, founder defaults), the research plan, all 11 research agents in one message with re-launch-once and insufficient-data handling, and claim verification, skipping stages and dimensions already done; `/research <run_id>` runs stages 1–3 of an existing run. A static test keeps the skills consistent with the agent registry and the scripts.",
+      "status": "not_started",
+      "depends_on": ["F-006", "F-007", "F-009", "F-010"],
+      "ticket": "IF-206",
+      "spec": "docs/TICKETS.md#if-206-validate-and-research-skills-stages-03",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_skills.py (skills name every research agent and only existing scripts; each stage wrapped in run_stage.py)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Absorbs IF-207 (parallel research) and IF-215 (/research). The live sauna-idea run moved to F-013."
+    },
+    {
+      "id": "F-012",
+      "priority": 12,
+      "area": "research",
+      "title": "Research briefs tuned and claim-extractor agent",
+      "user_visible_behavior": "Each research brief names concrete search strategies, Finnish search terms and the `fi` tool to use, and has an as-of header hook; a `claim-extractor` agent (role `claim_extractor`) adds candidate claims for cited prose sentences the parser missed, and its output goes through the same verification.",
+      "status": "not_started",
+      "depends_on": ["F-004", "F-005", "F-006", "F-007"],
+      "ticket": "IF-204",
+      "spec": "docs/TICKETS.md#if-204-research-briefs-tuned-and-claim-extractor-agent",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_gen_agents.py (19 agents, briefs name their fi tool, extractor on its role)",
+        "manual: one research agent run live passes validate_file --kind research, and the extractor adds a missed prose claim"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Absorbs IF-211 (claim extractor). Human-only: prompt tuning needs live agent runs."
+    },
+    {
+      "id": "F-013",
+      "priority": 13,
+      "area": "acceptance",
+      "title": "Phase 2 acceptance run",
+      "user_visible_behavior": "On the real sauna-and-lake cabin idea, `/validate` completes stages 0–3: 11 research files (or insufficient_data), ≥ 60 % of claims verified, no invented URL in a 10-claim spot check, the usage report and `/status` work, a re-run skips completed dimensions and a killed stage-2 session resumes.",
+      "status": "not_started",
+      "depends_on": ["F-002", "F-008", "F-011", "F-012"],
+      "ticket": "IF-216",
+      "spec": "docs/TICKETS.md#if-216-phase-2-acceptance-run",
+      "verification": [
+        "L1: pnpm check",
+        "manual: /validate on the sauna idea meets every IF-216 acceptance item; results recorded under the ticket"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Human-only: a real Claude run with network."
+    },
+    {
+      "id": "F-014",
+      "priority": 14,
+      "area": "scoring",
+      "title": "Scoring",
+      "user_visible_behavior": "`ideaforge.scoring` applies the rubric’s named evidence rules, caps unsupported dimensions at 2 with a reason, fires kill triggers from verified claim flags minus spec overrides, computes the weighted total and returns GO / PIVOT / NO_GO / INSUFFICIENT_DATA with thresholds from the rubric.",
+      "status": "not_started",
+      "depends_on": ["F-001"],
+      "ticket": "IF-302",
+      "spec": "docs/TICKETS.md#if-302-scoring",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_scoring.py --cov=ideaforge.scoring --cov-report=term-missing --cov-fail-under=90 (table-driven caps, kill triggers, verdict; coverage at least 90 %)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "F-015",
+      "priority": 15,
+      "area": "scoring",
+      "title": "Unit economics",
+      "user_visible_behavior": "`ideaforge.economics` maps numeric claims to price, variable cost, CAC proxy, fixed costs and volume and returns contribution margin, break-even units per month, payback months and a ±30 % price × volume sensitivity table, listing missing inputs instead of guessing and handling VAT explicitly.",
+      "status": "not_started",
+      "depends_on": ["F-001"],
+      "ticket": "IF-303",
+      "spec": "docs/TICKETS.md#if-303-unit-economics",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_economics.py (known inputs, including a negative margin)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "F-016",
+      "priority": 16,
+      "area": "scoring",
+      "title": "Synthesis and score run",
+      "user_visible_behavior": "`/synthesize <run_id>` writes `04_scores_proposed.json` and `04_risks.json` from only the spec, verified and conflict claims and the rubric, citing a claim id for every justification; `scripts/score_run.py <run_id>` drops non-existent or unverified citations, applies scoring and economics and writes `04_scores.json` and the scores table.",
+      "status": "not_started",
+      "depends_on": ["F-014", "F-015"],
+      "ticket": "IF-304",
+      "spec": "docs/TICKETS.md#if-304-synthesis-and-score-run",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_score_run.py tests/test_skills.py (end to end on fixtures; permit_impossible flips the verdict to NO_GO; unverified citations dropped)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Absorbs IF-301 (synthesizer and /synthesize)."
+    },
+    {
+      "id": "F-017",
+      "priority": 17,
+      "area": "report",
+      "title": "Report rendering with Finland and Rääkkylä sections",
+      "user_visible_behavior": "`scripts/render_report.py <run_id>` writes an immutable `05_report.md`: verdict, score table with cap labels, kill triggers, unit economics and sensitivity, dimension sections, Finland funding fit (each item backed by an official-source claim or shown as an unverified gap), Rääkkylä notes, risk register, sources and usage summary.",
+      "status": "not_started",
+      "depends_on": ["F-009", "F-016"],
+      "ticket": "IF-305",
+      "spec": "docs/TICKETS.md#if-305-report-rendering-with-finland-and-rääkkylä-sections",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_report.py (snapshot; under 3 sources capped at 2 with a label; funding gap rendered, never a finland.yaml value; overwrite refused)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Absorbs IF-306 (Finland funding fit and Rääkkylä sections)."
+    },
+    {
+      "id": "F-018",
+      "priority": 18,
+      "area": "report",
+      "title": "Starttiraha business-plan draft",
+      "user_visible_behavior": "The report includes a liiketoimintasuunnitelma skeleton and a kannattavuuslaskelma table from the unit economics, in the language chosen in IF-150, where every figure traces to a claim id or is marked as an assumption.",
+      "status": "not_started",
+      "depends_on": ["F-002", "F-017"],
+      "ticket": "IF-307",
+      "spec": "docs/TICKETS.md#if-307-starttiraha-business-plan-draft",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_report.py (draft in the configured language; every calculation figure traced or marked as an assumption)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Rendering on the real run moved to F-020."
+    },
+    {
+      "id": "F-019",
+      "priority": 19,
+      "area": "runs",
+      "title": "Versioning, meta.json and validate --from",
+      "user_visible_behavior": "`meta.json` records the prompts/config commit, a models snapshot, the Claude Code version and timestamps; `/validate --from <run_id>` creates `<run_id>-v2` linked through `idea_versions.parent` and leaves the v1 run and report unchanged.",
+      "status": "not_started",
+      "depends_on": ["F-010", "F-017"],
+      "ticket": "IF-308",
+      "spec": "docs/TICKETS.md#if-308-versioning-metajson-and-validate---from",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_versioning.py (meta fields; v2 directory and parent link; v1 report unchanged)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "F-020",
+      "priority": 20,
+      "area": "acceptance",
+      "title": "Phase 3 acceptance run",
+      "user_visible_behavior": "On the Phase 2 run, synthesis, scoring and rendering produce a report with the Finland sections and the starttiraha draft; a dimension with under 3 sources is capped at 2 and labelled; scoring coverage is at least 90 % and a permit_impossible claim flips the verdict to NO_GO.",
+      "status": "not_started",
+      "depends_on": ["F-013", "F-018", "F-019"],
+      "ticket": "IF-309",
+      "spec": "docs/TICKETS.md#if-309-phase-3-acceptance-run",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_scoring.py --cov=ideaforge.scoring --cov-fail-under=90 (coverage of scoring.py at least 90 %)",
+        "L1: uv run pytest tests/test_score_run.py (permit_impossible flips the verdict to NO_GO)",
+        "manual: the report renders on the real run and meets every IF-309 acceptance item"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Human-only: needs the real run from F-013."
+    },
+    {
+      "id": "F-021",
+      "priority": 21,
+      "area": "debate",
+      "title": "Debate anonymization and rebuttal validation",
+      "user_visible_behavior": "`debate.py anonymize <run_id> <round>` maps roles to P1…P5 with a stored seed and leaks no role names; `scripts/debate_validate.py <run_id> <round>` rejects a stance change without a new claim id or a computation, a disagree without evidence or a gap, unknown or unverified claim ids and a second mini-research request in a round, writing a reason per role.",
+      "status": "not_started",
+      "depends_on": ["F-001"],
+      "ticket": "IF-402",
+      "spec": "docs/TICKETS.md#if-402-debate-anonymization-and-rebuttal-validation",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_debate.py tests/test_debate_validate.py (deterministic anonymization; unsupported stance change rejected, supported one accepted)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Absorbs IF-403 (debate_validate.py)."
+    },
+    {
+      "id": "F-022",
+      "priority": 22,
+      "area": "debate",
+      "title": "Convergence, conformity flag, verdict and revised plan",
+      "user_visible_behavior": "`scripts/debate_converged.py` exits 0 on no new evidence and no moved change, on interim scores moving less than the configured delta, or at max rounds; the conformity flag is recomputed in Python; `render_report.py --debate` writes `debate/revised_plan.md` with a diff against the report, the assumption register and experiments sorted by info value per cost, and the tables are persisted.",
+      "status": "not_started",
+      "depends_on": ["F-017", "F-021"],
+      "ticket": "IF-405",
+      "spec": "docs/TICKETS.md#if-405-convergence-conformity-flag-verdict-and-revised-plan",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_debate_converged.py tests/test_debate.py tests/test_revised_plan.py (each exit condition; conformity flag; revised plan with at least 5 costed experiments)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Absorbs IF-406 (judge verdict and revised plan)."
+    },
+    {
+      "id": "F-023",
+      "priority": 23,
+      "area": "debate",
+      "title": "Debate skill, prompts and mini-research",
+      "user_visible_behavior": "`/debate <run_id>` runs round 0 with the 5 personas in one message, anonymizes, runs rebuttal rounds with validation, one re-prompt, mini-research (at most 3 per debate, enforced in Python) and the convergence check, then the judge and the render, resumable per round; persona briefs see only their evidence subset.",
+      "status": "not_started",
+      "depends_on": ["F-011", "F-022"],
+      "ticket": "IF-407",
+      "spec": "docs/TICKETS.md#if-407-debate-skill-prompts-and-mini-research",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_gen_agents.py tests/test_debate.py tests/test_skills.py (evidence subsets; 4th mini-research refused; round-1 claims usable in round 2; skill wires every step)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Absorbs IF-401 (persona and judge prompts) and IF-404 (mini-research). The live debate moved to F-024."
+    },
+    {
+      "id": "F-024",
+      "priority": 24,
+      "area": "acceptance",
+      "title": "Phase 4 acceptance run",
+      "user_visible_behavior": "On the Phase 2 run, a 3-round debate completes unattended, an unsupported stance change is rejected and re-prompted, and the output lists at least 5 experiments with cost, days and a success threshold.",
+      "status": "not_started",
+      "depends_on": ["F-020", "F-023"],
+      "ticket": "IF-408",
+      "spec": "docs/TICKETS.md#if-408-phase-4-acceptance-run",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_debate.py (conformity flag unit test)",
+        "manual: /debate on the Phase 2 run meets every IF-408 acceptance item"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Human-only: a real Claude run."
+    },
+    {
+      "id": "F-025",
+      "priority": 25,
+      "area": "eval",
+      "title": "Eval checker and eval skill",
+      "user_visible_behavior": "Golden ideas in `tests/golden/*.yaml` are validated by a schema; `scripts/eval_check.py` reports per idea whether the verdict is in range, the must-find facts are among the verified claims and no unverified claim is cited, as a summary table; `/eval [--limit N]` runs the golden ideas sequentially.",
+      "status": "not_started",
+      "depends_on": ["F-016"],
+      "ticket": "IF-502",
+      "spec": "docs/TICKETS.md#if-502-eval-checker-and-eval-skill",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_eval_check.py tests/test_skills.py (synthetic golden and run fixtures)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "F-026",
+      "priority": 26,
+      "area": "eval",
+      "title": "Golden set and eval run",
+      "user_visible_behavior": "Ten researched golden ideas (including obviously bad ones, one real Rääkkylä business and one Finnish regulatory trap) validate, and `/eval` passes on at least 8 of 10.",
+      "status": "not_started",
+      "depends_on": ["F-024", "F-025"],
+      "ticket": "IF-501",
+      "spec": "docs/TICKETS.md#if-501-golden-set-and-eval-run",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_eval_check.py (10 golden files validate)",
+        "manual: /eval passes on at least 8 of 10; summary table recorded under IF-501"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Human-only: the facts must be researched by a person (no invented data)."
+    },
+    {
+      "id": "F-027",
+      "priority": 27,
+      "area": "pipeline",
+      "title": "Back-test as-of, preset wiring and usage-limit docs",
+      "user_visible_behavior": "`/validate --as-of YYYY-MM-DD` adds the no-later-sources header to research briefs and `verify_claims.py` marks claims published after it `unverified` with `after_as_of`; `/validate --preset economy|standard|deep` sets the budget lines and the usage hook’s limits; the README documents usage limits, presets and the model downgrade procedure.",
+      "status": "not_started",
+      "depends_on": ["F-007", "F-011", "F-025"],
+      "ticket": "IF-503",
+      "spec": "docs/TICKETS.md#if-503-back-test-as-of-preset-wiring-and-usage-limit-docs",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_verify.py tests/test_usage.py tests/test_skills.py (after_as_of flag; economy flags BUDGET_EXCEEDED at 7 searches; preset budget lines passed)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Absorbs IF-506 (--preset wiring) and IF-508 (README usage limits and model downgrade)."
+    },
+    {
+      "id": "F-028",
+      "priority": 28,
+      "area": "observability",
+      "title": "Review scores and status diff",
+      "user_visible_behavior": "`/status <run_id> --review` stores 1–5 section scores in the reviews table and `/status --reviews` shows the trend across prompt and model versions; `/status --diff <a> <b>` compares two score sheets per dimension, verdict and kill triggers.",
+      "status": "not_started",
+      "depends_on": ["F-009", "F-019"],
+      "ticket": "IF-504",
+      "spec": "docs/TICKETS.md#if-504-review-scores-and-status-diff",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_status.py (reviews persist and show in the trend; v1/v2 fixture diff)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Absorbs IF-505 (/status --diff)."
+    }
+  ]
+}
