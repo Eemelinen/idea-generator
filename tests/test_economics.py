@@ -483,6 +483,10 @@ def test_unknown_period_is_dropped_not_read_as_monthly():
     assert "volume: unit_economics-001 unit 'nights/season' has no monthly conversion; dropped" in inputs.notes
     ue = economics.compute(inputs)
     assert {"volume", "fixed_costs"} <= set(ue.missing_inputs)
+    site = [claim("unit_economics-002", 40, "visitors/site", "40 visitors per site.")]
+    inputs = economics.inputs_from_claims(site, {"volume": ["unit_economics-002"]})
+    assert inputs.volume is None
+    assert "volume: unit_economics-002 unit 'visitors/site' has no monthly conversion; dropped" in inputs.notes
 
 
 def test_subscription_ignores_an_assigned_frequency():
@@ -509,3 +513,23 @@ def test_negative_margin_sensitivity_and_payback():
     assert table[(-30.0, 30.0)] == pytest.approx((17.5 - 30) * 130 - 400)
     assert ue.payback_months is None
     assert "contribution margin is not positive: the acquisition cost is never paid back" in ue.notes
+
+
+def test_seasonal_costs_are_never_per_unit():
+    claims = [
+        claim("pricing-001", 25, "EUR", "The price is 25 EUR excl. VAT."),
+        claim("unit_economics-001", 3, "EUR", "Firewood per evening costs 3 EUR excl. VAT."),
+        claim("unit_economics-002", 600, "EUR/season", "Insurance costs 600 EUR per season excl. VAT."),
+        claim("unit_economics-003", 900, "nights/kausi", "A peer sells 900 nights per season."),
+    ]
+    assert economics.auto_role(claims[2]) is None
+    assert economics.auto_role(claims[3]) is None
+    ue = economics.unit_economics(claims)
+    assert ue.variable_cost_eur == 3
+    assert economics.computed_triggers(ue) == []
+    assert "unit_economics-002: unit 'EUR/season' has no monthly conversion; not used" in ue.notes
+    assert {"fixed_costs", "volume"} <= set(ue.missing_inputs)
+    inputs = economics.inputs_from_claims(claims, {"variable_cost": ["unit_economics-001", "unit_economics-002"]})
+    assert inputs.variable_cost == (Amount(3, ("unit_economics-001",), "excl"),)
+    assert inputs.incomplete == {"variable_cost"}
+    assert "variable_cost: unit_economics-002 unit 'EUR/season' has no monthly conversion; dropped" in inputs.notes

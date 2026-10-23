@@ -63,6 +63,8 @@ _PER_MONTH = {
 }
 # A price per month or year is a subscription: one unit sold is one customer-month.
 _SUBSCRIPTION_PERIODS = {*_MONTH, *_YEAR}
+# Periods with no fixed length: a figure per season cannot be spread over months or units.
+_SEASONS = {"season", "kausi", "kaudessa", "sesonki", "sesongissa", "summer", "winter", "kesä", "talvi"}
 # `per a night` is per unit, not per annum.
 _PER_RE = re.compile(r"(?:/|\bper\s+(?!an?\b))\s*([a-zäö]+)", re.IGNORECASE)
 _EXCL_VAT_RE = re.compile(
@@ -187,9 +189,14 @@ def _percent(claim: Claim) -> bool:
     return (claim.unit or "").strip() == "%"
 
 
+def seasonal(unit: str) -> bool:
+    """Whether a unit is per season (`EUR/season`, `nights/kausi`): no monthly or per-unit reading."""
+    return any(w in _SEASONS for w in _per_words(unit))
+
+
 def auto_role(claim: Claim) -> str | None:
     """The role a verified claim fills without assignments, or None."""
-    if claim.value is None or not claim.unit:
+    if claim.value is None or not claim.unit or seasonal(claim.unit):
         return None
     text = f"{claim.unit} {claim.statement}"
     role = None
@@ -222,6 +229,8 @@ def _map(role: str, claim: Claim) -> _Mapped | str:
         expected = "'%'" if role in PERCENT_ROLES else "not '%'"
         return f"{role}: {cid} has unit {claim.unit!r}, expected {expected}; dropped"
     value, unit = claim.value, claim.unit or ""
+    if seasonal(unit):
+        return f"{role}: {cid} unit {unit!r} has no monthly conversion; dropped"
     per = period(unit)
     subscription, notes = False, []
     if role == "price" and per in _SUBSCRIPTION_PERIODS:
@@ -269,7 +278,11 @@ def _assigned(
 def _automatic(claims: Iterable[Claim], notes: list[str], vat_registered: bool) -> dict[str, list[_Mapped]]:
     candidates: dict[str, list[_Mapped]] = {}
     for claim in claims:
-        if claim.verification == "verified" and (role := auto_role(claim)) is not None:
+        if claim.verification != "verified":
+            continue
+        if claim.value is not None and claim.unit and seasonal(claim.unit) and numeric_field(claim):
+            notes.append(f"{claim.claim_id}: unit {claim.unit!r} has no monthly conversion; not used")
+        if (role := auto_role(claim)) is not None:
             mapped = _map(role, claim)
             if isinstance(mapped, _Mapped):
                 candidates.setdefault(role, []).append(mapped)

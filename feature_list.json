@@ -329,7 +329,9 @@
       ],
       "evidence": [
         "2026-10-23 pnpm check → pass (working tree on 84df544)",
-        "2026-10-23 uv run pytest tests/test_economics.py → pass (working tree on 84df544)"
+        "2026-10-23 uv run pytest tests/test_economics.py → pass (working tree on 84df544)",
+        "2026-10-23 pnpm check → pass (working tree on 3ada0c3)",
+        "2026-10-23 uv run pytest tests/test_economics.py → pass (working tree on 3ada0c3)"
       ],
       "attempts": 0,
       "notes": ""
