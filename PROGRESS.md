@@ -15,16 +15,12 @@ Repository-local session log. Read it at clock-in, update it at clock-out (AGENT
 - Session 002 (interactive: shared harness): the copied harness is replaced by `@eemelinen/harness` (devDependency, tag `v0.1.0`; the CLI behind every `pnpm harness:*`, new `pnpm harness:doctor`, also run by `./init.sh`) and the plugin `harness@eemelinen-harness` (skills `/harness:clock-in`, `/harness:verify-feature`, `/harness:clock-out`, agent `harness:evaluator`, hooks); the pipeline hooks are unchanged. Project rules live in `harness.config.json` and `docs/harness/generator-notes.md`. The evaluator is no longer generated (`agents.AGENTS["harness:evaluator"]`, 17 generated agents). D-007.
 - Current blocker: none in the repo.
   - Host: `uv`, `claude` and `gh` are installed but not on the Git Bash `PATH` (`~/.local/bin`, `C:\Program Files\GitHub CLI`). The pipeline hooks fail open without `uv`. `gh` is already logged in (account Eemelinen, keyring).
-  - GitHub branch protection does not exist yet, so `harness.config.json` keeps `merge: "wait"`.
+  - Loop merging: `main` is protected with the required check `L1 (pnpm check)` (no review requirement) and `harness.config.json` has `merge: "auto"`, so `pnpm harness:loop` opens a PR per feature and GitHub squash-merges it once CI passes.
 
 ## Next Steps
 
 1. Human, once: add `%USERPROFILE%\.local\bin` and `C:\Program Files\GitHub CLI` to the user `Path`, then open a new terminal and restart VS Code. Run `claude` in the repository once and accept the trust dialog and the harness plugin marketplace.
-2. Human, GitHub (`docs/harness/README.md` § 4):
-   - push `main` (9 commits ahead of `origin/main`); the driver refuses to start until they match, and CI then runs once
-   - allow auto-merge and squash merging
-   - protect `main` with the required check `L1 (pnpm check)`
-   - then set `merge` to `"auto"` in `harness.config.json`
+2. GitHub is set up for unattended runs: `main` is pushed, auto-merge and squash merging are allowed, `main` requires `L1 (pnpm check)`, and the loop merges with `merge: "auto"`.
 3. Human-only features, interactively: F-002 (answer the §13 questions) and F-003 (record the API fixtures with network). They unblock F-004/F-005/F-008, the Phase 2 run and the starttiraha draft.
 4. Unattended: `pnpm harness:loop --dry-run`, then `pnpm harness:loop --once` (F-006 first). Compare the evaluator's verdict with your own and add a row to the rubric's tuning log for each of the first 3–5 runs.
 
