@@ -1,0 +1,203 @@
+{#- 05_report.md, rendered by ideaforge.report. Every figure comes from the run's files. -#}
+# {{ spec.title }}: Ideaforge report
+
+- Run: `{{ run_id }}` (idea `{{ spec.idea_id }}`, version {{ spec.version }})
+- Generated: {{ generated_at }}
+- Idea: {{ spec.one_liner }}
+- Customer: {{ spec.customer }}
+- Revenue model: {{ spec.revenue_model }}
+- Geography: {{ spec.geography | join(" → ") }}
+- Founder: {{ spec.founder_constraints.hours_per_week | score }} h/week, {{ spec.founder_constraints.capital_eur | num(0) }} EUR capital, goal `{{ spec.founder_constraints.goal }}`; VAT {{ "registered" if spec.vat_registered else "not registered" }}
+
+This report is immutable. Scores, caps, kill triggers, the verdict and the unit economics are computed in Python (`config/rubric.yaml`, `score_run.py`); the synthesizer only proposed. Only verified claims count.
+
+## Verdict: {{ sheet.verdict }}
+
+{{ why }}
+
+## Score table
+
+| Dimension | Weight | Proposed | Final | Status |
+| --- | ---: | ---: | ---: | --- |
+{% for s, weight in score_rows %}
+| `{{ s.dimension }}` | {{ weight | num }} | {{ s.proposed_score | score }} | {{ s.final_score | score }} | {% if s.status == "insufficient_data" %}**{{ cap_label }}**: insufficient data ({{ s.cap_reason | cell }}){% else %}scored{% endif %} |
+{% endfor %}
+| **Weighted total** | | | **{{ sheet.weighted_total | num }}** | {{ insufficient }} dimension(s) with insufficient data |
+
+## Kill triggers
+
+| Trigger | State | Verified evidence | Flagged, not counted |
+| --- | --- | --- | --- |
+{% for t in triggers %}
+| `{{ t.trigger }}` | {{ t.state }} | {{ t.evidence | cell }} | {{ t.not_counted | cell }} |
+{% endfor %}
+
+{% if spec.kill_trigger_overrides %}
+Overridden by the founder in the spec: {{ spec.kill_trigger_overrides | join(", ") }}.
+{% else %}
+No kill trigger is overridden in the spec.
+{% endif %}
+
+## Unit economics
+
+| Item | Value |
+| --- | ---: |
+{% for label, value in economics %}
+| {{ label }} | {{ value }} |
+{% endfor %}
+
+{% set ue = sheet.unit_economics %}
+- Input claims: {{ ue.input_claim_ids | join(", ") if ue.input_claim_ids else "none" }}
+- Missing inputs: {{ ue.missing_inputs | join(", ") if ue.missing_inputs else "none" }}
+{% for note in ue.notes %}
+- Note: {{ note }}
+{% endfor %}
+
+### Sensitivity (monthly profit, EUR)
+
+{% if sensitivity %}
+| Price change ↓, volume change → | {{ sensitivity.volumes | join(" | ") }} |
+| --- |{% for v in sensitivity.volumes %} ---: |{% endfor %}
+
+{% for label, cells in sensitivity.rows %}
+| {{ label }} | {{ cells | join(" | ") }} |
+{% endfor %}
+{% else %}
+No sensitivity table: the inputs above are incomplete.
+{% endif %}
+
+## Dimensions
+{% for d in dimensions %}
+
+### {{ d.name }} (`{{ d.id }}`)
+
+{% if d.score %}
+Score: {{ d.score.final_score | score }} of 5 (proposed {{ d.score.proposed_score | score }}){% if d.score.status == "insufficient_data" %}, **{{ cap_label }}**: insufficient data ({{ d.score.cap_reason }}){% endif %}.
+
+Findings (synthesizer's justification): {{ d.score.justification }}
+{% elif d.id == "killcause" %}
+Not scored: kill-cause research feeds the kill triggers above.
+{% else %}
+No score in 04_scores.json.
+{% endif %}
+
+{% if d.cited %}
+Cited verified claims:
+
+{% for c in d.cited %}
+- `{{ c.claim_id }}`: {{ c | claim }} Source: {{ c.source_title | link(c.source_url) }}
+{% endfor %}
+{% elif d.score %}
+Cited verified claims: none.
+{% endif %}
+{% if d.uncited %}
+
+Other verified claims (not cited by the score): {{ d.uncited | join(", ") }}
+{% endif %}
+{% if d.not_counted %}
+
+Not counted (not verified): {% for c in d.not_counted %}`{{ c.claim_id }}` ({{ c.verification }}){{ ", " if not loop.last }}{% endfor %}
+
+{% endif %}
+
+Gaps:
+{% if d.gaps is none %}
+- No research file for this dimension.
+{% elif not d.gaps %}
+- None listed by the research.
+{% else %}
+{% for g in d.gaps %}
+- {{ g }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+## Finland funding fit
+
+Each item counts only when a verified claim on an allow-listed official domain (`config/domains.yaml`) backs it. Eligibility, amounts and conditions change: check the cited page before applying.
+
+{% for p in funding %}
+### {{ p.name }}
+
+{% if p.backing %}
+{% for c in p.backing %}
+- `{{ c.claim_id }}`: {{ c | claim }}
+
+  > {{ c.quote }}
+
+  Source: {{ c.source_title | link(c.source_url) }}, retrieved {{ c.retrieved_at.isoformat(timespec="seconds") }}
+{% endfor %}
+{% else %}
+- **{{ unverified_gap }}**: no verified claim on an official domain covers this.
+{% endif %}
+{% for c, reason in p.not_counted %}
+- Not counted: `{{ c.claim_id }}` ({{ reason }}): {{ c | claim }}
+{% endfor %}
+
+{% endfor %}
+### Funding gaps (financing research)
+
+{% if funding_gaps is none %}
+- No financing research file.
+{% elif not funding_gaps %}
+- None listed by the research.
+{% else %}
+{% for g in funding_gaps %}
+- {{ g }}
+{% endfor %}
+{% endif %}
+
+## Rääkkylä location notes
+
+{% if location_score %}
+Location score: {{ location_score.final_score | score }} of 5{% if location_score.status == "insufficient_data" %}, **{{ cap_label }}**: insufficient data{% endif %}.
+{% endif %}
+
+{% if local_verified %}
+{% for c in local_verified %}
+- `{{ c.claim_id }}`: {{ c | claim }} Source: {{ c.source_title | link(c.source_url) }}
+{% endfor %}
+{% else %}
+- No verified claim about Rääkkylä, Keski-Karjala or North Karelia.
+{% endif %}
+{% if local_other %}
+- Not counted (not verified): {% for c in local_other %}`{{ c.claim_id }}` ({{ c.verification }}){{ ", " if not loop.last }}{% endfor %}
+
+{% endif %}
+
+Location gaps:
+{% if location_gaps is none %}
+- No location research file.
+{% elif not location_gaps %}
+- None listed by the research.
+{% else %}
+{% for g in location_gaps %}
+- {{ g }}
+{% endfor %}
+{% endif %}
+
+## Risk register
+
+{% if risks %}
+| # | Risk | Dimension | Likelihood | Impact | L×I | Mitigation | Claims |
+| ---: | --- | --- | ---: | ---: | ---: | --- | --- |
+{% for r in risks %}
+| {{ loop.index }} | {{ r.risk.risk | cell }} | `{{ r.risk.dimension }}` | {{ r.risk.likelihood }} | {{ r.risk.impact }} | {{ r.severity }} | {{ r.risk.mitigation | cell }} | {{ r.claims | cell }} |
+{% endfor %}
+{% else %}
+The synthesizer listed no risks.
+{% endif %}
+
+## Sources
+
+| Source | Retrieved | Verification | Official | Claims |
+| --- | --- | --- | --- | --- |
+{% for s in sources %}
+| {{ s.title | link(s.url) | cell }} | {{ s.retrieved_at }} | {{ s.verification }} | {{ s.official }} | {{ s.claim_ids }} |
+{% endfor %}
+
+## Usage summary
+
+```text
+{{ usage }}
+```

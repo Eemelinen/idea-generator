@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -300,6 +300,33 @@ def replace_scores(run_id: str, scores: Iterable[DimensionScore]) -> int:
             rows,
         )
     return len(rows)
+
+
+def get_report(run_id: str, kind: str = "report") -> sqlite3.Row | None:
+    with session() as conn:
+        return conn.execute("SELECT * FROM reports WHERE run_id=? AND kind=?", (run_id, kind)).fetchone()
+
+
+def add_report(
+    run_id: str,
+    kind: str,
+    path: str,
+    *,
+    weighted_total: float | None,
+    verdict: str | None,
+    created_at: str,
+    then: Callable[[], None] = lambda: None,
+) -> None:
+    """Insert a run's `reports` row; raises sqlite3.IntegrityError if it already has one.
+
+    `then` (writing the report file) runs inside the transaction, so if it fails no row is left.
+    """
+    with session() as conn:
+        conn.execute(
+            "INSERT INTO reports(run_id, kind, path, weighted_total, verdict, created_at) VALUES (?,?,?,?,?,?)",
+            (run_id, kind, path, weighted_total, verdict, created_at),
+        )
+        then()
 
 
 def stage_set(run_id: str, stage: str, status: str) -> None:

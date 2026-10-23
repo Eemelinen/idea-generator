@@ -226,6 +226,7 @@ def test_research_skill_reuses_validate_stages_1_to_3():
 SYNTHESIZE_SECTIONS = {  # synthesize skill heading → (stage, validator kinds checked before --finish)
     "Stage 5a — Synthesis": ("synthesize", ("scores_proposed", "risks")),
     "Stage 5b — Scoring": ("score", ("scores",)),
+    "Stage 5c — Report": ("report", ()),
 }
 # What the synthesizer may see: the input file synthesis_input.py writes (spec, verified and
 # conflict claims, rubric) and the two files it writes. Anything else is a leak.
@@ -250,6 +251,8 @@ def test_synthesize_stages_are_wrapped_in_run_stage():
             assert begin < check < finish, f"{title}: no validate_file --kind {kind} before --finish"
     scoring = by_title["Stage 5b — Scoring"]
     assert scoring.find("score --begin") < scoring.find("score_run.py <run_id>") < scoring.find("score --finish")
+    rendering = by_title["Stage 5c — Report"]
+    assert rendering.find("report --begin") < rendering.find("render_report.py <run_id>") < rendering.find("report --finish")
 
 
 def test_synthesize_launches_the_registered_synthesizer_with_only_the_allowed_input():

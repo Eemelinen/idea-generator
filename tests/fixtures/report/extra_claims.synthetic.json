@@ -1,0 +1,65 @@
+[
+  {
+    "claim_id": "financing-004",
+    "dimension": "financing",
+    "statement": "Starttiraha can be granted to a person who starts full-time business activity.",
+    "source_url": "https://tyomarkkinatori.fi/synthetic/starttiraha",
+    "source_title": "Synthetic starttiraha page",
+    "quote": "synthetic starttiraha quote",
+    "retrieved_at": "2026-10-23T10:31:00+00:00",
+    "source_type": "official",
+    "confidence": 0.9,
+    "verification": "verified"
+  },
+  {
+    "claim_id": "financing-005",
+    "dimension": "financing",
+    "statement": "Finnvera offers small loans to new entrepreneurs.",
+    "source_url": "https://www.finnvera.fi/synthetic/microloan",
+    "source_title": "Synthetic Finnvera page",
+    "quote": "synthetic Finnvera quote",
+    "retrieved_at": "2026-10-23T10:32:00+00:00",
+    "source_type": "official",
+    "confidence": 0.8,
+    "flags": ["unfetchable"],
+    "verification": "unverified"
+  },
+  {
+    "claim_id": "financing-006",
+    "dimension": "financing",
+    "statement": "A blog says the Leader group funds | rural projects.",
+    "source_url": "https://example.net/synthetic/leader-blog",
+    "source_title": "Synthetic [blog] about Leader",
+    "quote": "synthetic Leader quote",
+    "retrieved_at": "2026-10-23T10:33:00+00:00",
+    "source_type": "news",
+    "confidence": 0.5,
+    "verification": "verified"
+  },
+  {
+    "claim_id": "location-004",
+    "dimension": "location",
+    "statement": "Rääkkylä has a synthetic number of summer residents.",
+    "value": 3000,
+    "unit": "persons",
+    "source_url": "https://www.raakkyla.fi/synthetic/residents",
+    "source_title": "Synthetic Rääkkylä page",
+    "quote": "synthetic Rääkkylä quote",
+    "retrieved_at": "2026-10-23T10:34:00+00:00",
+    "source_type": "official",
+    "confidence": 0.7,
+    "verification": "verified"
+  },
+  {
+    "claim_id": "gtm-004",
+    "dimension": "gtm",
+    "statement": "A North Karelia tourism newsletter reaches local businesses.",
+    "source_url": "https://example.net/synthetic/newsletter",
+    "source_title": "Synthetic newsletter",
+    "quote": "synthetic newsletter quote",
+    "retrieved_at": "2026-10-23T10:35:00+00:00",
+    "source_type": "news",
+    "confidence": 0.6,
+    "verification": "conflict"
+  }
+]

@@ -86,7 +86,8 @@ ideaforge/
 │   ├── scoring.py                 # weighted score, caps, kill triggers, verdict
 │   ├── economics.py               # unit economics calculator
 │   ├── synthesis.py               # stage 5: synthesizer input, score run (score_run.py)
-│   ├── report.py                  # Markdown report renderer
+│   ├── report.py                  # Markdown report renderer (render_report.py)
+│   ├── templates/report.md.j2     # Jinja2 template of 05_report.md
 │   ├── debate.py                  # debate protocol validator + convergence check
 │   ├── usage.py                   # JSONL log of tool calls; per-run tallies
 │   ├── status.py                  # /status text: recent runs, one run's claims, flags, markers, usage
@@ -102,7 +103,7 @@ ideaforge/
 │   ├── verify_claims.py           # stage 3 verification over a run
 │   ├── synthesis_input.py         # stage 5: the synthesizer's only input file
 │   ├── score_run.py               # stage 5 scoring
-│   ├── render_report.py
+│   ├── render_report.py           # stage 5: the immutable 05_report.md + its reports row
 │   ├── debate_validate.py         # validate a round's rebuttals; reject unsupported stance changes
 │   ├── debate_converged.py        # exit code 0 if converged
 │   ├── usage_report.py
@@ -314,7 +315,7 @@ Already written by stage 3. `/status <run_id>` prints: claims per dimension (ver
    - Computes `weighted_total` (0–5) and verdict: ≥3.5 GO, 2.5–3.5 PIVOT, <2.5 NO_GO; if ≥3 dimensions are `insufficient_data` → `INSUFFICIENT_DATA`.
    - Runs `economics.py` on numeric claims (price, COGS, CAC proxy, fixed costs, volume assumptions) → contribution margin, break-even units/month, payback months, and a sensitivity table (±30% on price and volume). Missing inputs are listed, not guessed. The inputs are the synthesizer's `unit_economics_inputs`; a negative margin fires `negative_contribution_margin` only when they were assigned and every assigned per-unit cost reads as per unit sold (otherwise economics.py's automatic pick or an odd unit is reported but cannot force NO_GO).
    - Writes `04_scores.json`.
-3. `scripts/render_report.py <run_id>` → `05_report.md` with sections: Verdict & one-paragraph why · Score table · Kill triggers · Unit economics · Dimension sections (findings, cited claim ids, gaps) · Finland funding fit (starttiraha / Leader / elinvoimakeskus / Finnvera eligibility notes, each with its official-source claim) · Rääkkylä location notes · Risk register · Starttiraha-format business plan draft (liiketoimintasuunnitelma skeleton + kannattavuuslaskelma from `economics.py`) · Sources (url, title, retrieved_at, verification state) · Usage summary.
+3. `scripts/render_report.py <run_id>` (`ideaforge.report`, run by `/synthesize` as stage `report`) → `05_report.md` with sections: Verdict & one-paragraph why · Score table (cap labels) · Kill triggers · Unit economics + sensitivity · Dimension sections (findings, cited claim ids, gaps from the research file's `## Gaps`) · Finland funding fit (starttiraha / Leader / elinvoimakeskus / Finnvera eligibility notes, each with its verified official-source claim, or "unverified – see gaps"; never a `config/finland.yaml` value) · Rääkkylä location notes · Risk register · Sources (url, title, retrieved_at, verification state) · Usage summary. It stores a `reports` row and refuses to overwrite an existing report. The starttiraha-format business plan draft (liiketoimintasuunnitelma skeleton + kannattavuuslaskelma from `economics.py`) is IF-307. Rules: TICKETS.md plan note 23.
 4. Orchestrator shows the verdict and offers `/debate <run_id>`.
 
 ### Stage 6 — Persistence/versioning
