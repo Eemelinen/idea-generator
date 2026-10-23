@@ -55,6 +55,10 @@ def get(name: str | None) -> AgentSpec | None:
     return AGENTS.get(name or "")
 
 
+def research_agent(dimension: str) -> AgentSpec | None:
+    return AGENTS.get(_research_name(dimension))
+
+
 def research_output(run_dir: Path, spec: AgentSpec) -> Path:
     return run_dir / "02_research" / f"{spec.dimension}.md"
 

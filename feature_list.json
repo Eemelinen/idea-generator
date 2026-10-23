@@ -130,7 +130,7 @@
       "area": "research",
       "title": "Full research validator",
       "user_visible_behavior": "`validate_file --kind research` rejects a figure without a following quote block (years, dates and claim ids exempt) and any cited URL that never appeared in the agent’s `.seen_urls.txt` (except `ideaforge.fi` API URLs), and warns about factual sentences without `[src: …]`.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-001"],
       "ticket": "IF-205",
       "spec": "docs/TICKETS.md#if-205-full-research-validator",
@@ -138,7 +138,12 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_validate_file.py (table-driven bare-number, src-tag and URL-provenance cases)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-23 pnpm check → pass (working tree on d299da5)",
+        "2026-10-23 uv run pytest tests/test_validate_file.py → pass (working tree on d299da5)",
+        "2026-10-23 pnpm check → pass (working tree on 55aaa5a)",
+        "2026-10-23 uv run pytest tests/test_validate_file.py → pass (working tree on 55aaa5a)"
+      ],
       "attempts": 0,
       "notes": "The no-false-rejections check on real files moved to F-013 (IF-216)."
     },
