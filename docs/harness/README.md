@@ -44,7 +44,8 @@ repository, never here.
     `.env*`, and asks before edits to `config/models.yaml`.
   - The pipeline guard `ideaforge.guard` runs next to it. It treats `HARNESS_LOOP=1` as a
     development session (D-005) and lets the `harness:evaluator` agent run only the read-only
-    harness checks.
+    harness checks, `pnpm test:py` and `grep`/`head`/`tail`/`wc`. Text inside quotes is not
+    read as a redirect or a pipe.
 - **Clean-state checks beyond the core.**
   - no skip/only/xfail added under `tests/`
   - no `fail_under` coverage threshold removed from `pyproject.toml`

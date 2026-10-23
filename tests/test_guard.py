@@ -157,6 +157,11 @@ def test_harness_loop_never_relaxes_subagents(active_run, monkeypatch):
     "pnpm check",
     "pnpm harness:feature show F-006",
     "uv run pytest tests/test_guard.py",
+    # Denied to the F-006 loop evaluator before quotes and read-only filters were allowed.
+    "pnpm test:py && git status --short",
+    "pnpm harness:check 2>&1 | tail -5; uv run pytest tests/test_validate_file.py -q 2>&1 | tail -3",
+    'grep -n "URL_RE\\|seen_urls\\|def " src/ideaforge/usage.py | head -50; cat -A tests/x.txt | head -3',
+    'git grep -n -e "Findings" -e "> quote" -- prompts agent_templates | head -30',
 ])
 def test_evaluator_runs_read_only_checks(project, cmd):
     assert guard.check_bash(bash(cmd, **EVALUATOR)) is None
@@ -167,6 +172,13 @@ def test_evaluator_runs_read_only_checks(project, cmd):
     "pnpm harness:verify F-006",
     "pnpm install",
     "pnpm check > runs/out.txt",
+    "FAST=1 ./init.sh",
+    'uv run python -c "print(1)"',
+    "grep -rn x src > runs/hits.txt",
+    # Quotes do not hide an operator outside them, and an unterminated quote hides nothing.
+    'git log --grep "a" > runs/log.txt',
+    'git log "x" | sort -o runs/x.txt',
+    'git log "x; pnpm install',
 ])
 def test_evaluator_cannot_change_state(project, cmd):
     assert guard.check_bash(bash(cmd, **EVALUATOR)) is not None
@@ -187,3 +199,8 @@ def test_main_exits_2_with_reason(project, monkeypatch, capsys):
         guard.main(["write"])
     assert exc.value.code == 2
     assert "outside the project" in capsys.readouterr().err
+
+
+def test_read_only_filters_are_for_the_evaluator_only(project):
+    assert guard.check_bash(bash("cat x | head -3", **RESEARCH)) is not None
+    assert guard.check_bash(bash("git log | tail -5")) is not None
