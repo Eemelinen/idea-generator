@@ -1,0 +1,4 @@
+# Shell scripts run under bash on every platform (hooks, init.sh, clean-state check); a CRLF
+# checkout on Windows breaks them with "$'\r': command not found".
+*.sh text eol=lf
+.husky/* text eol=lf

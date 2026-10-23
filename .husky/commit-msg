@@ -1,0 +1,7 @@
+pnpm commitlint --edit "$1"
+
+# No AI attribution in commit messages (CLAUDE.md): reject generator footers and trailers.
+if grep -qiE '^(🤖|.*generated with .*claude|co-authored-by:.*(claude|anthropic))' "$1"; then
+  echo "commit-msg: AI attribution lines are not allowed in commit messages." >&2
+  exit 1
+fi

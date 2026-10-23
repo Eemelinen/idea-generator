@@ -1,0 +1,44 @@
+{
+  "name": "ideaforge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Development tooling for Ideaforge: the agent harness (feature queue, verification gates, loop driver) and commit gates. The pipeline itself is Python (see pyproject.toml).",
+  "type": "module",
+  "packageManager": "pnpm@10.15.0",
+  "engines": {
+    "node": ">=22.12.0",
+    "pnpm": ">=10"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test:unit": "vitest run",
+    "test:py": "uv run pytest",
+    "check": "pnpm typecheck && pnpm format:check && pnpm test:unit && pnpm test:py",
+    "harness:check": "tsx scripts/validate-feature-list.ts",
+    "harness:feature": "tsx scripts/harness-feature.ts",
+    "harness:verify": "tsx scripts/verify-feature.ts",
+    "harness:clean-state": "bash scripts/clean-state-check.sh",
+    "harness:loop": "tsx scripts/harness-loop.ts",
+    "harness:report": "tsx scripts/harness-loop.ts --report",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "21.2.2",
+    "@commitlint/config-conventional": "21.2.2",
+    "@types/node": "24.19.2",
+    "husky": "9.1.7",
+    "lint-staged": "17.5.0",
+    "prettier": "3.9.6",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3",
+    "vitest": "5.0.0",
+    "zod": "4.5.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

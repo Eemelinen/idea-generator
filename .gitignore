@@ -15,3 +15,10 @@ ideaforge.db-*
 
 # Local dev-mode marker (relaxes the write/bash guard for the main session)
 .ideaforge-dev
+
+# Node tooling for the agent harness
+node_modules/
+coverage/
+
+# Harness traces, run log and stop-hook counters (scripts/harness-loop.ts)
+.harness/
