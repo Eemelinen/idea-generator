@@ -318,8 +318,10 @@ def validate_research(
         problems.append(f"duplicate claim ids: {', '.join(dupes)}")
 
     if max_words is None:
+        # The run's preset (meta.json), as the brief and the usage hook use; else the default.
         key = "killcause_scout" if dimension == "killcause" else "research_subagent"
-        max_words = getattr(config.budget().preset(), key).max_output_words
+        budget, preset = config.budget(), usage.run_preset(path.parent.parent)
+        max_words = getattr(budget.preset(preset if preset in budget.presets else None), key).max_output_words
     prose = FENCED_JSON_RE.sub("", md)
     words = len(prose.split())
     if words > max_words:

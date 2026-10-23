@@ -240,7 +240,7 @@
       "area": "pipeline",
       "title": "Validate and research skills, stages 0–3",
       "user_visible_behavior": "`/validate <idea>` runs intake (≤ 5 clarifying questions, founder defaults), the research plan, all 11 research agents in one message with re-launch-once and insufficient-data handling, and claim verification, skipping stages and dimensions already done; `/research <run_id>` runs stages 1–3 of an existing run. A static test keeps the skills consistent with the agent registry and the scripts.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-006", "F-007", "F-009", "F-010"],
       "ticket": "IF-206",
       "spec": "docs/TICKETS.md#if-206-validate-and-research-skills-stages-03",
@@ -248,7 +248,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_skills.py (skills name every research agent and only existing scripts; each stage wrapped in run_stage.py)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-23 pnpm check → pass (commit 25e0d92)",
+        "2026-10-23 uv run pytest tests/test_skills.py → pass (commit 25e0d92)"
+      ],
       "attempts": 0,
       "notes": "Absorbs IF-207 (parallel research) and IF-215 (/research). The live sauna-idea run moved to F-013."
     },

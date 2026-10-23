@@ -273,10 +273,12 @@ def test_cli_begin_finish_next(run, capsys):
 def test_cli_resume_and_insufficient_data(run, capsys):
     complete(run, "intake", "plan")
     runs.begin(RUN, "research:market")
+    runs.set_active("20261023-110000-other-run")
     assert run_stage.main([RUN, "--resume"]) == 0
     out = capsys.readouterr().out.splitlines()
-    assert out[0] == "reset: research:market: running -> pending"
-    assert out[1:] == RESEARCH
+    assert out[:2] == [f"active: {RUN}", "reset: research:market: running -> pending"]
+    assert out[2:] == RESEARCH
+    assert runs.active_run_id() == RUN  # the hooks now log and validate for the resumed run
     assert run_stage.main([RUN, "research:market", "--insufficient-data"]) == 0
     assert capsys.readouterr().out == "research:market: insufficient_data\n"
 
