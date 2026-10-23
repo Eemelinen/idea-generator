@@ -13,15 +13,15 @@ Repository-local session log. Read it at clock-in, update it at clock-out (AGENT
   - Ready now, human-only: F-002 (§13 decisions), F-003 (record API fixtures). Both gate later work.
 - Last verified commit: `db97340` (working tree with only `feature_list.json` changed by activate/verify). `pnpm harness:verify F-000` and `F-001` ran green on 2026-10-23: `pnpm check` = 25 Vitest + 124 pytest tests in about 14 s. The evidence lines are in `feature_list.json`.
 - Current blocker: none in the repo.
-  - Host: `uv`, `claude` and `gh` are installed but not on the Git Bash `PATH` (`~/.local/bin`, `C:\Program Files\GitHub CLI`). The pipeline hooks fail open without `uv`.
+  - Host: `uv`, `claude` and `gh` are installed but not on the Git Bash `PATH` (`~/.local/bin`, `C:\Program Files\GitHub CLI`). The pipeline hooks fail open without `uv`. `gh` is already logged in (account Eemelinen, keyring).
   - GitHub branch protection does not exist yet, so `harness.config.json` keeps `merge: "wait"`.
 
 ## Next Steps
 
-1. Human, once: add `%USERPROFILE%\.local\bin` and `C:\Program Files\GitHub CLI` to the user `Path`, then open a new terminal and restart VS Code. Run `gh auth login`. Run `claude` in the repository once and accept the trust dialog.
+1. Human, once: add `%USERPROFILE%\.local\bin` and `C:\Program Files\GitHub CLI` to the user `Path`, then open a new terminal and restart VS Code. Run `claude` in the repository once and accept the trust dialog.
 2. Human, GitHub (`docs/harness/README.md` § 4):
+   - push `main` (9 commits ahead of `origin/main`); the driver refuses to start until they match, and CI then runs once
    - allow auto-merge and squash merging
-   - push `main` so CI runs once
    - protect `main` with the required check `L1 (pnpm check)`
    - then set `merge` to `"auto"` in `harness.config.json`
 3. Human-only features, interactively: F-002 (answer the §13 questions) and F-003 (record the API fixtures with network). They unblock F-004/F-005/F-008, the Phase 2 run and the starttiraha draft.
@@ -57,6 +57,21 @@ Repository-local session log. Read it at clock-in, update it at clock-out (AGENT
   4. Harness models are the alias `opus`, kept equal to `models.yaml` by a test (D-004).
   5. Phase gates became `depends_on` (D-006).
   6. `merge: "wait"` until branch protection exists.
-- Verification run: see the F-000 / F-001 evidence. `pnpm check` (25 Vitest + 124 pytest tests), `pnpm harness:check`, `./init.sh` and `FAST=1 ./init.sh`, and the porting guide's § 8 acceptance checks 1–9 (results in the commit that records this entry).
+- Verification run: the F-000 / F-001 evidence, plus the porting guide's § 8 acceptance checks 1–9, all passing:
+  1. `pnpm install` runs husky (`core.hooksPath=.husky/_`).
+  2. `pnpm harness:check` prints `29 features · 2 passing … 9 ready (7 unattended) · VCR 2/2`.
+  3. `pnpm check`: 25 Vitest and 124 pytest tests in about 14 s.
+  4. `./init.sh` and `FAST=1 ./init.sh` both exit 0.
+  5. `scripts/clean-state-check.sh` on the committed tree: all `[ok]`. Probes confirmed that an added `@pytest.mark.skip` and an added `breakpoint()` are caught.
+  6. Hooks:
+     - `session-start.sh` prints the summary.
+     - `guard.sh` blocks npm, bare python/pytest and `pip install`.
+     - It denies `uv.lock` / `pnpm-lock.yaml` (also via backslash paths) and `.claude/agents/*`, and asks on `config/models.yaml`.
+     - With `HARNESS_LOOP=1` it denies a write outside the repo, `mkdir -p ~/x` and `git push`.
+     - `ideaforge.guard` allows a `src/` write in a marker-less worktree only with `HARNESS_LOOP=1`.
+  7. Commit gates: commitlint rejects "bad message"; commit-msg rejects an AI attribution trailer; both the guard's commit gate and lint-staged reject a `passing` feature without evidence.
+  8. `pnpm harness:feature next` → F-006. `pnpm harness:loop --dry-run` passes preflight and prints the worktree and `claude` commands for the 7 ready unattended features. Its only warning is that `main` is ahead of `origin/main` (not pushed, by design). A one-off probe `claude -p --model opus` answered (claude-opus-5-5).
+  9. A fresh worktree with committed files only: `FAST=1 ./init.sh` and `pnpm check` pass. The worktree and branch were removed afterwards.
+- Fixed during the checks: the clean-state debugger check matched its own pattern in `scripts/clean-state-check.sh` (now `*.py` only), and the guard's Python rules matched heredoc lines (now command position only).
 - Known risk: the driver has not run for real (no `pnpm harness:loop --once` yet), CI has not run on GitHub, and the evaluator rubric is uncalibrated.
 - Next best step: Next Steps 1–4 above.
