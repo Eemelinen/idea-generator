@@ -3,11 +3,14 @@
     uv run python scripts/run_stage.py <run_id> <stage> --begin              # pending|failed -> running
     uv run python scripts/run_stage.py <run_id> <stage> --finish             # running -> done | failed
     uv run python scripts/run_stage.py <run_id> <stage> --insufficient-data  # research dimension only
-    uv run python scripts/run_stage.py <run_id> --resume   # repair after a crash ("reset: ..." lines), then --next
+    uv run python scripts/run_stage.py <run_id> --resume   # make it the active run, repair after a crash
+                                                           # ("active: ..." and "reset: ..." lines), then --next
     uv run python scripts/run_stage.py <run_id> --next     # the stages to run now, one per line
 
 A stage is done only when its output file(s) exist and validate; --finish on an invalid output
-marks the stage failed and prints why. Exit 0 on success, 1 when the transition is refused.
+marks the stage failed and prints why. --resume also writes runs/.active, so the hooks log usage
+and validate files for this run when a session picks up an older one (/research <run_id>).
+Exit 0 on success, 1 when the transition is refused.
 """
 
 from __future__ import annotations
@@ -46,7 +49,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{args.stage}: insufficient_data")
         else:
             if args.action == "resume":
-                for stage, old, new in runs.resume(args.run_id):
+                changes = runs.resume(args.run_id)
+                runs.set_active(args.run_id)
+                print(f"active: {args.run_id}")
+                for stage, old, new in changes:
                     print(f"reset: {stage}: {old} -> {new}")
             for stage in runs.next_stages(args.run_id):
                 print(stage)

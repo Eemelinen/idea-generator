@@ -22,14 +22,16 @@ If downloads fail with `invalid peer certificate: UnknownIssuer`, something on t
 Inside Claude Code, in this directory:
 
 ```
-/validate <idea text>        # full pipeline (Phase 2+)
+/validate [--preset economy|standard|deep] <idea text>   # stages 0–3 (intake → claim verification)
+/validate <run_id>           # resume a run: skips completed stages and research dimensions
+/research <run_id>           # stages 1–3 of an existing run
 /status [run_id]
 /debate <run_id>             # Phase 4
 ```
 
-Status: Phase 1 (the skeleton) is done; of Phase 2, the research validator, claim verification (`uv run python scripts/verify_claims.py <run_id>`), the usage report, basic `/status` and the stage state machine are built. See `docs/TICKETS.md` for what comes next.
+Status: Phase 1 (the skeleton) is done; of Phase 2, the research validator, claim verification (`uv run python scripts/verify_claims.py <run_id>`), the usage report, basic `/status`, the stage state machine and the `/validate` and `/research` skills for stages 0–3 are built. See `docs/TICKETS.md` for what comes next.
 
-- `uv run python scripts/run_stage.py <run_id> <stage> --begin|--finish|--insufficient-data` moves one stage through `pending → running → done | failed` (`insufficient_data` for a research dimension that failed twice); a stage is done only when its output file(s) exist and validate. `run_stage.py <run_id> --resume` repairs the stages a crash left `running` and prints the stages to run next (`--next` prints them without repairing).
+- `uv run python scripts/run_stage.py <run_id> <stage> --begin|--finish|--insufficient-data` moves one stage through `pending → running → done | failed` (`insufficient_data` for a research dimension that failed twice); a stage is done only when its output file(s) exist and validate. `run_stage.py <run_id> --resume` makes the run active for the hooks, repairs the stages a crash left `running` and prints the stages to run next (`--next` prints them without repairing).
 - `uv run python scripts/usage_report.py <run_id>`: tool calls, searches, fetches and approximate tokens per stage and per agent, plus the run's `BUDGET_EXCEEDED_*` markers.
 - `/status` (`uv run python scripts/status.py [run_id] [--limit N]`): the recent runs and their stages; with a run id, its stages, claims per dimension by verification state, kill flags fired, validation and budget markers and the usage summary.
 

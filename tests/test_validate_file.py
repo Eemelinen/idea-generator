@@ -43,6 +43,24 @@ def test_research_word_limit(tmp_path):
         vf.validate_research(research_file(tmp_path), max_words=20)
 
 
+def word_problem(path):
+    try:
+        vf.validate_research(path, seen=None)
+    except vf.Invalid as e:
+        return "words" in str(e)
+    return False
+
+
+@pytest.mark.parametrize("preset,too_long", [(None, True), ("standard", True), ("deep", False), ("nope", True)])
+def test_research_word_limit_follows_the_run_preset(tmp_path, preset, too_long):
+    # 1400 words of summary: over the standard limit (1200), under deep (1600).
+    text = RESEARCH_FIXTURE.read_text(encoding="utf-8").replace("\n## ", "\n" + "word " * 1400 + "\n\n## ", 1)
+    path = research_file(tmp_path, text)
+    if preset:
+        (tmp_path / "meta.json").write_text(f'{{"budget_preset": "{preset}"}}', encoding="utf-8")
+    assert word_problem(path) is too_long
+
+
 def test_research_requires_claim_blocks(tmp_path):
     text = "# pricing\n\n## Candidate claims\n\nnone\n\n## Gaps\n\n- everything\n"
     with pytest.raises(vf.Invalid, match="no ```json"):
