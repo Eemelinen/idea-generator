@@ -1,0 +1,32 @@
+{
+  "scores": [
+    {
+      "dimension": "market",
+      "proposed_score": 3,
+      "justification": "600 000 nights in North Karelia (market-001) support a small beachhead.",
+      "supporting_claim_ids": ["market-001"],
+      "final_score": 2,
+      "cap_reason": "min_sources: 1 of 3 independent verified sources",
+      "status": "insufficient_data"
+    }
+  ],
+  "weighted_total": 2.1,
+  "kill_triggers_fired": [],
+  "verdict": "NO_GO",
+  "unit_economics": {
+    "price_eur": 700,
+    "variable_cost_eur": 180,
+    "contribution_margin_eur": 520,
+    "contribution_margin_pct": 74.3,
+    "fixed_costs_month_eur": 900,
+    "cac_eur": null,
+    "volume_month": 4,
+    "break_even_units_month": 1.73,
+    "payback_months": null,
+    "sensitivity": [
+      {"price_change_pct": -30, "volume_change_pct": 0, "monthly_profit_eur": 440}
+    ],
+    "missing_inputs": ["cac_eur"],
+    "input_claim_ids": ["pricing-002", "unit_economics-004"]
+  }
+}

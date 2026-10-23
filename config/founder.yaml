@@ -1,0 +1,7 @@
+# Founder constraints applied to every idea (open decision IF-150).
+# PLACEHOLDER VALUES: set confirmed: true once the user has confirmed them.
+confirmed: false
+hours_per_week: 20
+capital_eur: 5000
+skills: []
+goal: side_income        # side_income | full_time | starttiraha

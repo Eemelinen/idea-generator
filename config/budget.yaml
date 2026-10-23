@@ -1,0 +1,46 @@
+# Usage budgets. Claude Code has no hard max_uses for built-in tools, so these are
+# (1) stated in every subagent prompt and (2) counted by the PostToolUse hook, which
+# writes runs/<run_id>/BUDGET_EXCEEDED_<agent> when a limit is passed.
+#
+# Select a preset with `/validate --preset economy|standard|deep`.
+default_preset: standard
+
+presets:
+  economy:
+    research_subagent:
+      max_web_searches: 6
+      max_web_fetches: 6
+      max_output_words: 1000
+    killcause_scout:
+      max_web_searches: 8
+      max_web_fetches: 6
+    debate:
+      max_rounds: 2
+      max_mini_research_tasks: 1
+      convergence_score_delta: 0.25
+
+  standard:
+    research_subagent:
+      max_web_searches: 8
+      max_web_fetches: 8
+      max_output_words: 1200
+    killcause_scout:
+      max_web_searches: 10
+      max_web_fetches: 8
+    debate:
+      max_rounds: 3
+      max_mini_research_tasks: 3
+      convergence_score_delta: 0.25
+
+  deep:
+    research_subagent:
+      max_web_searches: 12
+      max_web_fetches: 12
+      max_output_words: 1600
+    killcause_scout:
+      max_web_searches: 14
+      max_web_fetches: 12
+    debate:
+      max_rounds: 3
+      max_mini_research_tasks: 3
+      convergence_score_delta: 0.25

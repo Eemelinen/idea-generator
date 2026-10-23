@@ -1,0 +1,20 @@
+{
+  "idea_id": "sauna-cabins-remote-work",
+  "title": "Sauna-and-lake cabins for remote workers",
+  "one_liner": "Week-long cabin rentals with sauna, fibre and a desk on Lake Orivesi for remote workers.",
+  "customer": "Remote-working professionals in Helsinki and abroad who want a quiet working retreat.",
+  "problem": "Holiday cottages rarely have reliable internet, a proper desk or availability outside summer.",
+  "solution": "Two renovated lakeside cabins with fibre, ergonomic desks, wood-fired sauna and weekly rates.",
+  "revenue_model": "Weekly rental fee; optional add-ons (meals, guided nature trips).",
+  "geography": ["Rääkkylä", "North Karelia", "Finland", "online"],
+  "founder_constraints": {
+    "hours_per_week": 20,
+    "capital_eur": 15000,
+    "skills": ["carpentry", "hospitality"],
+    "goal": "side_income"
+  },
+  "clarifications": [
+    {"question": "Do you already own the cabins?", "answer": "One cabin is owned; the second would be rented."}
+  ],
+  "version": 1
+}

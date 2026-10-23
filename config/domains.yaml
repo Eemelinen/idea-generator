@@ -1,0 +1,39 @@
+# Official-source allow-list. Regulatory, tax and grant claims must cite one of these.
+# Matching is by registrable suffix: "vero.fi" also matches "www.vero.fi".
+# Entries with a path (ec.europa.eu/eurostat) match only URLs under that path.
+official:
+  - vero.fi
+  - prh.fi
+  - ytj.fi
+  - avoindata.prh.fi
+  - suomi.fi
+  - tyomarkkinatori.fi
+  - finlex.fi
+  - elinvoimakeskus.fi
+  - finnvera.fi
+  - businessfinland.fi
+  - luotsipohjoiskarjala.fi
+  - jetina.fi
+  - maaseutu.fi
+  - raakkyla.fi
+  - stat.fi
+  - pxdata.stat.fi
+  - luke.fi
+  - statdb.luke.fi
+  - ec.europa.eu/eurostat
+
+# Preferred (not required) domains per dimension, on top of the official list.
+# Research agents try these first; scoring only requires the official list where the
+# rubric's evidence_rule says has_official_source.
+preferred:
+  customer: []
+  market: [stat.fi, luke.fi, ec.europa.eu/eurostat, visitfinland.fi, businessfinland.fi]
+  competition: [ytj.fi, avoindata.prh.fi, finder.fi, asiakastieto.fi]
+  pricing: []
+  unit_economics: [stat.fi, vero.fi]
+  gtm: []
+  regulation: [vero.fi, prh.fi, suomi.fi, finlex.fi, ruokavirasto.fi, tukes.fi, raakkyla.fi]
+  financing: [tyomarkkinatori.fi, elinvoimakeskus.fi, finnvera.fi, businessfinland.fi, jetina.fi, maaseutu.fi]
+  location: [raakkyla.fi, luotsipohjoiskarjala.fi, stat.fi, pohjois-karjala.fi]
+  founder_risk: []
+  killcause: [ytj.fi, avoindata.prh.fi]

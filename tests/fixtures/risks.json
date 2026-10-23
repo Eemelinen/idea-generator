@@ -1,0 +1,12 @@
+{
+  "risks": [
+    {
+      "risk": "Winter demand may be too low to cover fixed costs.",
+      "dimension": "market",
+      "likelihood": 3,
+      "impact": 4,
+      "mitigation": "Offer winter packages and test them with a landing page before investing.",
+      "claim_ids": ["market-001"]
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+# HINTS, NOT FACTS. Every value here must be confirmed against its verify_url at
+# runtime before it is cited. Research agents cite the official page, never this file.
+# Values were not checked when this file was written: treat every number as stale.
+
+geography_ladder: [Rääkkylä, Keski-Karjala, Pohjois-Karjala, Suomi, online/EU]   # open decision IF-150
+
+hints:
+  vat_small_business_threshold:
+    description: Annual turnover under which a business need not register for VAT (vähäinen toiminta).
+    value_eur: 20000
+    verify_at_runtime: true
+    verify_url: https://www.vero.fi/yritykset-ja-yhteisot/verot-ja-maksut/arvonlisaverotus/
+  vat_general_rate:
+    description: General VAT rate.
+    value_pct: 25.5
+    verify_at_runtime: true
+    verify_url: https://www.vero.fi/yritykset-ja-yhteisot/verot-ja-maksut/arvonlisaverotus/verokannat/
+  yel_minimum_income:
+    description: Income threshold above which YEL (entrepreneur pension insurance) is mandatory.
+    value_eur: null
+    verify_at_runtime: true
+    verify_url: https://www.etk.fi/
+  starttiraha:
+    description: Start-up grant paid to a new full-time entrepreneur (daily amount, max duration, conditions).
+    daily_amount_eur: null
+    max_months: 12
+    verify_at_runtime: true
+    verify_url: https://tyomarkkinatori.fi/
+  leader_group:
+    description: Leader action group covering Rääkkylä (rural development funding).
+    name: Jetina
+    verify_at_runtime: true
+    verify_url: https://www.jetina.fi/
+  employment_area:
+    description: Employment area / business advisory for North Karelia (starttiraha decisions, advice).
+    name: Pohjois-Karjalan työllisyysalue / Luotsi
+    verify_at_runtime: true
+    verify_url: https://www.luotsipohjoiskarjala.fi/
+  elinvoimakeskus_grants:
+    description: Regional business development grants (successor to ELY business services from 2026).
+    verify_at_runtime: true
+    verify_url: https://www.elinvoimakeskus.fi/
+  finnvera_microloan:
+    description: Finnvera small loans and guarantees for new entrepreneurs.
+    verify_at_runtime: true
+    verify_url: https://www.finnvera.fi/
+  business_registration:
+    description: Registering a toiminimi / osakeyhtiö (start-up notification, fees).
+    verify_at_runtime: true
+    verify_url: https://www.prh.fi/
+  municipality:
+    description: Rääkkylä municipality facts (population, services, land use, business contact).
+    name: Rääkkylä
+    region: Pohjois-Karjala
+    sub_region: Keski-Karjala
+    verify_at_runtime: true
+    verify_url: https://www.raakkyla.fi/

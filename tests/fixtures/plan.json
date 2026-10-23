@@ -1,0 +1,22 @@
+{
+  "run_id": "20261023-120000-sauna-cabins",
+  "dimensions": [
+    {
+      "dimension": "market",
+      "questions": [
+        "How many remote workers in Finland take working retreats?",
+        "How many cottage nights were sold in North Karelia in 2025?"
+      ],
+      "search_strategy": "StatFin accommodation statistics via PxWeb, then Visit Finland reports.",
+      "preferred_domains": ["stat.fi", "visitfinland.fi"],
+      "evidence_needed": "An official count of accommodation nights in North Karelia and one spend-per-night figure."
+    },
+    {
+      "dimension": "killcause",
+      "questions": ["Which remote-work cabin businesses in Finland have closed?"],
+      "search_strategy": "PRH search by TOL 55201 in North Karelia, then news.",
+      "preferred_domains": ["avoindata.prh.fi"],
+      "evidence_needed": "Named closed businesses with a stated reason."
+    }
+  ]
+}

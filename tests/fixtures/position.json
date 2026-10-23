@@ -1,0 +1,9 @@
+{
+  "role": "investor",
+  "objections": [
+    {"text": "The beachhead counts all overnight stays, not remote workers.", "claim_ids": ["market-001"]}
+  ],
+  "proposed_change": "Size the beachhead from remote-worker data, not total accommodation nights.",
+  "expected_score_impact": {"market": -0.5},
+  "confidence": 0.7
+}

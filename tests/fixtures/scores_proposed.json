@@ -1,0 +1,16 @@
+{
+  "scores": [
+    {
+      "dimension": "market",
+      "proposed_score": 3,
+      "justification": "600 000 nights in North Karelia (market-001) support a small beachhead.",
+      "supporting_claim_ids": ["market-001"]
+    },
+    {
+      "dimension": "regulation",
+      "proposed_score": 0,
+      "justification": "no verified evidence",
+      "supporting_claim_ids": []
+    }
+  ]
+}

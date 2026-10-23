@@ -1,0 +1,17 @@
+# Python / uv
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Runtime data
+runs/*
+!runs/.gitkeep
+cache/
+ideaforge.db
+ideaforge.db-*
+
+# Local dev-mode marker (relaxes the write/bash guard for the main session)
+.ideaforge-dev

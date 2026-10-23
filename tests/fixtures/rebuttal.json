@@ -1,0 +1,25 @@
+{
+  "role": "founder",
+  "round": 1,
+  "responses": [
+    {
+      "target_position_id": "P2",
+      "stance": "modify",
+      "basis": {"new_claim_ids": ["market-007"]},
+      "cited_claim_ids": []
+    },
+    {
+      "target_position_id": "P4",
+      "stance": "disagree",
+      "basis": {"evidence_gap": "No verified claim on winter occupancy for comparable cabins."},
+      "cited_claim_ids": []
+    }
+  ],
+  "updated_change": null,
+  "updated_change_basis": null,
+  "mini_research": {
+    "question": "What is the winter occupancy rate of rental cottages in North Karelia?",
+    "dimension": "market",
+    "requested_by": "founder"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "accepted_changes": [
+    {"change": "Size the beachhead from remote-worker data.", "claim_ids": ["market-007"], "reason": "Total nights overstate the segment."}
+  ],
+  "rejected_changes": [
+    {"change": "Add a third cabin in year one.", "claim_ids": [], "reason": "No verified demand evidence beyond two cabins."}
+  ],
+  "assumption_register": [
+    {"assumption": "Remote workers will book week-long stays in winter.", "evidence_state": "untested", "risk_if_wrong": "Fixed costs are not covered for five months a year."}
+  ],
+  "experiments": [
+    {"name": "Winter landing page with deposit", "cost_eur": 60, "days": 14, "success_threshold": "5 paid deposits", "info_value": 5}
+  ],
+  "projected_scores": {"market": 2.5},
+  "conformity_flag": false
+}

@@ -1,0 +1,34 @@
+[
+  {
+    "claim_id": "market-001",
+    "dimension": "market",
+    "statement": "Accommodation establishments in North Karelia recorded 600 000 overnight stays in 2025.",
+    "value": 600000,
+    "unit": "nights",
+    "source_url": "https://pxdata.stat.fi/PXWeb/api/v1/fi/StatFin/matk/statfin_matk_pxt_11ic.px",
+    "source_title": "Majoituskapasiteetti ja yöpymiset alueittain",
+    "quote": "Pohjois-Karjala yöpymiset yhteensä 2025: 600 000",
+    "published_date": "2026-02-15",
+    "retrieved_at": "2026-10-23T12:10:00Z",
+    "source_type": "api",
+    "confidence": 0.9,
+    "flags": [],
+    "verification": "verified"
+  },
+  {
+    "claim_id": "competition-001",
+    "dimension": "competition",
+    "statement": "A free municipal remote-work space operates in the Rääkkylä library.",
+    "value": null,
+    "unit": null,
+    "source_url": "https://www.raakkyla.fi/",
+    "source_title": "Rääkkylän kunta",
+    "quote": "Kirjaston etätyöpiste on maksutta kuntalaisten ja vierailijoiden käytössä.",
+    "published_date": null,
+    "retrieved_at": "2026-10-23T12:12:00Z",
+    "source_type": "official",
+    "confidence": 0.7,
+    "flags": ["free_good_enough_substitute"],
+    "verification": "unverified"
+  }
+]

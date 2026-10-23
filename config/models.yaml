@@ -1,0 +1,13 @@
+# Single source of truth. Values: opus | sonnet | haiku (Claude Code aliases).
+# After editing, run: uv run python scripts/gen_agents.py
+roles:
+  orchestrator: opus          # main session; the user sets this with /model
+  research_subagent: opus
+  killcause_scout: opus
+  claim_extractor: opus       # downgrade candidate #1 (haiku) when limits bite
+  synthesizer: opus
+  debate_persona: opus        # downgrade candidate #2 (sonnet)
+  debate_judge: opus
+notes: |
+  Downgrade order if usage limits are hit: claim_extractor → debate_persona → research_subagent.
+  Keep synthesizer and debate_judge on opus longest.
