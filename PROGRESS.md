@@ -9,11 +9,11 @@ Repository-local session log. Read it at clock-in, update it at clock-out (AGENT
 - Standard verification path: L1 `pnpm check` (Prettier, `pnpm harness:check`, `uv run pytest`). There is no L2/L3 (D-001). Per feature: `pnpm harness:verify F-NNN`.
 - Phase 1 skeleton (F-001), the harness (F-000), the full research validator (F-006) and claim verification (F-007) are `passing`. Otherwise nothing in Phase 2+ is built: `fi/` clients are stubs, and there is no API re-query or conflict detection, scoring, report, debate or eval code yet.
 - F-006: `validate_file --kind research` (and the SubagentStop hook) rejects figures without a following `>` quote and cited URLs missing from the agent's `.seen_urls.txt` (API URLs in `ideaforge.fi.API_URL_PREFIXES` exempt), and warns about factual sentences without `[src: …]` (hook mode also writes `VALIDATION_WARNINGS_<agent>`). The rule choices are TICKETS.md plan note 15; IF-216 (F-013) tunes them on real files.
-- F-007: `uv run python scripts/verify_claims.py <run_id>` (`ideaforge.verify`) parses the candidate claims of `02_research/*.md` into `03_claims/<dim>.json`, fetches each source once (robots.txt, 10 s timeout, UA, truststore; text cached in `cache/<sha256(url)>.txt`, `sources` rows), sets `verified` at normalized `partial_ratio ≥ 90`, flags `unfetchable` / `robots_disallowed`, types allow-listed URLs `official` (not `api`), and writes `03_claims/verified.json` + `claims` rows. Rules chosen unattended: TICKETS.md plan note 16.
+- F-007: `uv run python scripts/verify_claims.py <run_id>` (`ideaforge.verify`, lxml + trafilatura, XHTML declarations stripped) parses the candidate claims of `02_research/*.md` into `03_claims/<dim>.json`, fetches each source once (robots.txt, 10 s timeout, UA, truststore; text cached in `cache/<sha256(url)>.txt`, `sources` rows), sets `verified` at normalized `partial_ratio ≥ 90`, flags `unfetchable` / `robots_disallowed`, types allow-listed URLs `official` (not `api`), and writes `03_claims/verified.json` + `claims` rows. Rules chosen unattended: TICKETS.md plan note 16.
 - Queue: 29 features (`pnpm harness:feature list`), 20 unattended and 7 human-only among the 27 open.
   - Ready now, unattended: F-009 (usage report + status), F-010 (stage state machine), F-014 (scoring), F-015 (economics), F-021 (debate anonymization + validation). F-011 also needs F-009 and F-010; F-008 needs F-004/F-005 (behind F-003).
   - Ready now, human-only: F-002 (§13 decisions), F-003 (record API fixtures). Both gate later work.
-- Last verified: branch `feat/F-007` on 2026-10-23, `pnpm harness:verify F-007` green (`pnpm check` = Prettier, `harness:check` and 228 pytest tests passed, 1 Windows-only skip; `tests/test_verify.py` 41 passed). F-000/F-001/F-006 evidence lines are in `feature_list.json`.
+- Last verified: branch `feat/F-007` on 2026-10-23, `pnpm harness:verify F-007` green (`pnpm check` = Prettier, `harness:check` and 228 pytest tests passed, 1 Windows-only skip; `tests/test_verify.py` 46 passed, attempt 2 after the evaluator's XHTML finding). F-000/F-001/F-006 evidence lines are in `feature_list.json`.
 - Session 002 (interactive: shared harness): the copied harness is replaced by `@eemelinen/harness` (devDependency, tag `v0.2.0`; the CLI behind every `pnpm harness:*`, new `pnpm harness:doctor`, also run by `./init.sh`) and the plugin `harness@eemelinen-harness` (skills `/harness:clock-in`, `/harness:verify-feature`, `/harness:clock-out`, agent `harness:evaluator`, hooks); the pipeline hooks are unchanged. Project rules live in `harness.config.json` and `docs/harness/generator-notes.md`. The evaluator is no longer generated (`agents.AGENTS["harness:evaluator"]`, 17 generated agents). D-007.
 - Current blocker: none in the repo.
   - Host: `uv`, `claude` and `gh` are installed but not on the Git Bash `PATH` (`~/.local/bin`, `C:\Program Files\GitHub CLI`). The pipeline hooks fail open without `uv`. `gh` is already logged in (account Eemelinen, keyring).
@@ -27,6 +27,19 @@ Repository-local session log. Read it at clock-in, update it at clock-out (AGENT
 4. Unattended: `pnpm harness:loop` continues with the next ready feature (F-009 by priority). Compare the evaluator's verdict with your own and add a row to the rubric's tuning log for each of the first 3–5 runs.
 
 ## Session Log
+
+### Session 005 — 2026-10-23 (driver-run: F-007 attempt 2, evaluator revisions)
+
+- Goal: address the evaluator's Revise verdict on F-007 (correctness 1, maintainability 1).
+- Completed (commit c20324f):
+  - `verify.page_text` strips a leading `<?xml … encoding=…?>` declaration (and BOM) before `lxml.html.fromstring`, which rejects an already-decoded str that declares an encoding. `extract_text` falls back to `trafilatura.extract` on any lxml `ValueError`/`LxmlError`, so XHTML sources are no longer flagged `unfetchable`.
+  - `lxml` is a direct dependency (`uv add "lxml>=5.3"`; it was only pulled in by trafilatura).
+  - `VerifyResult.files` → `by_file` (verified claims per research file stem); `summary()` groups by file stem, so a file whose claims name another dimension no longer prints a stray `0 claims` line.
+  - Cache temp file is `<hash>.txt.<pid>.tmp` and is removed if the write or rename fails.
+  - Tests: XHTML with an encoding declaration (`text/html` and `application/xhtml+xml`) is `ok` and its quote matches; the trafilatura fallback; the temp file is cleaned up after a failed rename; summary grouping by stem. Plan note 16 updated.
+- Choice (no one to ask): a failed cache write still raises (a full disk should stop the run, not mark sources unfetchable).
+- Verification run: `pnpm harness:verify F-007` → `pnpm check` (233 passed, 1 skipped) and `uv run pytest tests/test_verify.py` (46 passed).
+- Next best step: F-009 or F-010.
 
 ### Session 004 — 2026-10-23 (driver-run: F-007 claim verification)
 
