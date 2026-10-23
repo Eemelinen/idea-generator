@@ -253,7 +253,7 @@ Gaps:
 
 ## Finland funding fit
 
-Each item counts only when a verified claim on an allow-listed official domain (`config/domains.yaml`) backs it. Eligibility, amounts and conditions change: check the cited page before applying.
+Each item counts only when a verified financing claim on an allow-listed official domain (`config/domains.yaml`) backs it. Eligibility, amounts and conditions change: check the cited page before applying.
 
 ### Starttiraha (start-up grant)
 
@@ -265,16 +265,16 @@ Each item counts only when a verified claim on an allow-listed official domain (
 
 ### Leader (Jetina)
 
-- **unverified – see gaps**: no verified claim on an official domain covers this.
+- **unverified – see gaps**: no verified financing claim on an official domain covers this.
 - Not counted: `financing-006` (not on an allow-listed official domain): A blog says the Leader group funds | rural projects.
 
 ### Elinvoimakeskus business development grants
 
-- **unverified – see gaps**: no verified claim on an official domain covers this.
+- **unverified – see gaps**: no verified financing claim on an official domain covers this.
 
 ### Finnvera loans and guarantees
 
-- **unverified – see gaps**: no verified claim on an official domain covers this.
+- **unverified – see gaps**: no verified financing claim on an official domain covers this.
 - Not counted: `financing-005` (unverified): Finnvera offers small loans to new entrepreneurs.
 
 ### Funding gaps (financing research)

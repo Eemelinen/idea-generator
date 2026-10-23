@@ -114,7 +114,7 @@ Gaps:
 
 ## Finland funding fit
 
-Each item counts only when a verified claim on an allow-listed official domain (`config/domains.yaml`) backs it. Eligibility, amounts and conditions change: check the cited page before applying.
+Each item counts only when a verified financing claim on an allow-listed official domain (`config/domains.yaml`) backs it. Eligibility, amounts and conditions change: check the cited page before applying.
 
 {% for p in funding %}
 ### {{ p.name }}
@@ -123,12 +123,12 @@ Each item counts only when a verified claim on an allow-listed official domain (
 {% for c in p.backing %}
 - `{{ c.claim_id }}`: {{ c | claim }}
 
-  > {{ c.quote }}
+  > {{ c.quote | oneline }}
 
   Source: {{ c.source_title | link(c.source_url) }}, retrieved {{ c.retrieved_at.isoformat(timespec="seconds") }}
 {% endfor %}
 {% else %}
-- **{{ unverified_gap }}**: no verified claim on an official domain covers this.
+- **{{ unverified_gap }}**: no verified financing claim on an official domain covers this.
 {% endif %}
 {% for c, reason in p.not_counted %}
 - Not counted: `{{ c.claim_id }}` ({{ reason }}): {{ c | claim }}

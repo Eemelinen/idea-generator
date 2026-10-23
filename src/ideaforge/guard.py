@@ -5,6 +5,8 @@
 
 Policy (exit 2 = deny, reason on stderr):
 - Writes outside the project root, or into .git/, are always denied.
+- runs/<run_id>/05_report.md is never written by a tool: render_report.py writes it once
+  (reports are immutable).
 - Subagents are always strict: a research agent may write only its own
   runs/<run_id>/02_research/<dimension>.md, the synthesizer only
   runs/<run_id>/04_scores_proposed.json and 04_risks.json, a debate agent only
@@ -32,6 +34,7 @@ from typing import Any
 
 from ideaforge import agents, config, hookio, runs
 
+REPORT_NAME = runs.STAGE_OUTPUTS["report"][0][0]
 NETWORK_RE = re.compile(
     r"(?i)(^|[\s;&|(])(curl|wget|invoke-webrequest|iwr|invoke-restmethod|irm|start-bitstransfer)(\.exe)?\b"
 )
@@ -103,6 +106,8 @@ def check_write(data: dict[str, Any]) -> str | None:
         return f"write denied: {target} is outside the project ({root})"
     if _within(target, root / ".git"):
         return "write denied: .git/ is never written by tools"
+    if target.name == REPORT_NAME and target.parent.parent == config.RUNS_DIR.resolve():
+        return f"write denied: {REPORT_NAME} is written only by scripts/render_report.py, and reports are immutable"
 
     runs_dir, cache_dir = config.RUNS_DIR, config.CACHE_DIR
     if hookio.is_subagent(data):

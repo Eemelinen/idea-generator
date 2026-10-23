@@ -53,15 +53,17 @@ class Programme:
     domains: tuple[str, ...] = ()  # official domains that are the programme's own site
 
 
-# A claim is about a programme when its statement, source title or quote names it, or its URL is
-# on the programme's own domain. Only verified claims on an allow-listed domain back it.
+# Only `financing` claims are about a programme: elinvoimakeskus.fi also hosts environmental and
+# shoreline permits, and "leader" or "starttiraha" appear in competition and tax claims. A
+# financing claim is about a programme when its statement, source title or quote names it, or its
+# URL is on the programme's own site; only the verified ones on an allow-listed domain back it.
 PROGRAMMES = (
     Programme("starttiraha", "Starttiraha (start-up grant)", re.compile(r"starttirah|start-?up grant", re.I)),
-    Programme("leader", "Leader (Jetina)", re.compile(r"\bleader\b|jetina", re.I), ("jetina.fi",)),
+    Programme("leader", "Leader (Jetina)", re.compile(r"jetina|\bleader\b(?!ship)", re.I), ("jetina.fi",)),
     Programme(
         "elinvoimakeskus",
         "Elinvoimakeskus business development grants",
-        re.compile(r"elinvoimakesk|\bely\b", re.I),
+        re.compile(r"elinvoimakesk|\bely-keskus|\bely cent(?:re|er)", re.I),
         ("elinvoimakeskus.fi",),
     ),
     Programme("finnvera", "Finnvera loans and guarantees", re.compile(r"finnvera", re.I), ("finnvera.fi",)),
@@ -119,7 +121,7 @@ def environment() -> Environment:
         keep_trailing_newline=True,
         autoescape=False,
     )
-    env.filters.update(cell=cell, num=num, score=score_fmt, link=link, claim=claim_text)
+    env.filters.update(oneline=lambda text: " ".join(str(text).split()), cell=cell, num=num, score=score_fmt, link=link, claim=claim_text)
     return env
 
 
@@ -202,7 +204,11 @@ def kill_trigger_rows(sheet: ScoreSheet, claims: list[Claim], overrides: Iterabl
             state = "not fired"
         evidence = ", ".join(verified)
         if trigger in sheet.kill_triggers_fired and not verified:
-            evidence = "computed: contribution margin below 0"
+            evidence = (
+                "computed: contribution margin below 0"
+                if trigger == "negative_contribution_margin"
+                else "no verified claim carries it now: 04_scores.json may be stale, re-run score_run.py"
+            )
         rows.append({"trigger": trigger, "state": state, "evidence": evidence, "not_counted": ", ".join(other)})
     return rows
 
@@ -254,11 +260,15 @@ def _mentions(c: Claim, pattern: re.Pattern[str]) -> bool:
 
 
 def funding_fit(claims: list[Claim]) -> list[dict[str, Any]]:
-    """Per programme: the verified official claims that back it and the mentions that do not count."""
+    """Per programme: the verified official financing claims that back it and the financing claims
+    about it that do not count."""
+    financing = [c for c in claims if c.dimension == "financing"]
     out = []
     for p in PROGRAMMES:
         about = [
-            c for c in claims if _mentions(c, p.pattern) or any(verify.domain_matches(c.source_url, d) for d in p.domains)
+            c
+            for c in financing
+            if _mentions(c, p.pattern) or any(verify.domain_matches(c.source_url, d) for d in p.domains)
         ]
         backing = [c for c in about if c.verification == "verified" and verify.is_official(c.source_url)]
         out.append(
@@ -323,7 +333,8 @@ def dimension_sections(
     for dim in (*RUBRIC_DIMENSIONS, "killcause"):
         own = [c for c in claims if c.dimension == dim]
         s = scores.get(dim)
-        cited = [by_id[cid] for cid in s.supporting_claim_ids if cid in by_id] if s else []
+        cited_ids = s.supporting_claim_ids if s else []
+        cited = [by_id[cid] for cid in cited_ids if cid in by_id and by_id[cid].verification == "verified"]
         out.append(
             {
                 "id": dim,

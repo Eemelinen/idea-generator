@@ -180,6 +180,42 @@ def test_funding_backed_only_by_verified_official_claims(scored):
     assert "- No official page found on Leader (Jetina) funding" in subsection(funding, "Funding gaps (financing research)")
 
 
+def synthetic_claim(claim_id, statement, url, **fields):
+    return {
+        "claim_id": claim_id, "dimension": claim_id.rsplit("-", 1)[0], "statement": statement,
+        "source_url": url, "source_title": "Synthetic page", "quote": "synthetic quote",
+        "retrieved_at": "2026-10-23T10:36:00+00:00", "source_type": "official", "confidence": 0.8,
+        "verification": "verified",
+    } | fields  # fmt: skip
+
+
+def test_off_topic_official_claims_never_back_a_programme(scored):
+    off_topic = [
+        synthetic_claim("regulation-005", "A shoreline building permit is applied for from the ELY-keskus.",
+                        "https://www.elinvoimakeskus.fi/synthetic/shoreline-permit"),
+        synthetic_claim("competition-005", "The market leader in cabin rentals is registered in Joensuu.",
+                        "https://www.ytj.fi/synthetic/market-leader"),
+        synthetic_claim("regulation-006", "Starttiraha is taxable income.", "https://www.vero.fi/synthetic/starttiraha-tax"),
+        synthetic_claim("location-005", "Finnvera has an office in Joensuu.", "https://www.finnvera.fi/synthetic/office"),
+    ]  # fmt: skip
+    edit_json(scored / "03_claims" / "verified.json", lambda data: data.extend(off_topic))
+    funding = section(render(scored), "Finland funding fit")
+    for name in ("Leader (Jetina)", "Elinvoimakeskus business development grants", "Finnvera loans and guarantees"):
+        assert f"**{report.UNVERIFIED_GAP}**" in subsection(funding, name), name
+    for cid in ("regulation-005", "competition-005", "regulation-006", "location-005"):
+        assert cid not in funding, cid
+    assert "`financing-004`" in subsection(funding, "Starttiraha (start-up grant)")  # the financing claim still backs it
+
+
+def test_financing_claim_on_a_programme_site_backs_it(scored):
+    claim = synthetic_claim("financing-007", "Business development grants support new small companies.",
+                            "https://www.elinvoimakeskus.fi/synthetic/grants")  # fmt: skip
+    edit_json(scored / "03_claims" / "verified.json", lambda data: data.append(claim))
+    body = subsection(section(render(scored), "Finland funding fit"), "Elinvoimakeskus business development grants")
+    assert "- `financing-007`: Business development grants support new small companies." in body
+    assert report.UNVERIFIED_GAP not in body
+
+
 def test_funding_gap_never_shows_a_finland_yaml_value(scored):
     # no claim about any programme: every item is a gap
     edit_json(scored / "03_claims" / "verified.json", lambda data: data.__setitem__(
@@ -187,7 +223,7 @@ def test_funding_gap_never_shows_a_finland_yaml_value(scored):
     funding = section(render(scored), "Finland funding fit")
     for p in report.PROGRAMMES:
         body = subsection(funding, p.name)
-        assert f"- **{report.UNVERIFIED_GAP}**: no verified claim on an official domain covers this." in body
+        assert f"- **{report.UNVERIFIED_GAP}**: no verified financing claim on an official domain covers this." in body
         assert "Not counted" not in body
     values = finland_values()
     assert {"20000", "25.5", "12", "https://tyomarkkinatori.fi/", "https://www.jetina.fi/"} <= values
@@ -350,3 +386,15 @@ def test_research_gaps_without_a_gaps_section(tmp_path):
     (tmp_path / "02_research" / "gtm.md").write_text("# GTM\n\nNo gaps heading.\n", encoding="utf-8")
     assert report.research_gaps(tmp_path, "gtm") == []
     assert report.research_gaps(tmp_path, "pricing") is None
+
+
+def test_fired_trigger_without_evidence_is_called_stale():
+    s = sheet(3.0, "NO_GO", fired=["permit_impossible"])
+    rows = {r["trigger"]: r for r in report.kill_trigger_rows(s, [], [])}
+    assert rows["permit_impossible"]["evidence"].startswith("no verified claim carries it now")
+
+
+def test_multi_line_quote_stays_in_its_block_quote(scored):
+    edit_json(scored / "03_claims" / "verified.json", lambda data: next(
+        c for c in data if c["claim_id"] == "financing-004").__setitem__("quote", "first line\nsecond line"))  # fmt: skip
+    assert "  > first line second line\n" in section(render(scored), "Finland funding fit")
