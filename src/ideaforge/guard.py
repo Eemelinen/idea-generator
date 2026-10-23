@@ -34,10 +34,14 @@ from ideaforge import agents, config, hookio, runs
 NETWORK_RE = re.compile(
     r"(?i)(^|[\s;&|(])(curl|wget|invoke-webrequest|iwr|invoke-restmethod|irm|start-bitstransfer)(\.exe)?\b"
 )
-SEGMENT_SPLIT_RE = re.compile(r"&&|\|\||[;|\n]")
+SEGMENT_SPLIT_RE = re.compile(r"&&|\|\||[;|&\n]")
 SAFE_REDIRECTS_RE = re.compile(r"\d?>&\d|2>\s*(/dev/null|\$null|nul)\b", re.IGNORECASE)
 # A complete '…' or "…" string; an unterminated quote is left alone, so nothing after it hides.
 QUOTED_RE = re.compile(r"'[^']*'|\"(?:[^\"\\]|\\.)*\"")
+# Shell syntax QUOTED_RE cannot read the way the shell does: an escaped quote outside a string
+# (`cat \'; rm -rf src; cat \'`), ANSI-C `$'…'`, a comment, a heredoc. With any of it, quotes are
+# not stripped and the command is checked as written.
+UNQUOTE_UNSAFE_RE = re.compile(r"\\['\"]|\$'|#|<<")
 
 GENERAL_ALLOW = (
     re.compile(r"^uv\s+run\s+(--quiet\s+|-q\s+)?python\s+-m\s+ideaforge(\.|\s|$)"),
@@ -141,11 +145,17 @@ def check_bash(data: dict[str, Any]) -> str | None:
 
     if NETWORK_RE.search(command):
         return "command denied: fetch pages with WebFetch or the ideaforge.fi tools so they are logged and cached"
-    if "$(" in command or "`" in command:
+    if any(token in command for token in ("$(", "`", "<(", ">(")):
         return "command denied: command substitution is not allowed"
     # `>` and `|` inside quotes are pattern text (`git grep -e "a|b"`), not shell operators.
-    unquoted = QUOTED_RE.sub(lambda m: m.group(0)[0] * 2, command)
-    if ">" in SAFE_REDIRECTS_RE.sub("", unquoted):
+    unquoted = (
+        command
+        if UNQUOTE_UNSAFE_RE.search(command)
+        else QUOTED_RE.sub(lambda m: m.group(0)[0] * 2, command)
+    )
+    # `2>&1` is allowed and must not split the command at its `&`.
+    unquoted = SAFE_REDIRECTS_RE.sub("", unquoted)
+    if ">" in unquoted:
         return "command denied: redirecting output to files is not allowed; write files with the Write tool"
 
     spec = agents.get(hookio.agent_name(data)) if subagent else None
