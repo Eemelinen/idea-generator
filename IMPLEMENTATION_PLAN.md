@@ -96,6 +96,7 @@ ideaforge/
 ├── scripts/
 │   ├── gen_agents.py              # render agent_templates/* with config/models.yaml → .claude/agents/
 │   ├── new_run.py                 # create run dir + db row, print run_id
+│   ├── run_stage.py               # stage state machine: --begin/--finish/--insufficient-data/--resume/--next
 │   ├── verify_claims.py           # stage 3 verification over a run
 │   ├── score_run.py               # stage 5 scoring
 │   ├── render_report.py

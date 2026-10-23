@@ -217,7 +217,7 @@
       "area": "runs",
       "title": "Stage state machine and resume",
       "user_visible_behavior": "`scripts/run_stage.py <run_id> <stage> --begin|--finish` drives each stage; a stage counts as done only when its output file exists and validates; re-running a run resets stages left `running` by a crash and continues with only the unfinished stages and dimensions.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-001"],
       "ticket": "IF-214",
       "spec": "docs/TICKETS.md#if-214-stage-state-machine-and-resume",
@@ -225,7 +225,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_runs.py (transitions, done needs a valid file, crash reset, mid-stage-2 resume)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-23 pnpm check → pass (working tree on 3ee220f)",
+        "2026-10-23 uv run pytest tests/test_runs.py → pass (working tree on 3ee220f)"
+      ],
       "attempts": 0,
       "notes": "Absorbs the Python side of IF-507 (crash-resume test). The manual Claude Code crash test moved to F-013."
     },
