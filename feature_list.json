@@ -153,7 +153,7 @@
       "area": "verification",
       "title": "Claim verification: fetch, cache, quote match",
       "user_visible_behavior": "`uv run python scripts/verify_claims.py <run_id>` turns candidate-claim blocks into `03_claims/<dim>.json`, fetches each source (robots.txt respected, 10 s timeout, cached by URL hash), marks a claim `verified` only when its quote matches the page at partial ratio ≥ 90, flags unfetchable and robots-disallowed sources, types allow-listed domains as `official`, and writes `03_claims/verified.json` plus DB rows.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-001"],
       "ticket": "IF-208",
       "spec": "docs/TICKETS.md#if-208-claim-verification-fetch-cache-quote-match",
@@ -161,9 +161,16 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_verify.py (89/90 boundary, normalization, unfetchable, robots, cache hits; no network)"
       ],
-      "evidence": [],
-      "attempts": 0,
-      "notes": ""
+      "evidence": [
+        "2026-10-23 pnpm check → pass (working tree on 57b5077)",
+        "2026-10-23 uv run pytest tests/test_verify.py → pass (working tree on 57b5077)",
+        "2026-10-23 pnpm check → pass (working tree on c56a73c)",
+        "2026-10-23 uv run pytest tests/test_verify.py → pass (working tree on c56a73c)",
+        "2026-10-23 pnpm check → pass (commit c20324f)",
+        "2026-10-23 uv run pytest tests/test_verify.py → pass (commit c20324f)"
+      ],
+      "attempts": 1,
+      "notes": "Attempt 1 failed 2026-10-23: evaluator: Revise"
     },
     {
       "id": "F-008",

@@ -252,6 +252,33 @@ def check_provenance(md: str, claims: list[CandidateClaim], seen: set[str], agen
     ]
 
 
+def candidate_claims(md: str) -> tuple[list[CandidateClaim], list[str]]:
+    """Parse the ```json blocks of a research file's '## Candidate claims' section.
+
+    Returns the claims of every block that validates and one problem line per block that does
+    not. A file without the section yields no claims and no problems.
+    """
+    section = _sections(md).get("candidate claims")
+    if section is None:
+        return [], []
+    claims: list[CandidateClaim] = []
+    problems: list[str] = []
+    adapter = TypeAdapter(list[CandidateClaim])
+    for i, block in enumerate(FENCED_JSON_RE.findall(section), 1):
+        try:
+            data = json.loads(block)
+        except json.JSONDecodeError as e:
+            problems.append(f"candidate-claims JSON block {i} does not parse: {e}")
+            continue
+        try:
+            claims.extend(adapter.validate_python(data if isinstance(data, list) else [data]))
+        except ValidationError as e:
+            problems.append(f"candidate-claims JSON block {i} is not a list of Claim:\n{_format_errors(e)}")
+    if not claims and not problems:
+        problems.append("the '## Candidate claims' section contains no ```json blocks")
+    return claims, problems
+
+
 def validate_research(
     path: Path,
     max_words: int | None = None,
@@ -279,20 +306,8 @@ def validate_research(
     if "gaps" not in sections:
         problems.append("missing the '## Gaps' section")
 
-    claims: list[CandidateClaim] = []
-    adapter = TypeAdapter(list[CandidateClaim])
-    for i, block in enumerate(FENCED_JSON_RE.findall(sections.get("candidate claims", "")), 1):
-        try:
-            data = json.loads(block)
-        except json.JSONDecodeError as e:
-            problems.append(f"candidate-claims JSON block {i} does not parse: {e}")
-            continue
-        try:
-            claims.extend(adapter.validate_python(data if isinstance(data, list) else [data]))
-        except ValidationError as e:
-            problems.append(f"candidate-claims JSON block {i} is not a list of Claim:\n{_format_errors(e)}")
-    if "candidate claims" in sections and not claims and not problems:
-        problems.append("the '## Candidate claims' section contains no ```json blocks")
+    claims, claim_problems = candidate_claims(md)
+    problems.extend(claim_problems)
 
     for c in claims:
         if c.dimension != dimension:
