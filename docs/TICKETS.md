@@ -10,7 +10,7 @@ This file breaks [IMPLEMENTATION_PLAN.md](../IMPLEMENTATION_PLAN.md) (the plan) 
 
 **Order.** Work is ordered by `depends_on`, not by phase. A phase-acceptance ticket (IF-216, IF-309, IF-408, IF-501) gates only the work that needs its real-run output, so pure-Python work keeps moving while a human run waits.
 
-**Verification.** `L1: pnpm check` is always the first step (typecheck, Prettier, harness tests, full pytest). The focused `uv run pytest …` steps name the test files the ticket creates or extends. Tests never touch the network: they run on fixtures recorded by IF-200 or on synthetic fixtures that are clearly labelled as such.
+**Verification.** `L1: pnpm check` is always the first step (Prettier, `pnpm harness:check`, full pytest). The focused `uv run pytest …` steps name the test files the ticket creates or extends. Tests never touch the network: they run on fixtures recorded by IF-200 or on synthetic fixtures that are clearly labelled as such.
 
 ---
 

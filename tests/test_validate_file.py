@@ -85,7 +85,7 @@ def test_auto_ignores_unknown_agents(active_run):
 
 
 def test_auto_ignores_the_harness_evaluator(active_run):
-    assert vf.auto({"agent_id": "e", "agent_type": "evaluator"}, stop=False) == 0
+    assert vf.auto({"agent_id": "e", "agent_type": "harness:evaluator"}, stop=False) == 0
     assert not list(active_run.glob("VALIDATION_FAILED_*"))
 
 

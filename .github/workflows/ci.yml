@@ -26,5 +26,5 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: pnpm install --frozen-lockfile
       - run: uv sync --frozen
-      - name: L1 — typecheck, format, harness unit tests, pytest
+      - name: L1 — format, feature list, pytest
         run: pnpm check

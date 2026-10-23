@@ -25,7 +25,7 @@ Before touching code:
 6. If the baseline is red, fix that first. Never stack feature work on a broken start.
 7. `pnpm harness:feature activate F-NNN` (WIP=1, dependency check) and work only on it.
 
-Claude Code: `/clock-in` runs these steps; the SessionStart hook prints the state summary.
+Claude Code: `/harness:clock-in` runs these steps; the SessionStart hook prints the state summary.
 
 ## Verification layers
 
@@ -36,8 +36,8 @@ Claude Code: `/clock-in` runs these steps; the SessionStart hook prints the stat
 - There is no L2/L3: the project runs no services, and a real pipeline run needs Claude and the network, so features that need one carry a `manual:` step instead (D-001).
 - Steps run in order. Do not proceed to step N+1 while step N fails, and do not skip a step a feature lists.
 - The repository is in a consistent state when `pnpm check` exits 0.
-- `pnpm harness:check` validates `feature_list.json`; it also runs from `pnpm test:unit`, lint-staged and the commit guard.
-- `pnpm harness:verify F-NNN` runs a feature's steps in order and records evidence; `manual:` steps fail closed. `scripts/clean-state-check.sh` is the machine-checkable clock-out gate.
+- `pnpm harness:check` validates `feature_list.json`; it also runs from `pnpm check`, lint-staged and the commit guard.
+- `pnpm harness:verify F-NNN` runs a feature's steps in order and records evidence; `manual:` steps fail closed. `pnpm harness:clean-state` is the machine-checkable clock-out gate.
 
 ## Constraints
 
@@ -52,9 +52,9 @@ Each rule carries a `why:` so it can be revisited when the reason disappears.
 - MUST validate every structured file against a schema in `src/ideaforge/schemas.py`. why: hooks re-prompt once on invalid output, then mark the dimension `INSUFFICIENT_DATA`. source: §0.6.
 - MUST keep the debate anti-sycophantic: isolated round 0, stance changes only with a new claim id or a computation, author-blind judge, max 3 rounds. why: personas otherwise converge on agreement. source: §0.7.
 - MUST cite an allow-listed official domain (`config/domains.yaml`) for regulatory, tax and grant claims, and treat `config/finland.yaml` values as hints to verify, never facts. why: Finnish rules change; stale hints mislead founders. source: §3.6.
-- MUST run Python only through `uv run` (`uv run pytest …`, `uv run python …`) and add dependencies with `uv add`. why: PATH on the dev machine has other Pythons first; `guard.sh` blocks bare `python`/`pytest`/`pip`. source: .claude/hooks/guard.sh.
+- MUST run Python only through `uv run` (`uv run pytest …`, `uv run python …`) and add dependencies with `uv add`. why: PATH on the dev machine has other Pythons first; the harness guard blocks bare `python`/`pytest`/`pip`. source: harness.config.json → guard.
 - MUST keep tests offline and MUST NOT invent fixture data: Finnish API responses come only from IF-200 recordings; synthetic fixtures for logic tests are labelled synthetic. why: tests run in worktrees and CI without network; invented "facts" would pass verification. source: docs/TICKETS.md notes 13–14.
-- MUST NOT skip, xfail or weaken tests, or lower coverage thresholds, to get green. why: verification is the completion gate; `scripts/clean-state-check.sh` checks it.
+- MUST NOT skip, xfail or weaken tests, or lower coverage thresholds, to get green. why: verification is the completion gate; `pnpm harness:clean-state` checks it.
 - MUST update docs affected by a change in the same commit (README, `IMPLEMENTATION_PLAN.md`, `docs/TICKETS.md` plan notes, `docs/DECISIONS.md`). why: stale docs mislead the next session more than no docs.
 - MUST make one logical change per commit, with a conventional-commit subject and a body that explains why, and no AI attribution lines. why: commitlint and the commit-msg hook enforce it; the history is read at every clock-in. source: .husky/commit-msg.
 - MUST NOT add secrets or a `.env`; the project needs none. why: free public APIs only; the deny list blocks `.env`.
@@ -83,16 +83,16 @@ A feature is done only when all of these are true:
 
 ## Clock-out (session end)
 
-1. `scripts/clean-state-check.sh --allow-state-dirty`, then the judgement items of [docs/harness/clean-state-checklist.md](docs/harness/clean-state-checklist.md).
+1. `pnpm harness:clean-state --allow-state-dirty`, then the judgement items of [docs/harness/clean-state-checklist.md](docs/harness/clean-state-checklist.md).
 2. Update `PROGRESS.md`; `feature_list.json` is already updated by `pnpm harness:verify` (or `pnpm harness:feature block`); `pnpm harness:check`.
 3. `pnpm check`.
-4. Optional: score the diff with [docs/harness/evaluator-rubric.md](docs/harness/evaluator-rubric.md) (Claude Code: `evaluator` subagent). Revise before committing if any category is below 2.
+4. Optional: score the diff with [docs/harness/evaluator-rubric.md](docs/harness/evaluator-rubric.md) (Claude Code: the `harness:evaluator` agent). Revise before committing if any category is below 2.
 5. Commit; for long sessions also fill [docs/harness/session-handoff.md](docs/harness/session-handoff.md).
 6. Leave a clean restart path: the next session must be able to run `./init.sh` immediately.
 
 Cleanup is dual-mode: immediate at every clock-out, plus a periodic (monthly) sweep that prunes stale docs and old PROGRESS.md sessions and regrades [docs/harness/quality-document.md](docs/harness/quality-document.md).
 
-Claude Code: `/clock-out` walks these steps; `/verify-feature F-NNN` runs a feature's steps and records evidence.
+Claude Code: `/harness:clock-out` walks these steps; `/harness:verify-feature F-NNN` runs a feature's steps and records evidence.
 
 ## Driver-run sessions
 
@@ -103,4 +103,4 @@ Claude Code: `/clock-out` walks these steps; `/verify-feature F-NNN` runs a feat
 - State: [PROGRESS.md](PROGRESS.md) · [feature_list.json](feature_list.json) · [docs/DECISIONS.md](docs/DECISIONS.md) · [docs/harness/](docs/harness/) (README, prompts, handoff, checklist, rubric, quality document).
 - Spec: [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) (§1 layout, §5 data model, §6 stages) · [docs/TICKETS.md](docs/TICKETS.md) (tickets, plan notes and deviations).
 - Project: [README.md](README.md) · `config/` (models, rubric, Finland hints, domains, budgets, founder) · `prompts/` + `agent_templates/` (sources of `.claude/agents/`) · `src/ideaforge/` · `scripts/` · `tests/` (pytest; `tests/unit/harness/` is Vitest).
-- Tools: Claude Code permissions, hooks, skills and the evaluator subagent are described in [CLAUDE.md](CLAUDE.md) and live in `.claude/`.
+- Tools: the harness CLI and the Claude Code plugin (skills, hooks, evaluator agent) come from the shared harness (`@eemelinen/harness`, configured in [harness.config.json](harness.config.json)); permissions and the pipeline hooks live in `.claude/settings.json`. Both are described in [CLAUDE.md](CLAUDE.md).

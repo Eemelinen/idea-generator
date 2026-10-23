@@ -1,7 +1,7 @@
 # Evaluator rubric
 
 Use after a feature is implemented and before it is accepted. In Claude Code the
-`evaluator` subagent (`.claude/agents/evaluator.md`) applies this rubric to the working-tree
+`harness:evaluator` agent (from the shared harness plugin) applies this rubric to the working-tree
 diff with a fresh context; humans can use it the same way in review.
 
 Score each category 0–2. **Every category must score 2 for Accept**; any 1 → Revise;
@@ -31,9 +31,9 @@ any 0 → Block.
 ## Machine output (loop driver)
 
 The driver (`pnpm harness:loop`) runs the evaluator as a separate `claude -p` session with the
-instructions and tools of `.claude/agents/evaluator.md` (`--append-system-prompt`, `--tools`; `--agent`
-would ignore the schema) and `--json-schema docs/harness/prompts/evaluator-schema.json`, and acts on the result
-without a human: Accept → push + PR, Revise → one bounded retry with the findings appended to
+instructions and tools of the plugin's `agents/evaluator.md` (`--append-system-prompt`, `--tools`;
+`--agent` would ignore the schema) and `--json-schema` with the package's
+`prompts/evaluator-schema.json`, and acts on the result without a human: Accept → push + PR, Revise → one bounded retry with the findings appended to
 the generator prompt, Block → the feature is set `blocked` and the branch is pushed for a human.
 The scores use the keys `correctness`, `verification`, `scope`, `reliability`, `maintainability`,
 `handoff`. A missing or unparsable verdict counts as Revise.

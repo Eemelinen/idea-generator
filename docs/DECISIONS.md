@@ -54,3 +54,31 @@ Format: **Context** (what forced a choice) · **Decision** · **Consequences**.
 - Context: the 44 open tickets were sized for a person (S/M/L), and the plan said "do not start a phase until the previous phase's acceptance passes". In Metsävahti about a third of each driver-run session went on clock-in overhead, so many tiny features cost more than fewer session-sized ones. Strict phase gates would also stop the driver at every human-only acceptance run.
 - Decision: merge tightly coupled tickets into 27 features. Each survivor keeps its IF id and lists what it absorbs. Each is sized for one session (roughly ≤ 100 turns) and has its verification commands. One new ticket, IF-200, records the live API fixtures: offline sessions must never invent fixture data. Work is ordered by `depends_on`; a phase-acceptance feature is a dependency only of the work that needs real-run output. Phase 6 stays an unqueued backlog.
 - Consequences: 20 features can run unattended, and 7 are human-only (`manual:` steps): the §13 decisions, fixture recording, prompt tuning against live runs, the three phase-acceptance runs and the golden set. The phase acceptance criteria from the plan §11 are unchanged; they now sit in those features' `verification` lists.
+
+## D-007 · The harness is the shared package and Claude Code plugin, not a copy (2026-10-23)
+
+- Context: D-001 ported the harness by copying Metsävahti's files at its `harness-reference` tag. The copies drifted at once: this repository fixed the guard's command-start matching (`1094bfa`), Metsävahti fixed the loop's wait on a failed CI check, and neither fix reached the other without porting it by hand.
+- Decision:
+  - **Source.** The harness now comes from `Eemelinen/harness`, pinned to one git tag twice:
+    - the package `@eemelinen/harness` (`devDependencies`; the `harness` CLI behind `pnpm harness:*`);
+    - the Claude Code plugin `harness@eemelinen-harness` (`.claude/settings.json`; skills `/harness:*`, agent `harness:evaluator`, the harness hooks).
+  - **Configuration.** The project values live in `harness.config.json`:
+    - `IF-NNN` tickets;
+    - guard rules: uv-only Python, `pip install`, generated agents, `uv.lock`, `.env*`, `config/models.yaml`;
+    - clean-state checks: skips/xfails, `fail_under`, debugger calls;
+    - `services: null`;
+    - `uv run pytest` / `pnpm test:py` milestones;
+    - the uv and dev-marker session-start lines.
+
+    The plan and offline rules moved into `docs/harness/generator-notes.md`.
+
+  - **Pipeline hooks.** They stay in `.claude/settings.json` next to the plugin.
+  - **Evaluator agent.** It is no longer generated (`agent_templates/evaluator.md.j2` is gone). It is registered as `agents.AGENTS["harness:evaluator"]` (kind `harness`), so `ideaforge.guard` and `validate_file` still recognise it, and `gen_agents.py` skips harness agents.
+  - **Node side.** It shrinks to the harness package, Prettier and the commit gates: TypeScript, tsx, zod and Vitest are removed with the copied scripts and their tests. `pnpm check` is Prettier + `pnpm harness:check` + pytest.
+  - **Plugin loading.** Driver sessions load the plugin from the installed package (`--plugin-dir`) and stop when it is missing.
+  - This amends D-001, D-002 and D-004.
+- Consequences:
+  - Harness fixes arrive by bumping both pins (`docs/harness/README.md`).
+  - Skill names gained the `harness:` prefix.
+  - The evaluator's model for interactive use comes from the plugin (`opus`, the same as `harness_evaluator`); driver runs still take it from `harness.config.json`, which `tests/test_harness_config.py` keeps equal to `config/models.yaml`.
+  - Interactive sessions need the folder trusted once for the marketplace and the permissions to apply.

@@ -3,29 +3,32 @@
 ## Claude Code specifics
 
 The operating manual above applies to every development session. This section covers what
-Claude Code does automatically in this repository (configuration in `.claude/`), then the rules
-for sessions that run the pipeline.
+Claude Code does automatically in this repository, then the rules for sessions that run the
+pipeline. Permissions and the pipeline hooks live in `.claude/settings.json`; the harness hooks,
+skills and evaluator agent come from the shared harness plugin (`harness@eemelinen-harness`,
+pinned to the same tag as the `@eemelinen/harness` package; project rules in
+`harness.config.json`).
 
 - **Permissions** (`.claude/settings.json`):
-  - Run without prompting: read-only git commands, the verification scripts (`pnpm check*`, `typecheck`, `format*`, `test:unit*`, `test:py*`, `uv run pytest*`), the harness scripts (`pnpm harness:*`, `scripts/clean-state-check.sh`), the pipeline commands (`uv run python -m ideaforge*`, `uv run python scripts/*`), `WebSearch`, `WebFetch` and `Agent`.
+  - Run without prompting: read-only git commands, the verification scripts (`pnpm check*`, `format*`, `test:py*`, `uv run pytest*`), the harness scripts (`pnpm harness:*`), the pipeline commands (`uv run python -m ideaforge*`, `uv run python scripts/*`), `WebSearch`, `WebFetch` and `Agent`.
   - Denied: reading or editing `.env`; editing `.claude/agents/**`, `uv.lock` and `pnpm-lock.yaml`; `curl`/`wget`; force pushes; `git reset --hard`.
 - **Hooks**: two sets run side by side, and either can block a call (D-001).
-  - Harness:
-    - `SessionStart` (`session-start.sh`) prints branch, recent commits, Current Verified State, the active feature and the dev-marker state.
-    - `PreToolUse` (`guard.sh`) blocks bare `python`/`pytest`/`pip`, `pip install`, npm/yarn/npx and destructive commands. It runs `pnpm harness:check` before every `git commit`, denies edits to generated agents and lockfiles, and asks before edits to `config/models.yaml`.
-    - `PostToolUse` (`format.sh`) runs Prettier on the edited file, honouring `.prettierignore`, so prompts and config are never reformatted.
-    - `Stop` (`stop-guard.sh`) is inert unless the loop driver sets `HARNESS_STOP_GUARD=1`; then it blocks stopping until the clean-state check passes (D-002).
+  - Harness (plugin, configured in `harness.config.json`):
+    - `SessionStart` prints branch, recent commits, Current Verified State, the active feature and the dev-marker state.
+    - `PreToolUse` (the guard) blocks bare `python`/`pytest`/`pip`, `pip install`, npm/yarn/npx and destructive commands. It runs `pnpm harness:check` before every `git commit`, denies edits to generated agents and lockfiles, and asks before edits to `config/models.yaml`.
+    - `PostToolUse` runs Prettier on the edited file, honouring `.prettierignore`, so prompts and config are never reformatted.
+    - `Stop` is inert unless the loop driver sets `HARNESS_STOP_GUARD=1`; then it blocks stopping until the clean-state check passes (D-002).
   - Pipeline:
     - `PreToolUse` → `ideaforge.guard` (write and shell policy)
     - `PostToolUse` → `ideaforge.usage` (usage log, budget counters)
     - `SubagentStop` / `Stop` → `ideaforge.validate_file --auto`
 - **Development mode**: subagents are always held to the strict pipeline guard. The main session gets the strict policy too (writes only under `runs/` and `cache/`, allow-listed shell commands, no `curl`/`wget`) **unless** the gitignored marker file `.ideaforge-dev` exists at the project root or the loop driver set `HARNESS_LOOP=1` (D-005). Create the marker to develop the project; delete it before running the pipeline unattended.
 - **Skills**:
-  - `/clock-in [F-NNN]` runs the clock-in routine and activates a feature (`pnpm harness:feature activate`).
-  - `/verify-feature F-NNN` runs `pnpm harness:verify`, which executes the feature's steps in order and records evidence.
-  - `/clock-out` runs `scripts/clean-state-check.sh`, updates the state files and commits. It is user-only.
-- **Driver-run sessions**: `pnpm harness:loop` (`scripts/harness-loop.ts`, config in `harness.config.json`) starts one `claude -p` session per ready feature in its own worktree, re-checks the result, runs the evaluator in a second session and opens a PR. How it works: [docs/harness/README.md](docs/harness/README.md).
-- **Subagent** `evaluator` (generated from `agent_templates/evaluator.md.j2`): a fresh-context reviewer that scores a diff against `docs/harness/evaluator-rubric.md`. Use it from `/clock-out` or on request; it never edits.
+  - `/harness:clock-in [F-NNN]` runs the clock-in routine and activates a feature (`pnpm harness:feature activate`).
+  - `/harness:verify-feature F-NNN` runs `pnpm harness:verify`, which executes the feature's steps in order and records evidence.
+  - `/harness:clock-out` runs `pnpm harness:clean-state`, updates the state files and commits. It is user-only.
+- **Driver-run sessions**: `pnpm harness:loop` (config in `harness.config.json`) starts one `claude -p` session per ready feature in its own worktree, with the plugin loaded from the installed package, re-checks the result, runs the evaluator in a second session and opens a PR. How it works: [docs/harness/README.md](docs/harness/README.md).
+- **Agent** `harness:evaluator` (from the plugin; registered in `src/ideaforge/agents.py` so the pipeline guard lets it run the read-only harness checks): a fresh-context reviewer that scores a diff against `docs/harness/evaluator-rubric.md`. Use it from `/harness:clock-out` or on request; it never edits.
 - **Hooks need `uv`, `node` and `bash` on PATH.** Without `uv` the pipeline hooks fail open; on this Windows machine add `%USERPROFILE%\.local\bin` to the user `Path`.
 
 ## Pipeline sessions
@@ -49,7 +52,7 @@ How to run: `uv sync`, `uv run python scripts/gen_agents.py`, then `/validate <i
 - `prompts/`: long prompt bodies, included into agent templates.
 - `agent_templates/`: sources for `.claude/agents/` (edit these, then run `gen_agents.py`; never edit `.claude/agents/` by hand).
 - `src/ideaforge/`: schemas, db, runs, hooks (`usage`, `guard`, `validate_file`), Finnish data tools (`fi/`).
-- `scripts/`: stage entry points (`new_run.py`, `gen_agents.py`, …) and the harness scripts (`*.ts`, `clean-state-check.sh`).
+- `scripts/`: stage entry points (`new_run.py`, `gen_agents.py`, …).
 - `runs/<run_id>/`: all outputs of one run. `runs/.active` holds the active run id, which hooks read. `IDEAFORGE_RUN_ID` overrides it.
 
 **Model policy.** All roles default to `opus` per `config/models.yaml`. Do not change models in agent files; change the config and run `gen_agents.py`.

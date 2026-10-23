@@ -46,7 +46,9 @@ for _p in PERSONAS:
     AGENTS[f"debate-{_p}"] = AgentSpec(name=f"debate-{_p}", role="debate_persona", kind="debate", persona=_p)
 AGENTS["debate-judge"] = AgentSpec(name="debate-judge", role="debate_judge", kind="judge")
 # Development harness reviewer (docs/harness/evaluator-rubric.md); read-only, writes no run files.
-AGENTS["evaluator"] = AgentSpec(name="evaluator", role="harness_evaluator", kind="harness")
+# It comes from the shared harness plugin (agent type "harness:evaluator"), so gen_agents.py does
+# not render it; it is registered here for the guards.
+AGENTS["harness:evaluator"] = AgentSpec(name="harness:evaluator", role="harness_evaluator", kind="harness")
 
 
 def get(name: str | None) -> AgentSpec | None:

@@ -1,20 +1,20 @@
 # Clean-state checklist
 
 Run through this at clock-out, before committing. A session is not finished until every
-box is ticked; `/clock-out` in Claude Code walks the same list, and the loop driver refuses
+box is ticked; `/harness:clock-out` in Claude Code walks the same list, and the loop driver refuses
 to open a PR until the machine-checked part passes.
 
-## Machine-checked — `scripts/clean-state-check.sh`
+## Machine-checked — `pnpm harness:clean-state`
 
-`pnpm harness:clean-state` (alias for the script) exits 0 only when all of these hold.
-Flags: `--allow-state-dirty` (state files may be uncommitted), `--quick` (skip `init.sh`,
+`pnpm harness:clean-state` (the shared harness CLI; the project checks below the core ones come
+from `harness.config.json` → `cleanState`) exits 0 only when all of these hold. Flags: `--allow-state-dirty` (state files may be uncommitted), `--quick` (skip `init.sh`,
 used by the Stop hook), `--require-terminal` (no feature may be left `in_progress`; used
 for driver-run sessions), `--base <ref>` (diff base, default `origin/main`).
 
 - [ ] Working tree is clean (or only `feature_list.json`, `PROGRESS.md`, `docs/harness/**` are dirty).
 - [ ] `feature_list.json` is valid: `pnpm harness:check` exits 0 (WIP=1, evidence before `passing`, dependencies resolve).
 - [ ] No skip was added under `tests/` (`.only`/`.skip`, `@pytest.mark.skip`/`skipif`/`xfail`, `pytest.skip(`/`pytest.xfail(`).
-- [ ] No coverage threshold was removed from `pyproject.toml` (`fail_under`, `--cov-fail-under`) or `vitest.config.ts`.
+- [ ] No coverage threshold was removed from `pyproject.toml` (`fail_under`, `--cov-fail-under`).
 - [ ] No debugger call (`breakpoint()`, `pdb.set_trace()`, `import pdb`) was added under `src/` or `scripts/`.
 - [ ] `PROGRESS.md` was updated on this branch.
 - [ ] `.env` is neither tracked nor staged.

@@ -15,7 +15,7 @@ def bash(command, tool="Bash", **extra):
 
 RESEARCH = {"agent_id": "a1", "agent_type": "research-pricing"}
 DEBATE = {"agent_id": "a2", "agent_type": "debate-investor"}
-EVALUATOR = {"agent_id": "a3", "agent_type": "evaluator"}
+EVALUATOR = {"agent_id": "a3", "agent_type": "harness:evaluator"}
 
 
 # ---------------------------------------------------------------- writes

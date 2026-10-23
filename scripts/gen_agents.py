@@ -64,13 +64,15 @@ def context(spec: agents.AgentSpec) -> dict:
 def render_all() -> dict[Path, str]:
     env = environment()
     templates = {p.name for p in config.AGENT_TEMPLATES_DIR.glob("*.md.j2") if not p.name.startswith("_")}
-    expected = {f"{name}.md.j2" for name in agents.AGENTS}
+    # Harness agents come from the shared harness plugin, not from a template.
+    generated = [spec for spec in agents.AGENTS.values() if spec.kind != "harness"]
+    expected = {f"{spec.name}.md.j2" for spec in generated}
     if templates != expected:
         missing, extra = sorted(expected - templates), sorted(templates - expected)
         raise SystemExit(f"template set mismatch: missing={missing} unregistered={extra}")
     return {
         config.AGENTS_DIR / f"{spec.name}.md": env.get_template(f"{spec.name}.md.j2").render(context(spec))
-        for spec in agents.AGENTS.values()
+        for spec in generated
     }
 
 

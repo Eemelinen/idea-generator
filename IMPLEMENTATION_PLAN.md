@@ -73,8 +73,7 @@ ideaforge/
 │       ├── debate-customer.md
 │       ├── debate-accountant.md
 │       ├── debate-operator.md
-│       ├── debate-judge.md
-│       └── evaluator.md             # harness reviewer (role harness_evaluator, §14)
+│       └── debate-judge.md
 ├── agent_templates/               # source templates for the above (edit these, not .claude/agents)
 ├── prompts/                       # long prompt bodies, versioned in git
 ├── src/ideaforge/
@@ -101,8 +100,7 @@ ideaforge/
 │   ├── render_report.py
 │   ├── debate_validate.py         # validate a round's rebuttals; reject unsupported stance changes
 │   ├── debate_converged.py        # exit code 0 if converged
-│   ├── usage_report.py
-│   └── harness-*.ts, validate-feature-list.ts, verify-feature.ts, clean-state-check.sh   # harness (§14)
+│   └── usage_report.py
 ├── runs/                          # one folder per run (gitignored)
 │   └── <run_id>/
 │       ├── idea.md
@@ -140,7 +138,7 @@ ideaforge/
 - Deps: `pydantic>=2`, `pyyaml`, `requests`, `rapidfuzz` (quote matching), `trafilatura` (HTML → text for verification), `pandas` (PxWeb tables), `pytest`, `jinja2` (report + agent templates).
 - SQLite with WAL mode; FTS5 virtual table over `claims.statement` and `claims.quote`.
 - No web framework for v1. Output is Markdown in `runs/<id>/` plus a `/status` skill. A Streamlit viewer is an optional v2 item.
-- Development-only tooling (§14): Node ≥ 22 with pnpm 10 for the harness scripts (TypeScript: zod, tsx, Vitest), Prettier, and husky + lint-staged + commitlint for the commit gates. The pipeline never calls Node.
+- Development-only tooling (§14): Node ≥ 22 with pnpm 10 for the shared harness (`@eemelinen/harness`, §14), Prettier, and husky + lint-staged + commitlint for the commit gates. The pipeline never calls Node.
 
 ---
 
@@ -352,7 +350,7 @@ Already written by stage 3. `/status <run_id>` prints: claims per dimension (ver
 
 Permissions in `settings.json`: pre-approve `WebSearch`, `WebFetch`, `Read`, `Write` (scoped), the allowed `Bash` patterns, and the `Agent` tool so the pipeline runs unattended with `claude -p`.
 
-The development harness (§14) adds its own hooks to the same `settings.json`: `SessionStart` summary, a second PreToolUse guard (`.claude/hooks/guard.sh`), a PostToolUse Prettier hook and an opt-in Stop guard. Both guards run on every call and either can block. "Development session" means the `.ideaforge-dev` marker exists **or** `HARNESS_LOOP=1` is set by the loop driver (D-005); subagents are strict either way.
+The development harness (§14) adds its own hooks through its Claude Code plugin: `SessionStart` summary, a second PreToolUse guard, a PostToolUse Prettier hook and an opt-in Stop guard. Both guards run on every call and either can block. "Development session" means the `.ideaforge-dev` marker exists **or** `HARNESS_LOOP=1` is set by the loop driver (D-005); subagents are strict either way.
 
 ---
 
@@ -448,15 +446,15 @@ These are ticket IF-150 (feature F-002), a human-only feature.
 
 ## 14. Development harness
 
-The remaining work is built with an agent harness ported from Metsävahti (D-001–D-006). It is development tooling and never runs the pipeline.
+The remaining work is built with the shared agent harness (`Eemelinen/harness`: the `@eemelinen/harness` package and its Claude Code plugin; D-001–D-007). It is development tooling and never runs the pipeline.
 
 - **State:** `feature_list.json` is the queue. There is one feature per ticket in `docs/TICKETS.md`, with `depends_on`, `verification[]` and `evidence[]`. Only `pnpm harness:feature` and `pnpm harness:verify` change it. `PROGRESS.md` is the session log; `docs/DECISIONS.md` holds the decisions.
 - **Loop:**
-  - `/clock-in` reads the state, runs `./init.sh` and activates exactly one feature (WIP=1).
+  - `/harness:clock-in` reads the state, runs `./init.sh` and activates exactly one feature (WIP=1).
   - Implement the feature.
-  - `/verify-feature` runs the feature's steps in order and records dated evidence.
-  - `/clock-out` runs the clean-state check, updates `PROGRESS.md` and commits.
-- **Verification:** one layer, L1 `pnpm check` (`tsc`, Prettier, the Vitest harness tests, `uv run pytest`). Steps that need the network, a real Claude run or a decision by the user are `manual:` and keep the feature human-only.
+  - `/harness:verify-feature` runs the feature's steps in order and records dated evidence.
+  - `/harness:clock-out` runs the clean-state check, updates `PROGRESS.md` and commits.
+- **Verification:** one layer, L1 `pnpm check` (Prettier, `pnpm harness:check`, `uv run pytest`). Steps that need the network, a real Claude run or a decision by the user are `manual:` and keep the feature human-only.
 - **Unattended:** `pnpm harness:loop` runs one fresh `claude -p` session per ready feature in its own git worktree, with `HARNESS_LOOP=1` and caps from `harness.config.json`. It re-checks the result, has a fresh-context evaluator grade it against `docs/harness/evaluator-rubric.md`, then opens a PR that CI (`L1 (pnpm check)`) must pass.
 - **Sizing:** a feature fits one session. Tightly coupled tickets are merged, and the survivor lists what it absorbs.
 
