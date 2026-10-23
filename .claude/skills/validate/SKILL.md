@@ -1,7 +1,7 @@
 ---
 name: validate
-description: Validate a business idea with the Ideaforge pipeline, stages 0–3. Creates a run, writes the idea spec (at most 5 clarifying questions), the research plan, launches the 11 research subagents in parallel and verifies their claims; given an existing run id it resumes that run and skips completed stages and dimensions. Use when the user types /validate with an idea or a run id.
-argument-hint: '[--preset economy|standard|deep] <idea text> | <run_id>'
+description: Validate a business idea with the Ideaforge pipeline, stages 0–3. Creates a run (or, with --from <run_id>, the next version of an earlier run), writes the idea spec (at most 5 clarifying questions), the research plan, launches the 11 research subagents in parallel and verifies their claims; given an existing run id it resumes that run and skips completed stages and dimensions. Use when the user types /validate with an idea or a run id.
+argument-hint: '[--preset economy|standard|deep] <idea text> | <run_id> | --from <run_id> [<revised idea text>]'
 allowed-tools: Read Write Agent AskUserQuestion Bash(uv run python scripts/new_run.py*) Bash(uv run python scripts/run_stage.py*) Bash(uv run python scripts/verify_claims.py*) Bash(uv run python scripts/usage_report.py*) Bash(uv run python scripts/status.py*) Bash(uv run python -m ideaforge.validate_file*) Bash(ls*) Bash(cat*)
 ---
 
@@ -25,6 +25,20 @@ Arguments: `$ARGUMENTS`
   2. Show the `reset:` lines to the user, then continue with the first stage whose group
      `--next` lists. Skip every stage it does not list: those are complete. When it lists
      `synthesize` or nothing, stages 0–3 are complete: go straight to **End**.
+- **New version** when the arguments start with `--from <parent_run_id>`: the run is the
+  parent's next idea version, a new run `<parent_run_id>-vN` (the parent's `-vN` suffix is
+  replaced) linked through `idea_versions.parent`. The parent run stays immutable: never write,
+  re-run or resume anything under `runs/<parent_run_id>/`.
+  1. `uv run python scripts/new_run.py --from <parent_run_id>` (add `--preset <name>` if
+     given), or `uv run python scripts/new_run.py --from <parent_run_id> '<idea text>'` when
+     the user gave a revised idea text after the run id (same quoting rules as a new run).
+     Without a text the new version keeps the parent's idea text. It prints only the new run
+     id and makes it the active run; exit 2 means the parent is unknown.
+  2. Read-only context for Stage 0: `runs/<parent_run_id>/00_spec.json`, and when they exist
+     `runs/<parent_run_id>/05_report.md` and `runs/<parent_run_id>/debate/revised_plan.md`.
+     Ask only about what the revision changes; reuse the parent's answers otherwise.
+  3. Continue with Stage 0 for the new run id. Every stage runs again: no file is copied from
+     the parent, because its claims and scores belong to the parent's version.
 - **New run** otherwise. Take `--preset <name>` out of the arguments if present; the rest is
   the idea text. If the text is empty, ask the user for the idea and stop.
   1. `uv run python scripts/new_run.py '<idea text>'` (add `--preset <name>` if given). Put
@@ -43,14 +57,15 @@ that first, never work around it.
 ## Stage 0 — Intake
 
 1. `uv run python scripts/run_stage.py <run_id> intake --begin`
-2. Read `runs/<run_id>/idea.md`, `runs/<run_id>/meta.json` and `config/founder.yaml`.
+2. Read `runs/<run_id>/idea.md`, `runs/<run_id>/meta.json` and `config/founder.yaml` (for a
+   new version also the parent's files listed under Start).
 3. Ask **at most 5** clarifying questions with `AskUserQuestion`, and only where the answer
    changes the research direction: geography (local service vs. online), the founder's goal
    (`side_income` | `full_time` | `starttiraha`), capital, hours per week, the paying customer.
    Ask nothing the idea text already answers. If `config/founder.yaml` has `confirmed: false`,
    its values are placeholders: say so when you use them.
 4. Write `runs/<run_id>/00_spec.json` (schema `IdeaSpec` in `src/ideaforge/schemas.py`):
-   - `idea_id`: the run id without its `YYYYMMDD-HHMMSS-` prefix and any `-vN` suffix.
+   - `idea_id`: `idea_id` from `runs/<run_id>/meta.json`.
    - `title`, `one_liner`, `customer`, `problem`, `solution`, `revenue_model` from the idea
      and the answers. Unknown is written as unknown; never invent facts about the market.
    - `geography`: the default ladder `["Rääkkylä", "North Karelia", "Finland", "online"]`
@@ -61,7 +76,8 @@ that first, never work around it.
    - `kill_trigger_overrides`: `[]` unless the user explicitly accepts a kill-trigger risk.
    - `vat_registered`: `true` (prices and costs net of VAT) unless the user says the business
      stays under the VAT registration threshold and will not register.
-   - `version`: 1 (a run created with `new_run.py --from` uses the parent's version + 1).
+   - `version`: `version` from `runs/<run_id>/meta.json` (1, or the parent's + 1 for a run
+     created with `--from`).
 5. `uv run python -m ideaforge.validate_file --kind spec runs/<run_id>/00_spec.json`; on
    exit 1 fix the file and validate again.
 6. `uv run python scripts/run_stage.py <run_id> intake --finish`

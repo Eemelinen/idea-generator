@@ -408,7 +408,7 @@
       "area": "runs",
       "title": "Versioning, meta.json and validate --from",
       "user_visible_behavior": "`meta.json` records the prompts/config commit, a models snapshot, the Claude Code version and timestamps; `/validate --from <run_id>` creates `<run_id>-v2` linked through `idea_versions.parent` and leaves the v1 run and report unchanged.",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": ["F-010", "F-017"],
       "ticket": "IF-308",
       "spec": "docs/TICKETS.md#if-308-versioning-metajson-and-validate---from",

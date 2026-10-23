@@ -24,17 +24,19 @@ Inside Claude Code, in this directory:
 ```
 /validate [--preset economy|standard|deep] <idea text>   # stages 0–3 (intake → claim verification)
 /validate <run_id>           # resume a run: skips completed stages and research dimensions
+/validate --from <run_id> [<revised idea text>]   # a new version <run_id>-vN; the old run and report stay unchanged
 /research <run_id>           # stages 1–3 of an existing run
 /synthesize <run_id>         # stage 5: proposed scores and risks, the score sheet and verdict, the report
 /status [run_id]
 /debate <run_id>             # Phase 4
 ```
 
-Status: Phase 1 (the skeleton) is done; of Phase 2, the research validator, claim verification (`uv run python scripts/verify_claims.py <run_id>`), the usage report, basic `/status`, the stage state machine and the `/validate` and `/research` skills for stages 0–3 are built; of Phase 3, scoring, unit economics, `/synthesize` (stage 5) and the report are built. See `docs/TICKETS.md` for what comes next.
+Status: Phase 1 (the skeleton) is done; of Phase 2, the research validator, claim verification (`uv run python scripts/verify_claims.py <run_id>`), the usage report, basic `/status`, the stage state machine and the `/validate` and `/research` skills for stages 0–3 are built; of Phase 3, scoring, unit economics, `/synthesize` (stage 5), the report and versioning (`meta.json`, `/validate --from`) are built. See `docs/TICKETS.md` for what comes next.
 
 - `uv run python scripts/run_stage.py <run_id> <stage> --begin|--finish|--insufficient-data` moves one stage through `pending → running → done | failed` (`insufficient_data` for a research dimension that failed twice); a stage is done only when its output file(s) exist and validate. `run_stage.py <run_id> --resume` makes the run active for the hooks, repairs the stages a crash left `running` and prints the stages to run next (`--next` prints them without repairing).
 - `uv run python scripts/usage_report.py <run_id>`: tool calls, searches, fetches and approximate tokens per stage and per agent, plus the run's `BUDGET_EXCEEDED_*` markers.
 - `/synthesize <run_id>`: `uv run python scripts/synthesis_input.py <run_id>` writes `04_synthesis_input.json` (the spec, the verified and conflict claims, the rubric), the `synthesizer` subagent reads only that file and writes `04_scores_proposed.json` (scores, citations, unit-economics inputs) and `04_risks.json`, and `uv run python scripts/score_run.py <run_id>` drops unverified citations, applies the caps, kill triggers and unit economics and writes `04_scores.json` and the `scores` rows. Then `uv run python scripts/render_report.py <run_id>` writes the immutable `05_report.md`: verdict and why, score table with cap labels, kill triggers, unit economics and sensitivity, dimension sections, Finland funding fit (each item backed by a verified official-source claim or shown as a gap), Rääkkylä notes, risk register, sources and usage. It never overwrites an existing report.
+- `uv run python scripts/new_run.py --from <run_id> [<idea text>]` (what `/validate --from` runs) creates the next version `<run_id>-vN` with its own directory, linked through `idea_versions.parent`; the idea text defaults to the parent's and the parent run is never touched. Every run's `meta.json` records the repository HEAD, the last commit that changed `config/`, `prompts/` or `agent_templates/` (and whether they had uncommitted changes), the `config/models.yaml` roles, the Claude Code version (`claude --version`), the idea version and `created_at` / `updated_at` (refreshed by each stage transition).
 - `/status` (`uv run python scripts/status.py [run_id] [--limit N]`): the recent runs and their stages; with a run id, its stages, claims per dimension by verification state, kill flags fired, validation and budget markers and the usage summary.
 
 ## Development

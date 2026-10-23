@@ -90,3 +90,5 @@ Arguments: `$ARGUMENTS` (one run id, `YYYYMMDD-HHMMSS-slug`, optionally `-vN`). 
    kill triggers), not from the synthesizer. A kill trigger the founder explicitly accepts
    goes into `kill_trigger_overrides` of `00_spec.json`; `uv run python scripts/score_run.py <run_id>`
    then re-scores the run; the report of this run stays as it is (reports are immutable).
+   A new report needs a new version: `/validate --from <run_id>` creates `<run_id>-vN`
+   and leaves this run and its report unchanged.
