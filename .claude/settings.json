@@ -18,15 +18,11 @@
       "Bash(ls*)",
       "Bash(cat*)",
       "Bash(pnpm check*)",
-      "Bash(pnpm typecheck)",
       "Bash(pnpm format*)",
-      "Bash(pnpm test:unit*)",
       "Bash(pnpm test:py*)",
       "Bash(pnpm exec tsc*)",
       "Bash(pnpm exec prettier*)",
-      "Bash(pnpm harness:*)",
-      "Bash(scripts/clean-state-check.sh*)",
-      "Bash(./scripts/clean-state-check.sh*)"
+      "Bash(pnpm harness:*)"
     ],
     "deny": [
       "Bash(curl*)",
@@ -46,17 +42,6 @@
     ]
   },
   "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
     "PreToolUse": [
       {
         "matcher": "Write|Edit|MultiEdit|NotebookEdit",
@@ -77,26 +62,6 @@
             "timeout": 30
           }
         ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.sh",
-            "timeout": 30
-          }
-        ]
-      },
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.sh",
-            "timeout": 10
-          }
-        ]
       }
     ],
     "PostToolUse": [
@@ -107,16 +72,6 @@
             "type": "command",
             "command": "uv run --quiet --project \"$CLAUDE_PROJECT_DIR\" python -m ideaforge.usage log",
             "timeout": 30
-          }
-        ]
-      },
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format.sh",
-            "timeout": 20
           }
         ]
       }
@@ -139,14 +94,21 @@
             "type": "command",
             "command": "uv run --quiet --project \"$CLAUDE_PROJECT_DIR\" python -m ideaforge.validate_file --auto --stop",
             "timeout": 60
-          },
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop-guard.sh",
-            "timeout": 60
           }
         ]
       }
     ]
+  },
+  "extraKnownMarketplaces": {
+    "eemelinen-harness": {
+      "source": {
+        "source": "github",
+        "repo": "Eemelinen/harness",
+        "ref": "v0.1.0"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "harness@eemelinen-harness": true
   }
 }

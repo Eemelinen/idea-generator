@@ -38,7 +38,7 @@ After editing `config/models.yaml`, `agent_templates/` or `prompts/`, run `uv ru
 The remaining work is built with an agent harness: one feature per Claude Code session, verified by scripts before it counts as done. You need Node 24 (`.nvmrc`) with pnpm, plus uv, and on Windows Git Bash. `uv`, `claude` and `gh` must be on `PATH`.
 
 - `./init.sh` installs both toolchains and runs the L1 check, `pnpm check`.
-- In Claude Code: `/clock-in` picks and activates the next feature, `/verify-feature F-NNN` runs its checks, and `/clock-out` commits.
+- In Claude Code: `/harness:clock-in` picks and activates the next feature, `/harness:verify-feature F-NNN` runs its checks, and `/harness:clock-out` commits. The skills, hooks and loop come from the shared harness ([Eemelinen/harness](https://github.com/Eemelinen/harness)), configured in `harness.config.json`.
 - `pnpm harness:feature list` shows the queue (`feature_list.json`; tickets in `docs/TICKETS.md`).
 - `pnpm harness:loop --once` runs one ready feature unattended in its own worktree and opens a PR.
 

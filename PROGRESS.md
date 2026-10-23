@@ -6,19 +6,20 @@ Repository-local session log. Read it at clock-in, update it at clock-out (AGENT
 
 - Repository root: `idea-generator/` (this directory; contains `AGENTS.md`, `feature_list.json`, `init.sh`, `harness.config.json`).
 - Standard startup path: `./init.sh` (`FAST=1` skips the baseline). It needs node 24, pnpm and uv on `PATH`.
-- Standard verification path: L1 `pnpm check` (tsc, Prettier, Vitest harness tests, `uv run pytest`). There is no L2/L3 (D-001). Per feature: `pnpm harness:verify F-NNN`.
+- Standard verification path: L1 `pnpm check` (Prettier, `pnpm harness:check`, `uv run pytest`). There is no L2/L3 (D-001). Per feature: `pnpm harness:verify F-NNN`.
 - Phase 1 skeleton (F-001) and the harness (F-000) are `passing`. Nothing in Phase 2+ is built: `fi/` clients are stubs, and there is no `verify.py`, scoring, report, debate or eval code yet.
 - Queue: 29 features (`pnpm harness:feature list`), 20 unattended and 7 human-only among the 27 open.
   - Ready now, unattended: F-006 (research validator), F-007 (claim verification), F-009 (usage report + status), F-010 (stage state machine), F-014 (scoring), F-015 (economics), F-021 (debate anonymization + validation).
   - Ready now, human-only: F-002 (§13 decisions), F-003 (record API fixtures). Both gate later work.
 - Last verified commit: `db97340` (working tree with only `feature_list.json` changed by activate/verify). `pnpm harness:verify F-000` and `F-001` ran green on 2026-10-23: `pnpm check` = 25 Vitest + 124 pytest tests in about 14 s. The evidence lines are in `feature_list.json`.
+- Session 002 (interactive: shared harness): the copied harness is replaced by `@eemelinen/harness` (devDependency, tag `v0.1.0`; the CLI behind every `pnpm harness:*`, new `pnpm harness:doctor`, also run by `./init.sh`) and the plugin `harness@eemelinen-harness` (skills `/harness:clock-in`, `/harness:verify-feature`, `/harness:clock-out`, agent `harness:evaluator`, hooks); the pipeline hooks are unchanged. Project rules live in `harness.config.json` and `docs/harness/generator-notes.md`. The evaluator is no longer generated (`agents.AGENTS["harness:evaluator"]`, 17 generated agents). D-007.
 - Current blocker: none in the repo.
   - Host: `uv`, `claude` and `gh` are installed but not on the Git Bash `PATH` (`~/.local/bin`, `C:\Program Files\GitHub CLI`). The pipeline hooks fail open without `uv`. `gh` is already logged in (account Eemelinen, keyring).
   - GitHub branch protection does not exist yet, so `harness.config.json` keeps `merge: "wait"`.
 
 ## Next Steps
 
-1. Human, once: add `%USERPROFILE%\.local\bin` and `C:\Program Files\GitHub CLI` to the user `Path`, then open a new terminal and restart VS Code. Run `claude` in the repository once and accept the trust dialog.
+1. Human, once: add `%USERPROFILE%\.local\bin` and `C:\Program Files\GitHub CLI` to the user `Path`, then open a new terminal and restart VS Code. Run `claude` in the repository once and accept the trust dialog and the harness plugin marketplace.
 2. Human, GitHub (`docs/harness/README.md` § 4):
    - push `main` (9 commits ahead of `origin/main`); the driver refuses to start until they match, and CI then runs once
    - allow auto-merge and squash merging
@@ -28,6 +29,21 @@ Repository-local session log. Read it at clock-in, update it at clock-out (AGENT
 4. Unattended: `pnpm harness:loop --dry-run`, then `pnpm harness:loop --once` (F-006 first). Compare the evaluator's verdict with your own and add a row to the rubric's tuning log for each of the first 3–5 runs.
 
 ## Session Log
+
+### Session 002 — 2026-10-23 (interactive: move to the shared harness)
+
+- Goal: stop carrying a copy of the harness (D-001) now that it lives in `Eemelinen/harness`, so fixes made for any project reach this one by a version bump.
+- Completed:
+  - Installed `@eemelinen/harness` and enabled the plugin (both `v0.1.0`).
+  - Deleted the copies: the harness `scripts/*.ts` and `clean-state-check.sh`, `.claude/hooks`, `.claude/skills`, `docs/harness/prompts/`, `tests/unit/`, `tsconfig.json`, `vitest.config.ts`, and TypeScript/tsx/zod/Vitest.
+  - The evaluator is no longer generated: `agent_templates/evaluator.md.j2` and `.claude/agents/evaluator.md` are gone, `agents.AGENTS["harness:evaluator"]` is registered, and `gen_agents.py` skips harness agents. The guard and validate_file tests use the plugin's agent type.
+  - Moved the project values into `harness.config.json` and `docs/harness/generator-notes.md`.
+  - Commit gates and checks: `pnpm check` = Prettier + `pnpm harness:check` + pytest; pre-commit no longer runs `typecheck`; `init.sh` runs `pnpm harness:doctor`.
+  - Docs: AGENTS.md, CLAUDE.md, README, IMPLEMENTATION_PLAN §14, TICKETS, `docs/harness/README.md` (now the project page), the checklist and the rubric, D-007.
+  - The release also brings the loop's stop on a failed CI check (Metsävahti).
+- Verification run: `pnpm check` green (Prettier, `harness:check`, 124 pytest tests) with the package installed from the `v0.1.0` tag; `uv run python scripts/gen_agents.py --check` → 17 agent files up to date; `pnpm harness:doctor` ok; `pnpm harness:check` accepts the 29 features and a write through `harness feature attempt` (on a copy) leaves the file byte-identical apart from `attempts`; `pnpm harness:feature next` still picks F-006; `pnpm harness:clean-state --base main` after the commit.
+- Known risk: interactive sessions need the folder trusted once for the plugin marketplace and `.claude/settings.json` permissions; driver sessions load the plugin from the package.
+- Next best step: Next Steps 1–4.
 
 ### Session 001 — 2026-10-23 (interactive: harness bootstrap, F-000; Phase 1 recorded as F-001)
 

@@ -43,6 +43,9 @@ fi
 
 step "Installing dependencies"
 pnpm install --frozen-lockfile
+
+step "Harness wiring (@eemelinen/harness package + plugin pin)"
+pnpm harness:doctor
 uv sync --frozen
 
 if [ "${FAST:-0}" = "1" ]; then
