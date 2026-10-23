@@ -2,85 +2,85 @@
 
     uv run python scripts/new_run.py "<idea text>" [--preset economy|standard|deep]
                                      [--from <parent_run_id>] [--as-of YYYY-MM-DD]
+    uv run python scripts/new_run.py --from <parent_run_id> ["<revised idea text>"]
 
+With --from the run is the parent's next idea version, `<parent id>-v<N>` (`runs.child_run`),
+linked through `idea_versions.parent`; the idea text, budget preset and as-of date default to the
+parent's, and the parent's
+directory, rows and report are never touched. meta.json records the provenance (`ideaforge.meta`).
 Prints the run_id on stdout (and nothing else) so callers can capture it.
 """
 
 from __future__ import annotations
 
 import argparse
-import re
-import subprocess
 import sys
-from datetime import UTC, date, datetime
+from datetime import date
 
-from ideaforge import config, db, runs
-from ideaforge.schemas import RunMeta
+from ideaforge import config, db, meta, runs
 
 
-def git_commit() -> str | None:
-    try:
-        out = subprocess.run(
-            ["git", "rev-parse", "HEAD"], cwd=config.ROOT, capture_output=True, text=True, timeout=10
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-    if out.returncode != 0:
-        return None
-    return out.stdout.strip() or None
+def parent_row(parent: str):
+    """The parent's `runs` row: idea text, budget preset and as-of date a new version inherits."""
+    with db.session() as conn:
+        return conn.execute(
+            "SELECT idea_text, budget_preset, as_of FROM runs WHERE run_id=?", (parent,)
+        ).fetchone()
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("idea", help="the idea, in free text")
+    parser.add_argument("idea", nargs="?", default=None, help="the idea, in free text (default with --from: the parent's)")
     parser.add_argument("--preset", default=None, help="budget preset from config/budget.yaml")
     parser.add_argument("--from", dest="parent", default=None, help="parent run id (new idea version)")
     parser.add_argument("--as-of", type=date.fromisoformat, default=None, help="back-test date")
     args = parser.parse_args(argv)
 
-    if not args.idea.strip():
-        parser.error("idea text must not be empty")
+    db.init()
+    idea, preset, as_of = args.idea, args.preset, args.as_of
+    if args.parent:
+        try:
+            run_id, version, idea_id = runs.child_run(args.parent)
+        except ValueError as e:
+            parser.error(str(e))
+        row = parent_row(args.parent)
+        if idea is None or not idea.strip():
+            idea = row["idea_text"]
+        # A revision of a back-test stays a back-test, at the parent's budget, unless overridden.
+        preset = preset or row["budget_preset"]
+        if as_of is None and row["as_of"]:
+            as_of = date.fromisoformat(row["as_of"])
+
     budget = config.budget()
-    preset = args.preset or budget.default_preset
+    preset = preset or budget.default_preset
     if preset not in budget.presets:
         parser.error(f"unknown preset {preset!r}; choose from {sorted(budget.presets)}")
+    if idea is None or not idea.strip():
+        parser.error("idea text must not be empty")
+    if not args.parent:
+        run_id, version, idea_id = runs.new_run_id(idea), 1, runs.slugify(idea, 30)
+    if runs.run_dir(run_id).exists():
+        parser.error(f"run directory runs/{run_id} already exists")
+    run_dir = runs.create_run_dir(run_id, idea)
 
-    db.init()
-    version, idea_id = 1, runs.slugify(args.idea, 30)
-    if args.parent:
-        with db.session() as conn:
-            row = conn.execute(
-                "SELECT idea_id, version FROM idea_versions WHERE run_id=?", (args.parent,)
-            ).fetchone()
-        if row is None:
-            parser.error(f"unknown parent run {args.parent!r}")
-        version, idea_id = row["version"] + 1, row["idea_id"]
-
-    run_id = runs.new_run_id(args.idea)
-    if args.parent:
-        run_id = f"{re.sub(r'-v\d+$', '', args.parent)}-v{version}"
-    run_dir = runs.create_run_dir(run_id, args.idea)
-
-    meta = RunMeta(
-        run_id=run_id,
+    run_meta = meta.build(
+        run_id,
+        idea_id=idea_id,
+        version=version,
         parent_run_id=args.parent,
-        created_at=datetime.now(UTC),
-        git_commit=git_commit(),
-        claude_code_version=None,
-        models=dict(config.models().roles),
         budget_preset=preset,
-        as_of=args.as_of,
+        as_of=as_of,
     )
-    (run_dir / "meta.json").write_text(meta.model_dump_json(indent=2), encoding="utf-8")
+    meta.write(run_dir, run_meta)
 
     db.create_run(
         run_id,
-        args.idea,
+        idea,
         idea_id=idea_id,
         version=version,
         parent=args.parent,
         budget_preset=preset,
-        as_of=args.as_of.isoformat() if args.as_of else None,
+        as_of=as_of.isoformat() if as_of else None,
         stages=runs.STAGES,
     )
     runs.set_active(run_id)

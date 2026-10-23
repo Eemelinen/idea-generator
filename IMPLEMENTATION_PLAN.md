@@ -81,7 +81,8 @@ ideaforge/
 │   ├── __init__.py
 │   ├── schemas.py                 # Pydantic models (IdeaSpec, ResearchPlan, Claim, Scores, Position, Rebuttal, Verdict…)
 │   ├── db.py                      # SQLite schema + helpers
-│   ├── runs.py                    # run lifecycle, stage state machine, resume
+│   ├── runs.py                    # run lifecycle, stage state machine, resume, child run ids
+│   ├── meta.py                    # meta.json: git/config commit, models snapshot, Claude Code version, timestamps
 │   ├── verify.py                  # quote verification, conflict detection, source typing
 │   ├── scoring.py                 # weighted score, caps, kill triggers, verdict
 │   ├── economics.py               # unit economics calculator
@@ -98,7 +99,7 @@ ideaforge/
 │       └── eurostat.py
 ├── scripts/
 │   ├── gen_agents.py              # render agent_templates/* with config/models.yaml → .claude/agents/
-│   ├── new_run.py                 # create run dir + db row, print run_id
+│   ├── new_run.py                 # create run dir + db row + meta.json, print run_id; --from = next version
 │   ├── run_stage.py               # stage state machine: --begin/--finish/--insufficient-data/--resume/--next
 │   ├── verify_claims.py           # stage 3 verification over a run
 │   ├── synthesis_input.py         # stage 5: the synthesizer's only input file
@@ -111,6 +112,7 @@ ideaforge/
 ├── runs/                          # one folder per run (gitignored)
 │   └── <run_id>/
 │       ├── idea.md
+│       ├── meta.json                           # provenance (ideaforge.meta)
 │       ├── 00_spec.json
 │       ├── 01_plan.json
 │       ├── 02_research/<dimension>.md          # subagent prose with inline citations
@@ -320,8 +322,8 @@ Already written by stage 3. `/status <run_id>` prints: claims per dimension (ver
 
 ### Stage 6 — Persistence/versioning
 
-- Reports are immutable. Re-running creates `runs/<run_id>-v2/` linked via `idea_versions.parent`. `/status` can diff score sheets between versions.
-- Record in `runs/<id>/meta.json`: git commit of prompts/config, `models.yaml` snapshot, Claude Code version, timestamps.
+- Reports are immutable. Re-running creates `runs/<run_id>-v2/` linked via `idea_versions.parent` (`/validate --from <run_id>` → `new_run.py --from`; a later version of the same parent gets the next free `-vN`). The parent run's files and rows are never touched. `/status` can diff score sheets between versions (IF-504).
+- Record in `runs/<id>/meta.json` (`ideaforge.meta`): git commit of prompts/config (the repository HEAD, the last commit touching `config/`, `prompts/`, `agent_templates/`, and an uncommitted-changes flag), `models.yaml` roles snapshot, Claude Code version, idea id and version, timestamps (`created_at`, `updated_at` per stage transition). Rules: TICKETS.md plan note 24.
 
 ### Stage 7 — Debate (`/debate <run_id>`)
 

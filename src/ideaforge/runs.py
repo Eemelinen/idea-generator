@@ -14,7 +14,7 @@ import unicodedata
 from datetime import datetime
 from pathlib import Path
 
-from ideaforge import config, db
+from ideaforge import config, db, meta
 from ideaforge.schemas import RESEARCH_DIMENSIONS
 
 # Ordered pipeline stages. Research is tracked per dimension so a resumed run
@@ -86,6 +86,31 @@ def create_run_dir(run_id: str, idea_text: str) -> Path:
         (d / sub).mkdir(parents=True, exist_ok=True)
     (d / "idea.md").write_text(f"# Idea\n\n{idea_text.strip()}\n", encoding="utf-8")
     return d
+
+
+def child_run(parent: str) -> tuple[str, int, str]:
+    """(run_id, version, idea_id) of a new version of `parent` (`new_run.py --from`).
+
+    The id is the parent's id without its `-vN` suffix plus `-v<version>`, where the version is
+    the parent's + 1, raised past any run id already taken (a second version made from the same
+    parent, or from an older version, never reuses an existing directory or db row).
+    """
+    d = run_dir(parent)
+    with db.session() as conn:
+        row = conn.execute(
+            "SELECT idea_id, version FROM idea_versions WHERE run_id=?", (parent,)
+        ).fetchone()
+        if row is None or not d.is_dir():
+            raise ValueError(f"unknown parent run {parent!r} (needs a runs/ directory and a db row)")
+        # Only a version > 1 carries a -vN suffix; a v1 slug may end in "-v2" by itself.
+        base = re.sub(r"-v\d+$", "", parent) if row["version"] > 1 else parent
+        version = row["version"] + 1
+        while (
+            (config.RUNS_DIR / f"{base}-v{version}").exists()
+            or conn.execute("SELECT 1 FROM runs WHERE run_id=?", (f"{base}-v{version}",)).fetchone()
+        ):
+            version += 1
+    return f"{base}-v{version}", version, row["idea_id"]
 
 
 def active_marker() -> Path:
@@ -211,6 +236,7 @@ def begin(run_id: str, stage: str) -> None:
     if blockers:
         raise StageError(f"{stage} cannot begin before {', '.join(blockers)} complete")
     db.stage_set(run_id, stage, "running")
+    meta.touch(_run_dir(run_id))
 
 
 def finish(run_id: str, stage: str) -> None:
@@ -223,8 +249,10 @@ def finish(run_id: str, stage: str) -> None:
     problems = output_problems(run_id, stage)
     if problems:
         db.stage_set(run_id, stage, "failed")
+        meta.touch(_run_dir(run_id))
         raise StageError(f"{stage} failed: its output does not validate\n" + "\n".join(problems))
     db.stage_set(run_id, stage, "done")
+    meta.touch(_run_dir(run_id))
 
 
 def mark_insufficient(run_id: str, stage: str) -> None:
@@ -237,6 +265,7 @@ def mark_insufficient(run_id: str, stage: str) -> None:
     if is_complete(run_id, stage, status):
         raise StageError(f"{stage} is already {status}")
     db.stage_set(run_id, stage, "insufficient_data")
+    meta.touch(_run_dir(run_id))
 
 
 def resume(run_id: str) -> list[tuple[str, str, str]]:
@@ -257,4 +286,6 @@ def resume(run_id: str) -> list[tuple[str, str, str]]:
         if new != status:
             db.stage_set(run_id, stage, new)
             changes.append((stage, status, new))
+    if changes:
+        meta.touch(_run_dir(run_id))
     return changes

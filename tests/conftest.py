@@ -12,6 +12,12 @@ FIXTURES = Path(__file__).parent / "fixtures"
 sys.path.insert(0, str(REPO / "scripts"))
 
 
+@pytest.fixture(autouse=True)
+def no_claude_cli(monkeypatch):
+    """Keep tests hermetic: meta.json never spawns the real `claude --version` (IF-308)."""
+    monkeypatch.setenv("IDEAFORGE_CLAUDE_CODE_VERSION", "0.0.0-test")
+
+
 @pytest.fixture
 def project(tmp_path, monkeypatch):
     """An isolated project root: runs/, cache/, a temp DB and no dev marker.

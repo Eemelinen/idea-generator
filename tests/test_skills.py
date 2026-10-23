@@ -22,6 +22,7 @@ RESEARCH_AGENTS = [a for a in agents.AGENTS.values() if a.kind == "research"]
 # Placeholders the skills use in commands → a value the guard and the stage table accept.
 PLACEHOLDERS = {
     "<run_id>": "20261023-120000-sauna-cabins",
+    "<parent_run_id>": "20261023-110000-sauna-cabins",
     "<dim>": "market",
     "<stage>": "plan",
     "<idea text>": "sauna cabins by the lake",
@@ -205,6 +206,20 @@ def test_validate_resumes_an_existing_run():
     text = read("validate")
     assert "new_run.py" in text
     assert "run_stage.py <run_id> --resume" in text
+
+
+def test_validate_creates_a_new_version_from_a_parent():
+    """IF-308: `/validate --from <run_id>` goes through new_run.py --from and never writes the parent."""
+    front, body = split("validate")
+    assert "--from <run_id>" in front["argument-hint"]
+    start = sections(body)["Start: new run or resume"]
+    assert "uv run python scripts/new_run.py --from <parent_run_id>" in start
+    assert "uv run python scripts/new_run.py --from <parent_run_id> '<idea text>'" in start
+    assert "immutable" in start and "never write" in start
+    intake = sections(body)["Stage 0 — Intake"]
+    assert "`idea_id` from `runs/<run_id>/meta.json`" in intake
+    assert "`version` from `runs/<run_id>/meta.json`" in intake
+    assert "/validate --from <run_id>" in read("synthesize")
 
 
 def test_research_skill_reuses_validate_stages_1_to_3():

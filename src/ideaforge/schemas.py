@@ -371,14 +371,28 @@ class Verdict(Strict):
 
 
 class RunMeta(Strict):
+    """`runs/<run_id>/meta.json`, written by `ideaforge.meta` (plan §6 stage 6)."""
+
     run_id: str
+    idea_id: str | None = None
+    version: Annotated[int, Field(ge=1)] = 1
     parent_run_id: str | None = None
     created_at: datetime
-    git_commit: str | None = None
+    updated_at: datetime | None = None  # last stage transition
+    git_commit: str | None = None  # repository HEAD
+    config_commit: str | None = None  # last commit touching config/, prompts/, agent_templates/
+    config_dirty: bool | None = None  # uncommitted changes there at creation
     claude_code_version: str | None = None
-    models: dict[str, str]
+    models: dict[str, str]  # config/models.yaml roles at creation
     budget_preset: str
     as_of: date | None = None
+
+    @model_validator(mode="after")
+    def _version_has_parent(self) -> RunMeta:
+        # A parent with version 1 is allowed: child runs made before IF-308 have no `version`.
+        if self.version > 1 and self.parent_run_id is None:
+            raise ValueError("version > 1 needs a parent_run_id")
+        return self
 
 
 # Kind name → model, used by validate_file.py and tests.
