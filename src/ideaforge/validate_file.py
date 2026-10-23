@@ -52,25 +52,39 @@ UNCHECKED_SECTIONS = {"candidate claims", "gaps"}
 LIST_ITEM_RE = re.compile(r"^(?:[-*+]|\d+[.)])\s+")
 SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?=[A-ZÅÄÖ])")
 SRC_TAG_RE = re.compile(r"\[src:[^\]]*\]", re.IGNORECASE)
+# English month names are matched capitalised only, so "30 may be" stays a figure.
 _MONTH = (
-    r"(?:january|february|march|april|may|june|july|august|september|october|november|december"
-    r"|jan|feb|mar|apr|jun|jul|aug|sept?|oct|nov|dec)\b"
-    r"|(?:tammi|helmi|maalis|huhti|touko|kesä|heinä|elo|syys|loka|marras|joulu)kuu\w*"
+    r"(?:January|February|March|April|May|June|July|August|September|October|November|December"
+    r"|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\b"
+    r"|(?:[Tt]ammi|[Hh]elmi|[Mm]aalis|[Hh]uhti|[Tt]ouko|[Kk]esä|[Hh]einä|[Ee]lo|[Ss]yys|[Ll]oka|[Mm]arras|[Jj]oulu)kuu\w*"
 )
+_YEAR = r"(?:1[89]|20)\d{2}"
+# A bare 4-digit number is a year only in a year context, never on its own: "1900 residents" is
+# a figure. Contexts: a preceding in/since/until/during/before/after, year word or month,
+# parentheses, a Finnish case ending (2024:n), a range or a season (2019–2024, 2024/25). Lists
+# continue the context ("in 2023 and 2024"). "to", "by", "from" and "of" are left out, as in
+# "grew to 2000 visitors", and a following EUR/€/% makes it a figure.
+_YEAR_WORD = (
+    rf"(?:[Ii]n|[Ss]ince|[Uu]ntil|[Dd]uring|[Bb]efore|[Aa]fter|[Yy]ears?"
+    rf"|[Vv]uonna|[Vv]uodesta|[Vv]uoteen|[Vv]uoden|[Vv]uosina|[Vv]uosien|[Vv]uosi|[Vv]uodelle|Q[1-4]|H[12]|{_MONTH})"
+)
+_YEAR_LIST = rf"{_YEAR}(?:\s*(?:,|and|or|ja|tai)\s*{_YEAR}\b)*(?!\s*(?:EUR|€|%|euro))"
 # Digit-bearing text that is not a figure, removed before looking for digits. Order matters:
 # dates before years, because a date contains a year.
 NOT_A_FIGURE_RES = [
     SRC_TAG_RE,
     usage.URL_RE,
-    re.compile(r"`[^`]*`"),  # inline code
     re.compile(r"\b[a-z_]+-\d{3,}\b"),  # claim ids (schemas.CLAIM_ID_RE)
     re.compile(r"\b\d{4}-\d{2}-\d{2}\b"),  # ISO date
     re.compile(r"\b\d{1,2}\.\d{1,2}\.\d{4}\b"),  # Finnish date 31.12.2024
     re.compile(r"\b\d{1,2}/\d{4}\b"),  # month/year 3/2025
-    re.compile(rf"\b\d{{1,2}}\.?\s+(?:{_MONTH})\b", re.IGNORECASE),  # 1 March, 1. maaliskuuta
-    re.compile(rf"\b(?:{_MONTH})\s+\d{{1,2}}\b", re.IGNORECASE),  # March 1
-    re.compile(r"\b(?:1[89]|20)\d{2}(?:[/–-]\d{2})?\b"),  # year, 2024/25
-    re.compile(r"\b[^\W\d_]+-?\d[\w-]*"),  # letter-led identifiers: B2B, Q1, COVID-19
+    re.compile(rf"\b\d{{1,2}}\.?\s+(?:{_MONTH})(?:\s+{_YEAR}\b)?"),  # 1 March 2025, 1. maaliskuuta
+    # March 1, March 31st 2025; not "In May 40 cabins were booked"
+    re.compile(rf"\b(?:{_MONTH})\s+\d{{1,2}}(?:st|nd|rd|th)?(?:,?\s+{_YEAR})?(?=\s*(?:[,.;\[]|$))"),
+    re.compile(rf"\b{_YEAR}\s*[–-]\s*(?:{_YEAR}|\d{{2}})\b|\b{_YEAR}/\d{{2}}\b"),  # range, season
+    re.compile(rf"\b{_YEAR_WORD}\s+{_YEAR_LIST}\b"),  # in 2024, since 2019, March 2025
+    re.compile(rf"\({_YEAR_LIST}\)|\b{_YEAR}:[^\W\d_]+"),  # (2024), 2024:n
+    re.compile(r"\b[^\W\d_]+\d[^\W\d_][\w-]*|\b[^\W\d_]+-?\d{1,2}\b"),  # identifiers: B2B, Q1, COVID-19
 ]
 DIGIT_RE = re.compile(r"\d")
 # Sentences that report a gap rather than a fact need no source.
@@ -205,7 +219,7 @@ def check_prose(md: str) -> tuple[list[str], list[str]]:
 
 
 def normalize_url(url: str) -> str:
-    return url.rstrip(".,;:").split("#", 1)[0].rstrip("/")
+    return url.rstrip(".,;:`*").split("#", 1)[0].rstrip("/")
 
 
 def seen_urls(run_dir: Path, agent: str) -> set[str]:
@@ -223,8 +237,13 @@ def seen_urls(run_dir: Path, agent: str) -> set[str]:
 
 
 def check_provenance(md: str, claims: list[CandidateClaim], seen: set[str], agent: str) -> list[str]:
-    """Cited URLs (prose and claim source_url) that the agent never saw and that are not API URLs."""
-    cited = {normalize_url(u) for u in usage.URL_RE.findall(FENCED_JSON_RE.sub("", md))}
+    """Cited URLs (prose and claim source_url) that the agent never saw and that are not API URLs.
+
+    '## Gaps' is skipped: it names sources that would answer an open question, unvisited by definition.
+    """
+    gaps = _sections(md).get("gaps")
+    prose = FENCED_JSON_RE.sub("", md.replace(gaps, "\n") if gaps else md)
+    cited = {normalize_url(u) for u in usage.URL_RE.findall(prose)}
     cited |= {normalize_url(c.source_url) for c in claims}
     unseen = sorted(u for u in cited if u not in seen and not u.startswith(API_URL_PREFIXES))
     return [
@@ -352,8 +371,13 @@ def auto(data: dict[str, Any], stop: bool) -> int:
     warning_text = "Warnings (not blocking):\n" + "\n".join(f"  - {w}" for w in warnings) if warnings else ""
     if not errors:
         (run_dir / f"VALIDATION_FAILED_{agent}").unlink(missing_ok=True)
+        # Exit-0 stderr reaches nobody, so the orchestrator and /status read the warnings from a file.
+        warnings_file = run_dir / f"VALIDATION_WARNINGS_{agent}"
         if warning_text:
+            warnings_file.write_text(warning_text + "\n", encoding="utf-8")
             print(warning_text, file=sys.stderr)
+        else:
+            warnings_file.unlink(missing_ok=True)
         return hookio.OK
 
     message = "\n\n".join([*errors, warning_text] if warning_text else errors)

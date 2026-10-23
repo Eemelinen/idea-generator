@@ -179,7 +179,22 @@ BARE_NUMBER_CASES = [
     ("claim-id", f"See pricing-001 for the listed weekly price {S}.", True),
     ("identifiers", f"The B2B and Q1 offers target COVID-19 recovery {S}.", True),
     ("digits-only-in-url", f"The listing page is the main source {S}.", True),
-    ("digits-in-inline-code", f"The tool prints `pxweb get 11ra` output {S}.", True),
+    ("figure-in-inline-code", f"It costs `650 EUR` per week {S}.", False),
+    ("currency-led-figure", f"It costs EUR650 per week {S}.", False),
+    ("count-that-looks-like-a-year", f"Rääkkylä had 1900 residents {S}.", False),
+    ("price-that-looks-like-a-year", f"Rent is 1950 EUR a month {S}.", False),
+    ("visitors-that-look-like-a-year", f"The region had 2000 visitors {S}.", False),
+    ("grew-to-is-not-a-year-context", f"Visitors grew to 2000 last summer {S}.", False),
+    ("year-then-count", f"In 2024 there were 1900 residents {S}.", False),
+    ("year-context-with-currency", f"The grant is paid in 2000 EUR instalments {S}.", False),
+    ("since-year", f"Prices have risen since 2019 {S}.", True),
+    ("year-list", f"The fair was held in 2023 and 2024 {S}.", True),
+    ("parenthesised-year", f"The municipal strategy (2024) targets tourism {S}.", True),
+    ("month-and-year", f"The listing was updated in March 2025 {S}.", True),
+    ("finnish-year", f"Vuonna 2024 kunta avasi uuden sataman {S}.", True),
+    ("finnish-case-ending", f"Kunnan 2024:n strategia painottaa matkailua {S}.", True),
+    ("may-the-verb", f"Some 30 may be seasonal {S}.", False),
+    ("may-the-month-then-count", f"In May 40 cabins were booked {S}.", False),
     ("extra-section-checked", f"It has a sauna {S}.", False),
 ]
 
@@ -231,6 +246,7 @@ PROVENANCE_CASES = [
     ("unseen-markdown-link", f"A cabin has a [sauna](https://example.fi/invented) {S}.", URL, {URL}, False),
     ("nothing-seen", f"A cabin has a sauna {S}.", URL, set(), False),
     ("trailing-slash-and-fragment", f"A cabin has a sauna [src: {URL}/#price].", URL, {URL}, True),
+    ("backticks-and-bold", f"A cabin has a sauna [src: `{URL}`], see **{URL}** {S}.", URL, {URL}, True),
     ("statfin-api", "Residents [src: https://pxdata.stat.fi/PXWeb/api/v1/fi/StatFin/vaerak/11ra.px].",
      URL, {URL}, True),
     ("prh-api", "", "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?location=R%C3%A4%C3%A4kkyl%C3%A4",
@@ -250,6 +266,13 @@ def test_url_provenance(tmp_path, case, findings, claim_url, seen, ok):
     else:
         with pytest.raises(vf.Invalid, match="never appeared in research-pricing's"):
             check(tmp_path, text, seen)
+
+
+def test_gaps_may_name_unvisited_sources(tmp_path):
+    text = doc(f"A cabin has a sauna {S}.").replace(
+        "- No 2024 occupancy data", "- Ask https://example.fi/never-fetched for 2024 occupancy data"
+    )
+    check(tmp_path, text)
 
 
 def test_seen_urls_are_read_per_agent_from_the_run_dir(tmp_path):
@@ -282,5 +305,12 @@ def test_auto_reports_warnings_without_blocking(active_run, capsys):
     (active_run / "02_research" / "pricing.md").write_text(
         doc(f"Cabins are busy in summer {S}. Winter demand is much lower."), encoding="utf-8"
     )
-    assert vf.auto({"agent_id": "a", "agent_type": "research-pricing"}, stop=False) == 0
+    hook = {"agent_id": "a", "agent_type": "research-pricing"}
+    assert vf.auto(hook, stop=False) == 0
     assert "Warnings (not blocking)" in capsys.readouterr().err
+    marker = active_run / "VALIDATION_WARNINGS_research-pricing"
+    assert "without [src: …]" in marker.read_text(encoding="utf-8")
+
+    shutil.copy(RESEARCH_FIXTURE, active_run / "02_research" / "pricing.md")
+    assert vf.auto(hook, stop=False) == 0
+    assert not marker.exists()
