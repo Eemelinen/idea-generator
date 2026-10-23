@@ -226,6 +226,9 @@ class SensitivityRow(Strict):
 
 
 class UnitEconomics(Strict):
+    """Output of `economics.py`. Prices and costs are per unit sold unless the field says per month,
+    after the VAT treatment `vat_registered` names (net if registered, else gross)."""
+
     price_eur: float | None = None
     variable_cost_eur: float | None = None
     contribution_margin_eur: float | None = None
@@ -233,11 +236,16 @@ class UnitEconomics(Strict):
     fixed_costs_month_eur: float | None = None
     cac_eur: float | None = None
     volume_month: float | None = None
+    purchases_per_customer_month: float | None = None
+    monthly_profit_eur: float | None = None
     break_even_units_month: float | None = None
     payback_months: float | None = None
     sensitivity: list[SensitivityRow] = []
+    vat_registered: bool | None = None
+    vat_rate_pct: float | None = None
     missing_inputs: list[str] = []
     input_claim_ids: list[str] = []
+    notes: list[str] = []
 
 
 class ScoreSheet(Strict):

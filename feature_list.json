@@ -319,7 +319,7 @@
       "area": "scoring",
       "title": "Unit economics",
       "user_visible_behavior": "`ideaforge.economics` maps numeric claims to price, variable cost, CAC proxy, fixed costs and volume and returns contribution margin, break-even units per month, payback months and a ±30 % price × volume sensitivity table, listing missing inputs instead of guessing and handling VAT explicitly.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-001"],
       "ticket": "IF-303",
       "spec": "docs/TICKETS.md#if-303-unit-economics",
@@ -327,9 +327,18 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_economics.py (known inputs, including a negative margin)"
       ],
-      "evidence": [],
-      "attempts": 0,
-      "notes": ""
+      "evidence": [
+        "2026-10-23 pnpm check → pass (working tree on 84df544)",
+        "2026-10-23 uv run pytest tests/test_economics.py → pass (working tree on 84df544)",
+        "2026-10-23 pnpm check → pass (working tree on 3ada0c3)",
+        "2026-10-23 uv run pytest tests/test_economics.py → pass (working tree on 3ada0c3)",
+        "2026-10-23 pnpm check → pass (commit 1d34ca5)",
+        "2026-10-23 uv run pytest tests/test_economics.py → pass (commit 1d34ca5)",
+        "2026-10-23 pnpm check → pass (working tree on f1db150)",
+        "2026-10-23 uv run pytest tests/test_economics.py → pass (working tree on f1db150)"
+      ],
+      "attempts": 1,
+      "notes": "Attempt 1 failed 2026-10-23: evaluator: Revise"
     },
     {
       "id": "F-016",
