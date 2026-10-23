@@ -1,12 +1,13 @@
 ---
 name: synthesize
-description: Run Ideaforge stage 5 for a run whose claims are verified. The synthesizer subagent proposes scores, unit-economics inputs and a risk register from the spec, the verified and conflict claims and the rubric only; scripts/score_run.py then drops unverified citations, applies the caps, kill triggers and unit economics and writes the final score sheet and verdict. Resumable. Use when the user types /synthesize <run_id>.
+description: Run Ideaforge stage 5 for a run whose claims are verified. The synthesizer subagent proposes scores, unit-economics inputs and a risk register from the spec, the verified and conflict claims and the rubric only; scripts/score_run.py then drops unverified citations, applies the caps, kill triggers and unit economics and writes the final score sheet and verdict, and scripts/render_report.py writes the immutable report. Resumable. Use when the user types /synthesize <run_id>.
 argument-hint: '<run_id>'
-allowed-tools: Read Agent Bash(uv run python scripts/run_stage.py*) Bash(uv run python scripts/synthesis_input.py*) Bash(uv run python scripts/score_run.py*) Bash(uv run python scripts/usage_report.py*) Bash(uv run python scripts/status.py*) Bash(uv run python -m ideaforge.validate_file*) Bash(ls*)
+allowed-tools: Read Agent Bash(uv run python scripts/run_stage.py*) Bash(uv run python scripts/synthesis_input.py*) Bash(uv run python scripts/score_run.py*) Bash(uv run python scripts/render_report.py*) Bash(uv run python scripts/usage_report.py*) Bash(uv run python scripts/status.py*) Bash(uv run python -m ideaforge.validate_file*) Bash(ls*)
 ---
 
 You are the orchestrator of an existing Ideaforge run. This skill runs stage 5 only:
-`synthesize` (the `synthesizer` subagent proposes) and `score` (Python decides). You never
+`synthesize` (the `synthesizer` subagent proposes), `score` (Python decides) and `report`
+(Python renders `05_report.md`). You never
 write a score, a risk or a claim file yourself, never read the research or claim files and
 never compute anything: all rules of CLAUDE.md → Pipeline sessions apply.
 
@@ -23,7 +24,8 @@ Arguments: `$ARGUMENTS` (one run id, `YYYYMMDD-HHMMSS-slug`, optionally `-vN`). 
    and stop.
 3. If it lists `intake`, `plan`, a `research:` stage or `verify`, stages 0–3 are incomplete:
    tell the user to run `/validate <run_id>` first, and stop. If it lists `score`, skip to
-   **Stage 5b — Scoring**. If it lists `report` or nothing, stage 5 is complete: go to **End**.
+   **Stage 5b — Scoring**. If it lists `report`, skip to **Stage 5c — Report**. If it lists
+   nothing, stage 5 is complete: go to **End**.
 
 ## Stage 5a — Synthesis
 
@@ -62,6 +64,17 @@ Arguments: `$ARGUMENTS` (one run id, `YYYYMMDD-HHMMSS-slug`, optionally `-vN`). 
 4. `uv run python scripts/run_stage.py <run_id> score --finish`
 5. `uv run python scripts/usage_report.py <run_id>`: report it to the user.
 
+## Stage 5c — Report
+
+1. `uv run python scripts/run_stage.py <run_id> report --begin`
+2. `uv run python scripts/render_report.py <run_id>`: it writes `runs/<run_id>/05_report.md`
+   (verdict, score table with cap labels, kill triggers, unit economics and sensitivity,
+   dimension sections, Finland funding fit, Rääkkylä notes, risk register, sources, usage) and
+   its `reports` row. Reports are immutable: if it says the report already exists, do not
+   delete or edit it; a new version is a new run. Any other exit 1 → report the error and stop.
+3. `uv run python scripts/run_stage.py <run_id> report --finish`
+4. `uv run python scripts/usage_report.py <run_id>`: report it to the user.
+
 ## End
 
 1. Show the `score_run.py` output verbatim in a code block: the score table with cap reasons,
@@ -70,7 +83,10 @@ Arguments: `$ARGUMENTS` (one run id, `YYYYMMDD-HHMMSS-slug`, optionally `-vN`). 
    `runs/<run_id>/04_scores.json` instead and summarise the same items from it.
 2. Check `ls runs/<run_id>/` for `BUDGET_EXCEEDED_*` and `VALIDATION_FAILED_*` markers and
    report them.
-3. Tell the user the verdict comes from Python (`config/rubric.yaml` thresholds, caps and
+3. Point the user at `runs/<run_id>/05_report.md`. Every Finland funding item there is backed
+   by a verified official-source claim or marked "unverified – see gaps"; never fill a gap
+   from your own knowledge or from the Finland hints in config.
+4. Tell the user the verdict comes from Python (`config/rubric.yaml` thresholds, caps and
    kill triggers), not from the synthesizer. A kill trigger the founder explicitly accepts
    goes into `kill_trigger_overrides` of `00_spec.json`; `uv run python scripts/score_run.py <run_id>`
-   then re-scores the run.
+   then re-scores the run; the report of this run stays as it is (reports are immutable).

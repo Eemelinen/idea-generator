@@ -32,6 +32,18 @@ def test_write_into_git_denied(project):
     assert ".git" in guard.check_write(write(project / ".git" / "config"))
 
 
+@pytest.mark.parametrize("dev", [False, True])
+@pytest.mark.parametrize("who", [{}, SYNTHESIZER, EVALUATOR])
+def test_report_is_never_written_by_a_tool(project, dev, who):
+    if dev:
+        (project / ".ideaforge-dev").touch()
+    report = project / "runs" / "20261023-130000-x" / "05_report.md"
+    assert "immutable" in guard.check_write(write(report, **who))
+    edit = {"tool_name": "Edit", "tool_input": {"file_path": str(report)}, **who}
+    assert "immutable" in guard.check_write(edit)
+    assert guard.check_write(write(project / "runs" / "20261023-130000-x" / "debate" / "05_report.md")) is None
+
+
 def test_main_session_strict_without_dev_marker(project):
     assert guard.check_write(write(project / "runs" / "x" / "00_spec.json")) is None
     assert guard.check_write(write(project / "cache" / "abc.txt")) is None

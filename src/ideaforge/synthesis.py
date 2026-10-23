@@ -94,6 +94,10 @@ def load_risks(run_dir: Path) -> RiskRegister:
     return _load(run_dir / "04_risks.json", TypeAdapter(RiskRegister))
 
 
+def load_scores(run_dir: Path) -> ScoreSheet:
+    return _load(run_dir / "04_scores.json", TypeAdapter(ScoreSheet))
+
+
 def _write_json(path: Path, data: Any) -> None:
     """Write via a temp file and rename, so a crash never leaves half a stage file."""
     tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
