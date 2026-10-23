@@ -6,7 +6,8 @@ Two steps, both deterministic:
   (role → claim ids, e.g. from the synthesizer) it uses exactly those; without, it picks one
   claim per role by unit and keywords and takes the most pessimistic candidate after period and
   VAT conversion. Values are converted to per month (fixed costs, volume, purchase frequency)
-  from the unit's period; a period with no monthly conversion (`/season`) drops the claim.
+  from the unit's period; a period with no monthly conversion (`/season`, `/kesäkausi`) drops the
+  claim for every role.
 - `compute` does the arithmetic. Every input that is absent, or an assigned cost role that lost
   a claim, is listed in `missing_inputs` and every output that needs it stays `None`.
 
@@ -64,9 +65,25 @@ _PER_MONTH = {
 # A price per month or year is a subscription: one unit sold is one customer-month.
 _SUBSCRIPTION_PERIODS = {*_MONTH, *_YEAR}
 # Periods with no fixed length: a figure per season cannot be spread over months or units.
-_SEASONS = {"season", "kausi", "kaudessa", "sesonki", "sesongissa", "summer", "winter", "kesä", "talvi"}
-# `per a night` is per unit, not per annum.
-_PER_RE = re.compile(r"(?:/|\bper\s+(?!an?\b))\s*([a-zäö]+)", re.IGNORECASE)
+# Matched as substrings of a `/` word, so compounds, plurals and inflections count too
+# (`kesäkausi`, `seasons`, `off-season`, `sesonkiaika`, `talvella`); known periods are excluded
+# first, and month inflections (`kuukauden`) never count, because `kuukausi` contains `kausi`.
+_SEASON_STEMS = (
+    "season", "summer", "winter", "spring", "autumn",
+    "kausi", "kausa", "kaude", "sesonk", "sesong", "kesä", "talvi", "talve", "kevät", "kevää", "syksy",
+    "vuodenai", "vuodenaj",
+)  # fmt: skip
+# `/` words that name the unit sold: an automatic per-unit cost needs one of these (or no `/` word).
+_PER_UNIT = {
+    "unit", "item", "piece", "pc", "pcs", "person", "people", "head", "guest", "customer", "client",
+    "visitor", "visit", "night", "stay", "booking", "order", "session", "evening", "ticket", "meal",
+    "portion", "serving", "product", "room", "cabin", "seat", "participant", "member", "user",
+    "kpl", "kappale", "henkilö", "hlö", "asiakas", "vieras", "kävijä", "käynti", "kerta", "yö", "ilta",
+    "tilaus", "varaus", "annos", "tuote", "huone", "mökki", "lippu", "osallistuja", "jäsen", "käyttäjä",
+}  # fmt: skip
+# `per a night` is per unit, not per annum. A count before the word (`/2 weeks`) is kept with it,
+# so the word is no known period and gets no monthly conversion.
+_PER_RE = re.compile(r"(?:/|\bper\s+(?!an?\b))\s*(\d+(?:[.,]\d+)?\s*)?([a-zäö][a-zäö-]*)", re.IGNORECASE)
 _EXCL_VAT_RE = re.compile(
     r"\b(excl(\.|uding|usive( of)?)?|ex\.?|without|net of|before)\s+vat\b|\bvat\s+excl|\+\s*(vat|alv)\b"
     r"|\b(alv|vat)\s*0\b(?![,.]\d)|\bverotons?|\bilman\s+alv",
@@ -148,10 +165,17 @@ def vat_basis(text: str) -> VatBasis | None:
     return "excl" if excl else "incl"
 
 
+def _singular(word: str, known: Iterable[str]) -> str:
+    """The word with a plural `s` dropped when only the singular is in `known`."""
+    return word.removesuffix("s") if word not in known and word.removesuffix("s") in known else word
+
+
 def _per_words(unit: str) -> list[str]:
-    """The words after `/` or `per` in a unit, plural `s` dropped from period words."""
-    words = [w.lower() for w in _PER_RE.findall(unit)]
-    return [w.removesuffix("s") if w not in _PER_MONTH and w.removesuffix("s") in _PER_MONTH else w for w in words]
+    """The words after `/` or `per` in a unit, plural `s` dropped from period words, a count kept (`2 weeks`)."""
+    return [
+        f"{count.strip()} {word.lower()}" if count else _singular(word.lower(), _PER_MONTH)
+        for count, word in _PER_RE.findall(unit)
+    ]
 
 
 def period(unit: str) -> str | None:
@@ -190,8 +214,15 @@ def _percent(claim: Claim) -> bool:
 
 
 def seasonal(unit: str) -> bool:
-    """Whether a unit is per season (`EUR/season`, `nights/kausi`): no monthly or per-unit reading."""
-    return any(w in _SEASONS for w in _per_words(unit))
+    """Whether a unit is per season (`EUR/season`, `EUR/kesäkausi`, `nights/seasons`): no monthly or per-unit reading."""
+    return any(
+        w not in _PER_MONTH and "kuukau" not in w and any(stem in w for stem in _SEASON_STEMS) for w in _per_words(unit)
+    )
+
+
+def per_unit(unit: str) -> bool:
+    """Whether a unit reads as per unit sold: no `/` or `per` word, or only words in `_PER_UNIT` (`EUR/person`)."""
+    return all(_singular(w, _PER_UNIT) in _PER_UNIT for w in _per_words(unit))
 
 
 def auto_role(claim: Claim) -> str | None:
@@ -212,7 +243,10 @@ def auto_role(claim: Claim) -> str | None:
         elif kind == "price":
             role = "price"
         elif kind == "cost":
-            role = "fixed_costs" if period(claim.unit) else "variable_cost"
+            if period(claim.unit):
+                role = "fixed_costs"
+            elif per_unit(claim.unit):
+                role = "variable_cost"
         elif kind == "unit_count" and period(claim.unit):
             role = "volume"
     if role is None or claim.dimension not in _AUTO_DIMENSIONS.get(role, {claim.dimension}):
@@ -280,8 +314,17 @@ def _automatic(claims: Iterable[Claim], notes: list[str], vat_registered: bool) 
     for claim in claims:
         if claim.verification != "verified":
             continue
-        if claim.value is not None and claim.unit and seasonal(claim.unit) and numeric_field(claim):
-            notes.append(f"{claim.claim_id}: unit {claim.unit!r} has no monthly conversion; not used")
+        if claim.value is not None and claim.unit and (kind := numeric_field(claim)):
+            if seasonal(claim.unit):
+                notes.append(f"{claim.claim_id}: unit {claim.unit!r} has no monthly conversion; not used")
+            elif (
+                kind == "cost"
+                and claim.dimension in _AUTO_DIMENSIONS["variable_cost"]
+                and not period(claim.unit)
+                and not per_unit(claim.unit)
+                and not _CAC_RE.search(f"{claim.unit} {claim.statement}")
+            ):
+                notes.append(f"{claim.claim_id}: unit {claim.unit!r} is neither per unit sold nor per period; not used")
         if (role := auto_role(claim)) is not None:
             mapped = _map(role, claim)
             if isinstance(mapped, _Mapped):

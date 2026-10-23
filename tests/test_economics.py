@@ -533,3 +533,75 @@ def test_seasonal_costs_are_never_per_unit():
     assert inputs.variable_cost == (Amount(3, ("unit_economics-001",), "excl"),)
     assert inputs.incomplete == {"variable_cost"}
     assert "variable_cost: unit_economics-002 unit 'EUR/season' has no monthly conversion; dropped" in inputs.notes
+
+
+@pytest.mark.parametrize(
+    "unit",
+    ["EUR/kesäkausi", "EUR/talvikausi", "EUR/seasons", "EUR/sesonkiaika", "EUR/off-season", "EUR per summers",
+     "EUR/kesällä", "nights/kaudet"],
+)  # fmt: skip
+def test_seasonal_matches_compounds_plurals_and_inflections(unit):
+    assert economics.seasonal(unit)
+
+
+@pytest.mark.parametrize("unit", ["EUR/month", "EUR/kuukausi", "EUR/kuukauden", "EUR/kk", "EUR/year", "EUR/night", "EUR"])
+def test_seasonal_ignores_periods_and_units(unit):
+    assert not economics.seasonal(unit)
+
+
+@pytest.mark.parametrize("unit", ["EUR/kesäkausi", "EUR/seasons"])
+def test_compound_and_plural_seasonal_costs_set_no_trigger(unit):
+    claims = [
+        claim("pricing-001", 25, "EUR", "The price is 25 EUR excl. VAT."),
+        claim("unit_economics-001", 5, "EUR", "Firewood per evening costs 5 EUR excl. VAT."),
+        claim("unit_economics-002", 1200, unit, "Insurance costs 1200 EUR per summer season excl. VAT."),
+    ]
+    assert economics.auto_role(claims[2]) is None
+    ue = economics.unit_economics(claims)
+    assert ue.variable_cost_eur == 5
+    assert "unit_economics-002" not in ue.input_claim_ids
+    assert economics.computed_triggers(ue) == []
+    assert f"unit_economics-002: unit {unit!r} has no monthly conversion; not used" in ue.notes
+    for role in ("variable_cost", "fixed_costs"):
+        ue = economics.unit_economics(claims, {"price": ["pricing-001"], role: ["unit_economics-002"]})
+        assert role in ue.missing_inputs
+        assert "unit_economics-002" not in ue.input_claim_ids
+        assert economics.computed_triggers(ue) == []
+        assert f"{role}: unit_economics-002 unit {unit!r} has no monthly conversion; dropped" in ue.notes
+    ue = economics.unit_economics(claims, {"price": ["pricing-001"],
+                                           "variable_cost": ["unit_economics-001", "unit_economics-002"]})  # fmt: skip
+    assert ue.variable_cost_eur is None
+    assert ue.contribution_margin_eur is None
+    assert economics.computed_triggers(ue) == []
+
+
+@pytest.mark.parametrize(
+    ("unit", "expected"),
+    [("EUR", True), ("EUR/person", True), ("EUR/persons", True), ("EUR/hlö", True), ("EUR per night", True),
+     ("EUR/h", False), ("EUR/event", False), ("EUR/2 weeks", False), ("EUR/month", False)],
+)  # fmt: skip
+def test_per_unit(unit, expected):
+    assert economics.per_unit(unit) is expected
+
+
+@pytest.mark.parametrize("unit", ["EUR/h", "EUR/event", "EUR/2 weeks"])
+def test_auto_cost_with_unclear_unit_is_not_a_per_unit_cost(unit):
+    claims = [
+        claim("pricing-001", 25, "EUR", "The price is 25 EUR excl. VAT."),
+        claim("unit_economics-001", 300, unit, "Staff costs 300 EUR excl. VAT."),
+    ]
+    assert economics.auto_role(claims[1]) is None
+    ue = economics.unit_economics(claims)
+    assert ue.variable_cost_eur is None
+    assert "variable_cost" in ue.missing_inputs
+    assert economics.computed_triggers(ue) == []
+    assert f"unit_economics-001: unit {unit!r} is neither per unit sold nor per period; not used" in ue.notes
+
+
+def test_counted_period_is_dropped_not_read_as_monthly():
+    assert economics.period("EUR/2 weeks") is None
+    claims = [claim("unit_economics-001", 300, "EUR/2 weeks", "Cleaning costs 300 EUR every two weeks excl. VAT.")]
+    inputs = economics.inputs_from_claims(claims, {"fixed_costs": ["unit_economics-001"]})
+    assert inputs.fixed_costs == ()
+    assert inputs.incomplete == {"fixed_costs"}
+    assert "fixed_costs: unit_economics-001 unit 'EUR/2 weeks' has no monthly conversion; dropped" in inputs.notes
