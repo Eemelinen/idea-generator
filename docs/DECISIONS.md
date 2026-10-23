@@ -24,7 +24,7 @@ Format: **Context** (what forced a choice) · **Decision** · **Consequences**.
   - The driver is the local script `scripts/harness-loop.ts` (`pnpm harness:loop`), run from Git Bash with the existing Claude Code login. No CI or cloud runner.
   - Sessions run `claude -p --permission-mode auto --permission-prompts none` with `--allowedTools` from `harness.config.json`. `bypassPermissions` is not used.
   - One worktree and branch `feat/F-NNN` per feature, cut from `main`. The driver pushes and opens a PR with `gh`, and waits for the merge before a dependent feature starts.
-  - `merge` starts at `"wait"` (a human merges). Switch it to `"auto"` only after `main` is protected with the required check `L1 (pnpm check)`; without protection `gh pr merge --auto` merges before CI.
+  - `merge` started at `"wait"` (a human merges) and is `"auto"` since 2026-10-23, when `main` got the protection below. Switch it to `"auto"` only after `main` is protected with the required check `L1 (pnpm check)`; without protection `gh pr merge --auto` merges before CI.
   - Caps start at the porting guide's values: 2 attempts, 200 turns, 15 USD and 60 minutes per generator session; evaluator 60 turns and 4 USD; the loop stops after 2 consecutive failures. `manual:` steps are never waived unattended.
   - The evaluator is a separate fresh-context `claude -p` session with the body and tools of `.claude/agents/evaluator.md` (`--append-system-prompt`, `--tools`) and a JSON verdict schema.
   - The Stop hook `stop-guard.sh` is inert unless `HARNESS_STOP_GUARD=1` (set by the driver) and blocks at most three times.

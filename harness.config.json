@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/@eemelinen/harness/schema/harness.config.schema.json",
-  "$comment": "Project configuration for the shared harness (@eemelinen/harness; reference: https://github.com/Eemelinen/harness/blob/main/docs/config.md). allowedTools merge with .claude/settings.json only for driver-run sessions. Models must equal config/models.yaml roles harness_generator / harness_evaluator (tests/test_harness_config.py). Set merge to \"auto\" only after branch protection exists. See docs/harness/README.md.",
+  "$comment": "Project configuration for the shared harness (@eemelinen/harness; reference: https://github.com/Eemelinen/harness/blob/main/docs/config.md). allowedTools merge with .claude/settings.json only for driver-run sessions. Models must equal config/models.yaml roles harness_generator / harness_evaluator (tests/test_harness_config.py). See docs/harness/README.md.",
   "project": {
     "name": "Ideaforge",
     "sourceDirs": ["src", "scripts", "prompts", "agent_templates"]
@@ -152,7 +152,7 @@
     "Bash(git worktree list)"
   ],
   "worktreeRoot": "../idea-generator-worktrees",
-  "merge": "wait",
+  "merge": "auto",
   "traceDir": ".harness/traces",
   "runsLog": ".harness/runs.jsonl"
 }
