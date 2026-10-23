@@ -87,6 +87,7 @@ ideaforge/
 │   ├── report.py                  # Markdown report renderer
 │   ├── debate.py                  # debate protocol validator + convergence check
 │   ├── usage.py                   # JSONL log of tool calls; per-run tallies
+│   ├── status.py                  # /status text: recent runs, one run's claims, flags, markers, usage
 │   ├── validate_file.py           # CLI: validate a JSON file against a schema (used by hooks)
 │   └── fi/                        # free Finnish data tools
 │       ├── pxweb.py               # Statistics Finland + Luke PxWeb client
@@ -100,7 +101,8 @@ ideaforge/
 │   ├── render_report.py
 │   ├── debate_validate.py         # validate a round's rebuttals; reject unsupported stance changes
 │   ├── debate_converged.py        # exit code 0 if converged
-│   └── usage_report.py
+│   ├── usage_report.py
+│   └── status.py                  # /status [run_id]
 ├── runs/                          # one folder per run (gitignored)
 │   └── <run_id>/
 │       ├── idea.md

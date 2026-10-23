@@ -1,0 +1,14 @@
+{"ts": "2026-10-23T09:59:00+00:00", "run_id": "20261023-100000-sauna-cabins", "stage": null, "agent": "main", "tool": "Bash", "model": "opus", "approx_tokens": 40}
+{"ts": "2026-10-23T10:00:30+00:00", "run_id": "20261023-100000-sauna-cabins", "stage": null, "agent": "main", "tool": "Write", "model": "opus", "approx_tokens": 350}
+{"ts": "2026-10-23T10:03:00+00:00", "run_id": "20261023-100000-sauna-cabins", "stage": null, "agent": "main", "tool": "Read", "model": "opus", "approx_tokens": 1200}
+{"ts": "2026-10-23T10:04:50+00:00", "run_id": "20261023-100000-sauna-cabins", "stage": null, "agent": "research-pricing", "tool": "WebSearch", "model": "opus", "approx_tokens": 1500}
+{"ts": "2026-10-23T10:06:00+00:00", "run_id": "20261023-100000-sauna-cabins", "stage": null, "agent": "research-market", "tool": "WebSearch", "model": "opus", "approx_tokens": 2400}
+{"ts": "2026-10-23T10:06:30+00:00", "run_id": "20261023-100000-sauna-cabins", "stage": null, "agent": "research-pricing", "tool": "WebSearch", "model": "opus", "approx_tokens": 2100}
+{"ts": "2026-10-23T10:07:00+00:00", "run_id": "20261023-100000-sauna-cabins", "stage": null, "agent": "research-market", "tool": "WebFetch", "model": "opus", "approx_tokens": 5000}
+{"ts": "2026-10-23T10:08:00+00:00", "run_id": "20261023-100000-sauna-cabins", "stage": null, "agent": "main", "tool": "Read", "model": "opus", "approx_tokens": 300}
+not a json line (synthetic: malformed on purpose)
+{"ts": "2026-10-23T10:21:00+00:00", "run_id": "20261023-100000-sauna-cabins", "stage": null, "agent": "research-pricing", "tool": "WebFetch", "model": "opus", "approx_tokens": 4100}
+{"ts": "2026-10-23T10:22:00+00:00", "run_id": "20261023-100000-sauna-cabins", "stage": null, "agent": "research-market", "tool": "Write", "model": "opus", "approx_tokens": 900}
+{"ts": "2026-10-23T10:30:00+00:00", "run_id": "20261023-100000-sauna-cabins", "stage": null, "agent": "research-killcause", "tool": "WebSearch", "model": "opus", "approx_tokens": 1800}
+
+{"ts": "2026-10-23T10:40:00+00:00", "run_id": "20261023-100000-sauna-cabins", "stage": "verify", "agent": "main", "tool": "Bash", "model": "opus", "approx_tokens": 600}

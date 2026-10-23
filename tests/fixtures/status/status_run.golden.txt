@@ -1,0 +1,62 @@
+run 20261023-100000-sauna-cabins (times UTC)
+idea: Sauna-and-lake cabin rentals for remote workers
+created 2026-10-23 10:00:00 · preset standard · status active
+
+stages
+stage                    status   attempts  started              finished
+intake                   done            1  2026-10-23 10:00:00  2026-10-23 10:02:00
+plan                     done            1  2026-10-23 10:02:00  2026-10-23 10:05:00
+research:customer        pending         0  -                    -
+research:market          done            1  2026-10-23 10:05:00  2026-10-23 10:20:00
+research:competition     pending         0  -                    -
+research:pricing         done            2  2026-10-23 10:05:05  2026-10-23 10:25:00
+research:unit_economics  pending         0  -                    -
+research:gtm             failed          2  2026-10-23 10:05:07  2026-10-23 10:12:00
+research:regulation      pending         0  -                    -
+research:financing       pending         0  -                    -
+research:location        pending         0  -                    -
+research:founder_risk    pending         0  -                    -
+research:killcause       running         2  2026-10-23 10:05:10  -
+verify                   pending         0  -                    -
+synthesize               pending         0  -                    -
+score                    pending         0  -                    -
+report                   pending         0  -                    -
+
+claims per dimension
+dimension       verified  unverified  conflict  pending  total
+customer               0           0         0        0      0
+market                 1           1         0        0      2
+competition            1           0         1        0      2
+pricing                0           0         0        1      1
+unit_economics         0           0         0        0      0
+gtm                    0           0         0        0      0
+regulation             1           0         0        0      1
+financing              0           0         0        0      0
+location               0           0         0        0      0
+founder_risk           0           0         0        0      0
+killcause              1           1         1        0      3
+total                  4           2         2        1      9
+
+kill flags fired (verified claims)
+free_good_enough_substitute: competition-001, killcause-002
+permit_impossible: regulation-001 (overridden in 00_spec.json)
+flagged only on claims that are not verified (not fired):
+  no_evidence_anyone_pays: killcause-003 conflict
+  permit_impossible: killcause-001 unverified
+
+markers
+BUDGET_EXCEEDED_research-pricing: WebSearch: 9 > 8
+VALIDATION_FAILED_research-gtm: figure without a following > quote: 'about 40 cabins'
+VALIDATION_WARNINGS_research-market: no [src: …] on: 'Demand peaks in July.' (+1 more line(s))
+
+usage: 12 tool calls, 4 searches, 2 fetches, ~20290 tokens
+warning: skipped 1 malformed line(s) in usage.jsonl
+stage               calls  searches  fetches  ~tokens
+intake                  1         0        0      350
+plan                    1         0        0     1200
+research:market         3         1        1     8300
+research:pricing        3         2        1     7700
+research:killcause      2         1        0     2100
+verify                  1         0        0      600
+(no stage)              1         0        0       40
+total                  12         4        2    20290

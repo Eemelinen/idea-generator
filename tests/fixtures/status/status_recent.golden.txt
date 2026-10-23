@@ -1,0 +1,5 @@
+recent runs, newest first (times UTC)
+20261023-100000-sauna-cabins  2026-10-23 10:00:00  standard  active
+  intake done · plan done · research: 2 done, 1 running, 1 failed, 7 pending · verify pending · synthesize pending · score pending · report pending
+20261020-090000-berry-drying  2026-10-20 09:00:00  economy  abandoned
+  intake pending · plan pending · research: 11 pending · verify pending · synthesize pending · score pending · report pending

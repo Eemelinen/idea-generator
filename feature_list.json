@@ -196,7 +196,7 @@
       "area": "observability",
       "title": "Usage report and basic status",
       "user_visible_behavior": "`scripts/usage_report.py <run_id>` prints tool calls, searches, fetches and approximate tokens per stage and per agent and lists budget markers; `/status` lists recent runs and their stages, and `/status <run_id>` shows claims per dimension by verification state, fired kill flags, failure and budget markers and the usage summary.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-001"],
       "ticket": "IF-212",
       "spec": "docs/TICKETS.md#if-212-usage-report-and-basic-status",
@@ -204,7 +204,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_usage_report.py tests/test_status.py (golden output on fixture JSONL and a fixture DB)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-23 pnpm check → pass (commit 9c39638)",
+        "2026-10-23 uv run pytest tests/test_usage_report.py tests/test_status.py → pass (commit 9c39638)"
+      ],
       "attempts": 0,
       "notes": "Absorbs IF-213 (/status basic). The live check on a real run moved to F-013."
     },
