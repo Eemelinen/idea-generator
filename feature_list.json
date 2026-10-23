@@ -298,7 +298,7 @@
       "area": "scoring",
       "title": "Scoring",
       "user_visible_behavior": "`ideaforge.scoring` applies the rubric’s named evidence rules, caps unsupported dimensions at 2 with a reason, fires kill triggers from verified claim flags minus spec overrides, computes the weighted total and returns GO / PIVOT / NO_GO / INSUFFICIENT_DATA with thresholds from the rubric.",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": ["F-001"],
       "ticket": "IF-302",
       "spec": "docs/TICKETS.md#if-302-scoring",
