@@ -27,6 +27,9 @@ decide() {
   exit 0
 }
 has() { printf '%s' "$1" | grep -qE "$2"; }
+# Like has(), but the command is one record: ^ is its start, not the start of every line, so a
+# heredoc or commit-message line that begins with "pytest" is not mistaken for a command.
+has_at_command() { printf '%s' "$1" | grep -qzE "(^|[;&|][[:space:]]*)$2"; }
 
 tool="$(field tool_name)"
 
@@ -35,9 +38,9 @@ case "$tool" in
     cmd="$(field command)"
     sep='(^|[;&|[:space:]])'
     # PATH on the dev machine has Python 3.8 and anaconda ahead of the project interpreter.
-    has "$cmd" '(^|[;&|][[:space:]]*)(python3?|py|pytest|pip3?)([[:space:]]|$)' &&
+    has_at_command "$cmd" '(python3?|py|pytest|pip3?)([[:space:]]|$)' &&
       block "run Python through uv (uv run pytest, uv run python …); a bare python/pytest/pip picks the wrong interpreter"
-    has "$cmd" '(^|[;&|][[:space:]]*)(uv )?pip3? install' && block "add dependencies with uv add (pyproject.toml + uv.lock), never pip install"
+    has_at_command "$cmd" '(uv )?pip3? install' && block "add dependencies with uv add (pyproject.toml + uv.lock), never pip install"
     has "$cmd" "${sep}(npm (i|install|add|ci)|yarn( add| install)?([[:space:]]|$)|npx )" && block "use pnpm (packageManager pin); npm/yarn/npx are not allowed"
     has "$cmd" 'git push.*(--force|-f( |$))' && block "force push is not allowed"
     has "$cmd" 'git reset --hard|git checkout -- \.|git clean -f' && block "destructive git command; ask the user"

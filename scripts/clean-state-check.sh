@@ -101,10 +101,10 @@ else
     ok "coverage thresholds untouched"
   fi
   # print() is not checked: the src/ and scripts/ CLIs print their results by design.
-  if diff_added src scripts | grep -qE '\bbreakpoint\(\)|pdb\.set_trace\(|^\+?\s*import i?pdb\b'; then
-    fail "a debugger call (breakpoint(), pdb) was added under src/ or scripts/"
+  if diff_added 'src/*.py' 'scripts/*.py' | grep -qE '\bbreakpoint\(\)|pdb\.set_trace\(|^\+?\s*import i?pdb\b'; then
+    fail "a Python debugger call (breakpoint or pdb) was added under src/ or scripts/"
   else
-    ok "no debugger calls added under src/ or scripts/"
+    ok "no Python debugger calls added under src/ or scripts/"
   fi
   branch_files="$(git diff --name-only "$base" 2>/dev/null || true)"
   if [ -n "$branch_files" ] && ! printf '%s\n' "$branch_files" | grep -qx 'PROGRESS.md'; then
