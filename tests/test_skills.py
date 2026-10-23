@@ -65,7 +65,7 @@ def fill(command: str) -> str:
 
 
 def test_pipeline_skills_exist():
-    assert {"validate", "research", "status"} <= set(SKILLS)
+    assert {"validate", "research", "status", "synthesize"} <= set(SKILLS)
 
 
 @pytest.mark.parametrize("skill", SKILLS)
@@ -113,7 +113,7 @@ def test_commands_pass_the_guard_and_allowed_tools(skill, project):
         for script in re.findall(r"scripts/([\w-]+\.py)", pattern):
             assert (ROOT / "scripts" / script).is_file(), pattern
     cited = commands(body)
-    if skill in ("validate", "research"):
+    if skill in ("validate", "research", "synthesize"):
         assert cited
     for command in cited:
         filled = fill(command)
@@ -219,3 +219,70 @@ def test_research_skill_reuses_validate_stages_1_to_3():
     assert set(referenced) <= set(sections(split("validate")[1]))
     for marker in ("VALIDATION_FAILED_", "BUDGET_EXCEEDED_", "usage_report.py"):
         assert marker in body, marker
+
+
+# ---------------------------------------------------------------- synthesize (IF-304)
+
+SYNTHESIZE_SECTIONS = {  # synthesize skill heading → (stage, validator kinds checked before --finish)
+    "Stage 5a — Synthesis": ("synthesize", ("scores_proposed", "risks")),
+    "Stage 5b — Scoring": ("score", ("scores",)),
+}
+# What the synthesizer may see: the input file synthesis_input.py writes (spec, verified and
+# conflict claims, rubric) and the two files it writes. Anything else is a leak.
+SYNTHESIZER_PATHS = {
+    f"runs/<run_id>/{agents.SYNTHESIS_INPUT}",
+    *(f"runs/<run_id>/{name}" for name in agents.SYNTHESIS_OUTPUTS),
+}
+FORBIDDEN_INPUTS = ("02_research", "03_claims", "verified.json", "idea.md", "01_plan.json", "usage.jsonl")
+
+
+def test_synthesize_stages_are_wrapped_in_run_stage():
+    by_title = sections(split("synthesize")[1])
+    assert set(SYNTHESIZE_SECTIONS) <= set(by_title)
+    for title, (stage, kinds) in SYNTHESIZE_SECTIONS.items():
+        text = by_title[title]
+        begin = text.find(f"run_stage.py <run_id> {stage} --begin")
+        finish = text.find(f"run_stage.py <run_id> {stage} --finish")
+        assert 0 <= begin < finish, f"{title}: {stage} not wrapped in --begin/--finish"
+        assert "usage_report.py <run_id>" in text[finish:], f"{title}: no usage report after the stage"
+        for kind in kinds:
+            check = text.find(f"validate_file --kind {kind}")
+            assert begin < check < finish, f"{title}: no validate_file --kind {kind} before --finish"
+    scoring = by_title["Stage 5b — Scoring"]
+    assert scoring.find("score --begin") < scoring.find("score_run.py <run_id>") < scoring.find("score --finish")
+
+
+def test_synthesize_launches_the_registered_synthesizer_with_only_the_allowed_input():
+    text = sections(split("synthesize")[1])["Stage 5a — Synthesis"]
+    spec = agents.get("synthesizer")
+    assert spec is not None and spec.kind == "synthesizer" and spec.role == "synthesizer"
+    assert "subagent_type: synthesizer" in text
+    # the input file is written before the launch, and is the only input the brief names
+    assert text.find("synthesis_input.py <run_id>") < text.find("subagent_type: synthesizer")
+    brief = text[text.find("The brief contains exactly") : text.find("validate_file")]
+    assert set(re.findall(r"runs/<run_id>/[\w./-]+", brief)) == SYNTHESIZER_PATHS
+    assert "read no other file" in brief and "write no other file" in brief
+
+
+@pytest.mark.parametrize("path", [SKILLS_DIR / "synthesize" / "SKILL.md", config.PROMPTS_DIR / "synthesizer.md"])
+def test_synthesizer_never_sees_research_or_unfiltered_claims(path):
+    text = path.read_text(encoding="utf-8")
+    for forbidden in FORBIDDEN_INPUTS:
+        assert forbidden not in text, f"{path.name} names {forbidden}"
+
+
+def test_synthesizer_prompt_reads_one_file_and_writes_two():
+    text = (config.PROMPTS_DIR / "synthesizer.md").read_text(encoding="utf-8")
+    assert set(re.findall(r"runs/<run_id>/[\w./-]+", text)) == SYNTHESIZER_PATHS
+    assert "Read **only** `runs/<run_id>/04_synthesis_input.json`" in text
+    for rule in ("cites at least one claim id", "no verified evidence", "Never introduce facts"):
+        assert rule in text, rule
+    agent = (config.AGENTS_DIR / "synthesizer.md").read_text(encoding="utf-8")
+    front = yaml.safe_load(agent.split("---\n")[1])
+    assert front["tools"] == "Read, Write"
+    assert front["model"] == config.models().roles["synthesizer"]
+
+
+def test_validate_points_to_synthesize():
+    end = sections(split("validate")[1])["End"]
+    assert "/synthesize <run_id>" in end

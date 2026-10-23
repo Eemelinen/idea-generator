@@ -138,6 +138,22 @@ def test_auto_debate_agent_validates_latest_round(active_run):
         vf.auto(hook, stop=False)
 
 
+def test_auto_synthesizer_validates_both_files(active_run):
+    hook = {"agent_id": "a", "agent_type": "synthesizer"}
+    with pytest.raises(SystemExit):
+        vf.auto(hook, stop=False)  # nothing written yet
+    shutil.copy(FIXTURES / "scores_proposed.json", active_run / "04_scores_proposed.json")
+    with pytest.raises(SystemExit):
+        vf.auto(hook, stop=False)  # 04_risks.json is still missing
+    shutil.copy(FIXTURES / "risks.json", active_run / "04_risks.json")
+    assert vf.auto(hook, stop=False) == 0
+    (active_run / "04_risks.json").write_text('{"risks": [{"risk": "no fields"}]}', encoding="utf-8")
+    assert vf.auto(hook | {"stop_hook_active": True}, stop=False) == 0
+    assert "04_risks.json is not a valid risks" in (active_run / "VALIDATION_FAILED_synthesizer").read_text(
+        encoding="utf-8"
+    )
+
+
 def test_auto_stop_validates_existing_stage_files(active_run):
     assert vf.auto({}, stop=True) == 0
     (active_run / "00_spec.json").write_text('{"title": "only"}', encoding="utf-8")

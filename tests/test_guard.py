@@ -16,6 +16,7 @@ def bash(command, tool="Bash", **extra):
 RESEARCH = {"agent_id": "a1", "agent_type": "research-pricing"}
 DEBATE = {"agent_id": "a2", "agent_type": "debate-investor"}
 EVALUATOR = {"agent_id": "a3", "agent_type": "harness:evaluator"}
+SYNTHESIZER = {"agent_id": "a4", "agent_type": "synthesizer"}
 
 
 # ---------------------------------------------------------------- writes
@@ -65,6 +66,19 @@ def test_research_agent_needs_active_run(project):
 def test_debate_agent_only_debate_dir(active_run):
     assert guard.check_write(write(active_run / "debate" / "round0" / "investor.json", **DEBATE)) is None
     assert guard.check_write(write(active_run / "04_scores.json", **DEBATE)) is not None
+
+
+def test_synthesizer_writes_only_its_two_files(active_run, project):
+    (project / ".ideaforge-dev").touch()  # dev mode never relaxes subagents
+    for name in ("04_scores_proposed.json", "04_risks.json"):
+        assert guard.check_write(write(active_run / name, **SYNTHESIZER)) is None
+    for other in ("04_scores.json", "04_synthesis_input.json", "03_claims/verified.json", "00_spec.json"):
+        assert "the synthesizer may only write" in guard.check_write(write(active_run / other, **SYNTHESIZER))
+    assert guard.check_write(write(project / "cache" / "a.txt", **SYNTHESIZER)) is not None
+
+
+def test_synthesizer_needs_active_run(project):
+    assert "no active run" in guard.check_write(write(project / "runs" / "x" / "04_risks.json", **SYNTHESIZER))
 
 
 def test_unknown_subagent_limited_to_runs_and_cache(project):

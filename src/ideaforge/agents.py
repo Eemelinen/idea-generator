@@ -12,7 +12,7 @@ from ideaforge.schemas import PERSONAS, RESEARCH_DIMENSIONS
 class AgentSpec:
     name: str          # subagent name == .claude/agents/<name>.md == hook agent_type
     role: str          # key in config/models.yaml roles
-    kind: str          # research | debate | judge | harness
+    kind: str          # research | synthesizer | debate | judge | harness
     dimension: str | None = None
     persona: str | None = None
     budget_key: str | None = None   # key in a budget preset
@@ -42,6 +42,8 @@ for _dim in RESEARCH_DIMENSIONS:
         dimension=_dim,
         budget_key="killcause_scout" if _killcause else "research_subagent",
     )
+# Stage 5 (IF-304): proposes scores and risks from runs/<run_id>/04_synthesis_input.json only.
+AGENTS["synthesizer"] = AgentSpec(name="synthesizer", role="synthesizer", kind="synthesizer")
 for _p in PERSONAS:
     AGENTS[f"debate-{_p}"] = AgentSpec(name=f"debate-{_p}", role="debate_persona", kind="debate", persona=_p)
 AGENTS["debate-judge"] = AgentSpec(name="debate-judge", role="debate_judge", kind="judge")
@@ -61,6 +63,14 @@ def research_agent(dimension: str) -> AgentSpec | None:
 
 def research_output(run_dir: Path, spec: AgentSpec) -> Path:
     return run_dir / "02_research" / f"{spec.dimension}.md"
+
+
+SYNTHESIS_INPUT = "04_synthesis_input.json"
+SYNTHESIS_OUTPUTS = ("04_scores_proposed.json", "04_risks.json")
+
+
+def synthesizer_outputs(run_dir: Path) -> list[Path]:
+    return [run_dir / name for name in SYNTHESIS_OUTPUTS]
 
 
 def latest_debate_output(run_dir: Path, spec: AgentSpec) -> Path | None:
