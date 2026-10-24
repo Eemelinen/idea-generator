@@ -278,20 +278,19 @@
       "id": "F-012",
       "priority": 12,
       "area": "research",
-      "title": "Research briefs tuned and claim-extractor agent",
-      "user_visible_behavior": "Each research brief names concrete search strategies, Finnish search terms and the `fi` tool to use, and has an as-of header hook; a `claim-extractor` agent (role `claim_extractor`) adds candidate claims for cited prose sentences the parser missed, and its output goes through the same verification.",
+      "title": "Research briefs tuned on live runs",
+      "user_visible_behavior": "Live research-agent runs on a real idea produce files that pass `validate_file --kind research`; the briefs' search strategies, Finnish search terms and `fi` tool advice are adjusted from what the agents actually did, and the claim-extractor pass adds a prose claim the parser missed.",
       "status": "not_started",
-      "depends_on": ["F-004", "F-005", "F-006", "F-007"],
+      "depends_on": ["F-029"],
       "ticket": "IF-204",
-      "spec": "docs/TICKETS.md#if-204-research-briefs-tuned-and-claim-extractor-agent",
+      "spec": "docs/TICKETS.md#if-204-research-briefs-tuned-on-live-runs",
       "verification": [
         "L1: pnpm check",
-        "L1: uv run pytest tests/test_gen_agents.py (19 agents, briefs name their fi tool, extractor on its role)",
         "manual: one research agent run live passes validate_file --kind research, and the extractor adds a missed prose claim"
       ],
       "evidence": [],
       "attempts": 0,
-      "notes": "Absorbs IF-211 (claim extractor). Human-only: prompt tuning needs live agent runs."
+      "notes": "Human-only: prompt tuning needs live agent runs. The code half of the original F-012 (drafted briefs, claim-extractor agent) is F-029. Also record the live API responses plan notes 31–32 left unrecorded (PxWeb `?query=` search, PRH registration-date and page parameters, Eurostat `untilTimePeriod`)."
     },
     {
       "id": "F-013",
@@ -646,6 +645,25 @@
       ],
       "attempts": 0,
       "notes": "Absorbs IF-505 (/status --diff)."
+    },
+    {
+      "id": "F-029",
+      "priority": 12,
+      "area": "research",
+      "title": "Production research briefs and claim-extractor agent",
+      "user_visible_behavior": "Each research brief names concrete search strategies, Finnish search terms and which `fi` tool to use when; a `claim-extractor` agent (role `claim_extractor`) runs only when a research file has `[src: …]` sentences with no matching candidate claim, and the candidate claims it adds go through the same verification as parsed ones.",
+      "status": "not_started",
+      "depends_on": ["F-004", "F-005", "F-006", "F-007"],
+      "ticket": "IF-211",
+      "spec": "docs/TICKETS.md#if-211-production-research-briefs-and-claim-extractor-agent",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_gen_agents.py (19 agents, briefs name their fi tool, extractor on its role)",
+        "L1: uv run pytest tests/test_claim_extractor.py (uncited-sentence detection and extractor candidates verified like parsed claims, on synthetic research files)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Code half of the original F-012, split off so the loop can build it; the live tuning stays in F-012. Unattended: no live agent runs or network, so the briefs are a first draft from IMPLEMENTATION_PLAN.md §12 and the open points in TICKETS.md plan notes 31–33. No `{% if as_of %}` hook (plan note 29)."
     }
   ]
 }

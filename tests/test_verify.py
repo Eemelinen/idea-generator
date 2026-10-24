@@ -899,7 +899,11 @@ def test_verify_run_marks_conflicts_and_records_the_preference_order(active_run)
     assert "conflicts: 1 group(s) in 03_claims/conflicts.json" in summary
 
 
-def test_mini_research_conflict_leaves_the_kept_claims_alone(active_run):
+def test_mini_research_conflict_leaves_the_kept_claims_alone(active_run, monkeypatch):
+    # Both verification runs fetch in the same second, so preference_key ties market-001 and
+    # market-101 on retrieved_at and orders them by id instead of by the wall clock.
+    fixed = datetime(2026, 10, 23, 12, 0, tzinfo=UTC)
+    monkeypatch.setattr(verify, "_now", lambda: fixed)
     db.init()
     db.create_run(RUN_ID, "test idea", idea_id="test-idea")
     research = active_run / "02_research"
