@@ -194,15 +194,15 @@ def test_broken_debate_files_show_an_error_instead_of_failing(runs_set):
 
 
 def test_placeholders_and_static(client):
-    for path, ticket in (("/jobs", "IF-607"), ("/settings", "IF-608")):
-        resp = client.get(path)
-        assert resp.status_code == 200 and ticket in resp.text
+    # /jobs is built by IF-607 (tests/test_web_control.py); Settings is still a placeholder
+    resp = client.get("/settings")
+    assert resp.status_code == 200 and "IF-608" in resp.text
     css = client.get("/static/app.css")
     assert css.status_code == 200 and "text/css" in css.headers["content-type"]
 
 
 def test_pages_load_nothing_from_the_network(client):
-    for path in ("/", "/jobs", "/settings"):
+    for path in ("/", "/new", "/jobs", "/settings"):
         html = client.get(path).text
         assert "http://" not in html.replace("http://testserver", "") and "https://" not in html
 
