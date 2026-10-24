@@ -1,0 +1,8 @@
+{
+  "url": "https://pxdata.stat.fi/PXWeb/api/v1/fi/StatFin/vaerak/11re.px",
+  "method": "GET",
+  "request": null,
+  "status": 200,
+  "retrieved_at": "2026-10-24T06:20:10+00:00",
+  "note": "Population by age, sex and region: 309 × 102 × 3 × 54 × 1 = 5 105 916 cells unfiltered (over the 100 000-cell limit)."
+}

@@ -1,0 +1,164 @@
+{
+ "version": "2.0",
+ "class": "dataset",
+ "label": "Monialaisten maatalous- ja puutarhayritysten lukumäärä muuttujina Tieto, Vuosi, ELY-keskus, Rajaus ja Toimiala",
+ "source": "SVT: Luonnonvarakeskus, Maatalous- ja puutarhayritysten muu yritystoiminta",
+ "updated": "2025-05-08T05:00:00Z",
+ "role": {
+  "time": [
+   "A"
+  ],
+  "metric": [
+   "INFO"
+  ]
+ },
+ "id": [
+  "INFO",
+  "A",
+  "ELY",
+  "RAJ",
+  "TOL"
+ ],
+ "size": [
+  1,
+  2,
+  2,
+  2,
+  2
+ ],
+ "dimension": {
+  "INFO": {
+   "label": "Tieto",
+   "category": {
+    "index": {
+     "TILA_KPL": 0
+    },
+    "label": {
+     "TILA_KPL": "Tiloja (kpl)"
+    },
+    "unit": {
+     "TILA_KPL": {
+      "decimals": 0
+     }
+    }
+   },
+   "extension": {
+    "elimination": false,
+    "show": "value"
+   }
+  },
+  "A": {
+   "label": "Vuosi",
+   "category": {
+    "index": {
+     "2020": 0,
+     "2023": 1
+    },
+    "label": {
+     "2020": "2020",
+     "2023": "2023"
+    }
+   },
+   "extension": {
+    "elimination": false,
+    "show": "value"
+   }
+  },
+  "ELY": {
+   "label": "ELY-keskus",
+   "category": {
+    "index": {
+     "SSS": 0,
+     "ELY09": 1
+    },
+    "label": {
+     "SSS": "KOKO MAA",
+     "ELY09": "Pohjois-Karjala"
+    }
+   },
+   "extension": {
+    "elimination": false,
+    "show": "value"
+   }
+  },
+  "RAJ": {
+   "label": "Rajaus",
+   "category": {
+    "index": {
+     "SUUR_TOIM": 0,
+     "KAIK_YRI": 1
+    },
+    "label": {
+     "SUUR_TOIM": "Liikevaihdoltaan suurimman toimialan mukaan",
+     "KAIK_YRI": "Kaikki toimialaa harjoittavat tilat/yritykset"
+    }
+   },
+   "extension": {
+    "elimination": false,
+    "show": "value"
+   }
+  },
+  "TOL": {
+   "label": "Toimiala",
+   "category": {
+    "index": {
+     "TOL_YHT": 0,
+     "MATK": 1
+    },
+    "label": {
+     "TOL_YHT": "YHTEENSÄ (toimialat)",
+     "MATK": "Matkailu, majoitus, vapaa-aika"
+    },
+    "note": {
+     "MATK": [
+      "Matkailu, majoitus ja muu vapaa-ajan toiminta (esim. lomamökkien vuokraus, ravintolatoiminta, pitopalvelu, ohjelmapalvelut, ratsastustalli)"
+     ]
+    }
+   },
+   "extension": {
+    "elimination": false,
+    "show": "value"
+   }
+  }
+ },
+ "extension": {
+  "px": {
+   "decimals": 0,
+   "official-statistics": false,
+   "aggregallowed": true,
+   "language": "fi",
+   "description": "Monialaisten maatalous- ja puutarhayritysten lukumäärä ELY-keskuksittain",
+   "matrix": "0100_muuyri",
+   "subject-code": "MAA"
+  },
+  "contact": [
+   {
+    "raw": "tietopalvelu@luke.fi#<A HREF=https://www.luke.fi/fi/tilastot/maatalous-ja-puutarhayritysten-muu-yritystoiminta TARGET=_blank>Tilaston kotisivu</A>"
+   }
+  ]
+ },
+ "value": [
+  14542,
+  1217,
+  null,
+  1547,
+  652,
+  61,
+  null,
+  86,
+  13783,
+  1147,
+  null,
+  1581,
+  607,
+  50,
+  null,
+  66
+ ],
+ "status": {
+  "2": "..",
+  "6": "..",
+  "10": "..",
+  "14": ".."
+ }
+}

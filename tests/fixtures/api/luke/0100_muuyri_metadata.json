@@ -1,0 +1,128 @@
+{
+ "title": "Monialaisten maatalous- ja puutarhayritysten lukumäärä muuttujina Tieto, Vuosi, ELY-keskus, Rajaus ja Toimiala",
+ "variables": [
+  {
+   "code": "INFO",
+   "text": "Tieto",
+   "values": [
+    "TILA_KPL",
+    "TILAK_PROS"
+   ],
+   "valueTexts": [
+    "Tiloja (kpl)",
+    "Osuus kaikista tiloista (%)"
+   ]
+  },
+  {
+   "code": "A",
+   "text": "Vuosi",
+   "values": [
+    "2010",
+    "2013",
+    "2016",
+    "2020",
+    "2023"
+   ],
+   "valueTexts": [
+    "2010",
+    "2013",
+    "2016",
+    "2020",
+    "2023"
+   ],
+   "time": true
+  },
+  {
+   "code": "ELY",
+   "text": "ELY-keskus",
+   "values": [
+    "SSS",
+    "ELY01",
+    "ELY02",
+    "ELY03",
+    "ELY04",
+    "ELY05",
+    "ELY06",
+    "ELY07",
+    "ELY08",
+    "ELY09",
+    "ELY10",
+    "ELY11",
+    "ELY12",
+    "ELY13",
+    "ELY14",
+    "ELY15",
+    "ELY16"
+   ],
+   "valueTexts": [
+    "KOKO MAA",
+    "Uusimaa",
+    "Varsinais-Suomi",
+    "Satakunta",
+    "Häme",
+    "Pirkanmaa",
+    "Kaakkois-Suomi",
+    "Etelä-Savo",
+    "Pohjois-Savo",
+    "Pohjois-Karjala",
+    "Keski-Suomi",
+    "Etelä-Pohjanmaa",
+    "Pohjanmaa",
+    "Pohjois-Pohjanmaa",
+    "Kainuu",
+    "Lappi",
+    "Ahvenanmaa"
+   ]
+  },
+  {
+   "code": "RAJ",
+   "text": "Rajaus",
+   "values": [
+    "SUUR_TOIM",
+    "KAIK_YRI"
+   ],
+   "valueTexts": [
+    "Liikevaihdoltaan suurimman toimialan mukaan",
+    "Kaikki toimialaa harjoittavat tilat/yritykset"
+   ]
+  },
+  {
+   "code": "TOL",
+   "text": "Toimiala",
+   "values": [
+    "TOL_YHT",
+    "MTYOULK",
+    "METULK",
+    "MUUTYO",
+    "MAATJAL",
+    "MAATMYY",
+    "PUUTJAL",
+    "ENERP_TUOT",
+    "UENE",
+    "VESVIL",
+    "TURTA",
+    "KASTEOLL",
+    "MATK",
+    "SOTEKO",
+    "MUUTOIM"
+   ],
+   "valueTexts": [
+    "YHTEENSÄ (toimialat)",
+    "Maataloustyö tilan ulkopuolisille",
+    "Metsätaloustyö tilan ulkopuolisille",
+    "Muu kuin maa- tai metsätaloustyö",
+    "Maataloustuotteiden jalostus",
+    "Maataloustuotteiden suoramyynti",
+    "Puutavaran jalostus",
+    "Energiapuuntuotanto",
+    "Uusiutuvan energian tuotanto",
+    "Vesiviljely",
+    "Turkistarhaus",
+    "Käsiteollisuus",
+    "Matkailu, majoitus, vapaa-aika",
+    "Sosiaali-, terveys- ja koulutuspalvelut",
+    "Muu toiminta"
+   ]
+  }
+ ]
+}

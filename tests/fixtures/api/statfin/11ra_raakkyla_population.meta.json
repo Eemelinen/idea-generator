@@ -1,0 +1,46 @@
+{
+  "url": "https://pxdata.stat.fi/PXWeb/api/v1/fi/StatFin/vaerak/11ra.px",
+  "method": "POST",
+  "request": {
+    "query": [
+      {
+        "code": "alue_23_20260101",
+        "selection": {
+          "filter": "item",
+          "values": [
+            "KU707",
+            "MK12"
+          ]
+        }
+      },
+      {
+        "code": "contentscode",
+        "selection": {
+          "filter": "item",
+          "values": [
+            "vaerak-vaesto"
+          ]
+        }
+      },
+      {
+        "code": "timeperiod_y",
+        "selection": {
+          "filter": "item",
+          "values": [
+            "2021",
+            "2022",
+            "2023",
+            "2024",
+            "2025"
+          ]
+        }
+      }
+    ],
+    "response": {
+      "format": "json-stat2"
+    }
+  },
+  "status": 200,
+  "retrieved_at": "2026-10-24T06:20:10+00:00",
+  "note": "Population 31.12. of Rääkkylä and North Karelia, 2021–2025."
+}

@@ -79,7 +79,7 @@
       "area": "fi-data",
       "title": "Record Finnish open-data API fixtures",
       "user_visible_behavior": "`scripts/record_fixtures.py` records real StatFin, Luke, PRH and Eurostat responses into `tests/fixtures/api/<source>/` with a meta file per response (URL, request, status, retrieved_at); `tests/test_api_fixtures.py` checks every fixture parses and cites an allow-listed URL.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-001"],
       "ticket": "IF-200",
       "spec": "docs/TICKETS.md#if-200-record-finnish-open-data-api-fixtures",
@@ -88,7 +88,11 @@
         "L1: uv run pytest tests/test_api_fixtures.py (every fixture parses and names its allow-listed request URL)",
         "manual: fixtures recorded from the live APIs and reviewed (network access needed)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-24 pnpm check → pass (working tree on f97881b)",
+        "2026-10-24 uv run pytest tests/test_api_fixtures.py → pass (working tree on f97881b)",
+        "2026-10-24 manual: fixtures recorded from the live APIs and reviewed (network access needed) → observed by eemeli: fixtures recorded from the live APIs on 2026-10-24 and reviewed by the user (StatFin population, PRH, Eurostat and Luke values spot-checked) (working tree on f97881b)"
+      ],
       "attempts": 0,
       "notes": "New ticket (D-006): offline sessions must never invent API responses. Unblocks F-004, F-005 and F-008."
     },
