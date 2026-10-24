@@ -1,6 +1,6 @@
 {
   "project": "idea-generator",
-  "last_updated": "2026-10-23",
+  "last_updated": "2026-10-24",
   "rules": {
     "single_active_feature": true,
     "passing_requires_evidence": true,
@@ -465,8 +465,8 @@
         "2026-10-23 pnpm check → pass (commit 12dc951)",
         "2026-10-23 uv run pytest tests/test_debate.py tests/test_debate_validate.py → pass (commit 12dc951)"
       ],
-      "attempts": 0,
-      "notes": "Absorbs IF-403 (debate_validate.py)."
+      "attempts": 1,
+      "notes": "Absorbs IF-403 (debate_validate.py). Attempt 1 failed 2026-10-24: evaluator: Revise"
     },
     {
       "id": "F-022",
