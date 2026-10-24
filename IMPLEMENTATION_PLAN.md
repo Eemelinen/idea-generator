@@ -101,6 +101,7 @@ ideaforge/
 │   ├── review.py                  # /status --review / --reviews: report-section scores 1–5, trend by prompt/model version
 │   ├── golden.py                  # eval golden set: load + validate, find each idea's run, the three checks
 │   ├── validate_file.py           # CLI: validate a JSON file against a schema (used by hooks)
+│   ├── jobs.py                    # job queue + headless worker (IF-604): enqueue/list/show/cancel/retry/worker, `claude -p`
 │   ├── web/                       # local web UI (D-008): `python -m ideaforge.web`, 127.0.0.1 only
 │   │   ├── __init__.py            # create_app(): FastAPI app, routes
 │   │   ├── dashboard.py           # runs dashboard rows, lineages, runs/ ↔ DB mismatch (IF-601)
@@ -117,7 +118,7 @@ ideaforge/
 │       └── requery.py             # cited API URL → client call, re-run for claim verification
 ├── scripts/
 │   ├── gen_agents.py              # render agent_templates/* with config/models.yaml → .claude/agents/
-│   ├── new_run.py                 # create run dir + db row + meta.json, print run_id; --from = next version
+│   ├── new_run.py                 # create run dir + db row + meta.json, print run_id; --from = next version; --intake → intake.json
 │   ├── run_stage.py               # stage state machine: --begin/--finish/--insufficient-data/--resume/--next
 │   ├── research_brief.py          # print a research brief's budget line and back-test header for <run_id> <dim>
 │   ├── extract_claims.py          # stage 3: list the research sentences no candidate claim covers (request.json)
@@ -133,6 +134,7 @@ ideaforge/
 ├── runs/                          # one folder per run (gitignored)
 │   └── <run_id>/
 │       ├── idea.md
+│       ├── intake.json                         # clarifications answered up front (new_run.py --intake, IF-604)
 │       ├── meta.json                           # provenance (ideaforge.meta)
 │       ├── 00_spec.json
 │       ├── 01_plan.json
@@ -158,6 +160,7 @@ ideaforge/
 │       ├── debate/verdict.json
 │       ├── debate/revised_plan.md
 │       └── usage.jsonl
+│   └── .jobs/                       # job logs <job_id>.log and the worker's worker.pid (IF-604)
 ├── cache/                         # fetched pages keyed by sha256(url) (gitignored)
 ├── tests/
 │   ├── test_scoring.py
@@ -302,6 +305,7 @@ SQLite tables mirror these: `runs`, `idea_versions`, `stages` (run_id, stage, st
 
 1. `uv run python scripts/new_run.py "<idea text>"` → prints `run_id`, writes `runs/<run_id>/idea.md`.
 2. Orchestrator produces `00_spec.json` (IdeaSpec). It must ask the user **up to 5 clarifying questions** via `AskUserQuestion` only where the answer changes research direction (geography, goal, capital, time). Store Q/A in `clarifications`.
+   A run created with `new_run.py --intake '<json>'` (a headless job, IF-604) has `runs/<run_id>/intake.json` (schema `Intake`: goal, capital, hours, skills, geography, free-text answers, kill-trigger overrides) instead: the orchestrator builds the spec from it, asks nothing and treats the run as "just run it" (no plan approval either), so `claude -p` never needs `AskUserQuestion`.
 3. Hook validates `00_spec.json` against `IdeaSpec`.
 
 ### Stage 1 — Research plan (main session)

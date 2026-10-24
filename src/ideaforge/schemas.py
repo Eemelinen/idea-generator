@@ -115,6 +115,20 @@ class IdeaSpec(Strict):
     version: Annotated[int, Field(ge=1)] = 1
 
 
+class Intake(Strict):
+    """`runs/<run_id>/intake.json`: the clarifications answered before the run starts
+    (`new_run.py --intake`, IF-604). Stage 0 builds `00_spec.json` from it and asks nothing, so a
+    headless `/validate` never needs `AskUserQuestion`."""
+
+    goal: Goal
+    capital_eur: Annotated[float, Field(ge=0)]
+    hours_per_week: Annotated[float, Field(ge=0, le=100)]
+    skills: list[str] | None = None  # None = config/founder.yaml's
+    geography: Annotated[list[str], Field(min_length=1)] = ["Rääkkylä", "North Karelia", "Finland", "online/EU"]
+    answers: list[Clarification] = Field(default_factory=list, max_length=5)  # free-text answers
+    kill_trigger_overrides: list[KillTrigger] = []
+
+
 # ---------------------------------------------------------------- stage 1: plan
 
 
@@ -535,6 +549,7 @@ class GoldenIdea(Strict):
 # Kind name → model, used by validate_file.py and tests.
 SCHEMAS: dict[str, type[BaseModel]] = {
     "spec": IdeaSpec,
+    "intake": Intake,
     "plan": ResearchPlan,
     "claim": Claim,
     "candidate_claim": CandidateClaim,

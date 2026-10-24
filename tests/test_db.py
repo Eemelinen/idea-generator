@@ -128,11 +128,11 @@ def test_new_migrations_apply_in_order_once_and_keep_rows(project, monkeypatch):
     with db.session() as conn:
         assert db.schema_version(conn) == len(migrations)
         assert {"synthetic_a", "synthetic_b"} <= table_names(conn)
-        # the version-3 insert ran exactly once
+        # the last migration's insert ran exactly once
         assert conn.execute("SELECT COUNT(*) FROM synthetic_a").fetchone()[0] == 1
         assert conn.execute("SELECT run_id FROM runs").fetchone()[0] == RUN
         versions = conn.execute("SELECT version, applied_at FROM schema_version ORDER BY version").fetchall()
-    assert [v["version"] for v in versions] == [1, 2, 3]
+    assert [v["version"] for v in versions] == list(range(1, len(migrations) + 1))
     assert all(v["applied_at"] for v in versions)
 
 

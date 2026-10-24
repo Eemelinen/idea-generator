@@ -2,12 +2,16 @@
 
     uv run python scripts/new_run.py "<idea text>" [--preset economy|standard|deep]
                                      [--from <parent_run_id>] [--as-of YYYY-MM-DD]
+                                     [--intake '<json>']
     uv run python scripts/new_run.py --from <parent_run_id> ["<revised idea text>"]
 
 With --from the run is the parent's next idea version, `<parent id>-v<N>` (`runs.child_run`),
 linked through `idea_versions.parent`; the idea text, budget preset and as-of date default to the
 parent's, and the parent's
 directory, rows and report are never touched. meta.json records the provenance (`ideaforge.meta`).
+--intake takes the clarifications as JSON (schema `Intake`: goal, capital_eur, hours_per_week,
+skills, geography, answers, kill_trigger_overrides) and writes them to `runs/<run_id>/intake.json`,
+so `/validate`'s stage 0 asks nothing (IF-604); an invalid intake creates nothing (exit 2).
 Prints the run_id on stdout (and nothing else) so callers can capture it.
 """
 
@@ -17,7 +21,10 @@ import argparse
 import sys
 from datetime import date
 
+from pydantic import ValidationError
+
 from ideaforge import config, db, meta, runs
+from ideaforge.schemas import Intake
 
 
 def parent_row(parent: str):
@@ -34,7 +41,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--preset", default=None, help="budget preset from config/budget.yaml")
     parser.add_argument("--from", dest="parent", default=None, help="parent run id (new idea version)")
     parser.add_argument("--as-of", type=date.fromisoformat, default=None, help="back-test date")
+    parser.add_argument("--intake", default=None, help="clarifications as JSON (schema Intake) → intake.json")
     args = parser.parse_args(argv)
+
+    intake = None
+    if args.intake is not None:
+        try:
+            intake = Intake.model_validate_json(args.intake)
+        except ValidationError as e:
+            parser.error(f"invalid --intake: {e}")
 
     db.init()
     idea, preset, as_of = args.idea, args.preset, args.as_of
@@ -62,6 +77,8 @@ def main(argv: list[str] | None = None) -> int:
     if runs.run_dir(run_id).exists():
         parser.error(f"run directory runs/{run_id} already exists")
     run_dir = runs.create_run_dir(run_id, idea)
+    if intake is not None:
+        (run_dir / "intake.json").write_text(intake.model_dump_json(indent=2) + "\n", encoding="utf-8")
 
     run_meta = meta.build(
         run_id,

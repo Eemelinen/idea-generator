@@ -34,6 +34,7 @@ KINDS = sorted([*SCHEMAS, *LIST_KINDS, "research", "extracted"])
 # Run-relative path → kind, for inference and the Stop hook.
 STAGE_FILES: dict[str, str] = {
     "meta.json": "meta",
+    "intake.json": "intake",
     "00_spec.json": "spec",
     "01_plan.json": "plan",
     "03_claims/verified.json": "claims",
