@@ -173,7 +173,7 @@ ideaforge/
 - Python 3.12, `uv` for env/deps.
 - Deps: `pydantic>=2`, `pyyaml`, `requests`, `rapidfuzz` (quote matching), `trafilatura` (HTML → text for verification), `pandas` (PxWeb tables), `pytest`, `jinja2` (report + agent templates).
 - SQLite with WAL mode; FTS5 virtual table over `claims.statement` and `claims.quote`.
-- No web framework for v1. Output is Markdown in `runs/<id>/` plus a `/status` skill. A Streamlit viewer is an optional v2 item.
+- No web framework for v1. Output is Markdown in `runs/<id>/` plus a `/status` skill. Phase 6 adds a local web UI (FastAPI + Jinja2 + HTMX, `ideaforge.web`) that controls the pipeline through headless `claude -p` jobs and edits the settings (D-008, TICKETS.md IF-601, IF-604–IF-609).
 - Development-only tooling (§14): Node ≥ 22 with pnpm 10 for the shared harness (`@eemelinen/harness`, §14), Prettier, and husky + lint-staged + commitlint for the commit gates. The pipeline never calls Node.
 
 ---
@@ -457,9 +457,11 @@ The phases describe the shape of the build; the order of work is `depends_on` in
 - Golden set of 10, `/eval`, back-test mode, review scores, `/status --diff`, resume-from-crash test (kill the process mid-stage 2, re-run, confirm completed dimensions are skipped).
 - **Accept:** `/eval` passes on ≥ 8/10; resume works; README documents usage-limit presets and model downgrade procedure.
 
-### Phase 6 — v2 (optional)
+### Phase 6 — Web UI
 
-- Streamlit viewer over SQLite; local competitor index (PRH + yc-oss company list with local embeddings); experiment tracker that feeds results back as top-confidence claims into version n+1; `claude -p` wrapper script for overnight batches.
+- Local web UI (D-008): runs dashboard and run detail over SQLite and `runs/`, debate, reviews and comparison views, a persistent job queue that runs the skills headless with `claude -p`, pipeline control and a settings editor with history.
+- **Accept:** IF-609: a real idea runs validate → synthesize → debate from the UI alone, and the jobs, logs, settings history and results survive a restart and a restore from backup.
+- Backlog (not queued): local competitor index (PRH + yc-oss company list with local embeddings); experiment tracker that feeds results back as top-confidence claims into version n+1.
 
 ---
 

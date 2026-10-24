@@ -82,3 +82,23 @@ Format: **Context** (what forced a choice) · **Decision** · **Consequences**.
   - Skill names gained the `harness:` prefix.
   - The evaluator's model for interactive use comes from the plugin (`opus`, the same as `harness_evaluator`); driver runs still take it from `harness.config.json`, which `tests/test_harness_config.py` keeps equal to `config/models.yaml`.
   - Interactive sessions need the folder trusted once for the marketplace and the permissions to apply.
+
+## D-008 · Local web UI: FastAPI + Jinja2 + HTMX, headless control via `claude -p` (2026-10-24)
+
+- Context:
+  - The user wants a UI that starts and controls the pipeline, shows its reports and results, edits every pipeline setting, and keeps all data persistent.
+  - The plan had only a read-only Streamlit viewer (IF-601) and a batch wrapper (IF-604) as optional v2 items.
+  - The pipeline runs inside Claude Code skills. `/validate` asks up to five clarifying questions, which a headless run cannot ask.
+  - D-003 keeps Node for development tooling only.
+- Decision:
+  - **Stack:** a local FastAPI app with server-rendered Jinja2 templates (Jinja2 is already a dependency) and HTMX, vendored so no page or test touches the network. Streamlit was rejected: forms, background jobs and offline tests through `TestClient` are simpler in FastAPI, and every ticket stays buildable unattended.
+  - **Binding:** the server binds to `127.0.0.1` only and has no login.
+  - **Control:** the UI never runs the model itself. It enqueues jobs that run the existing skills through `claude -p`, one at a time, with the strict pipeline guard. The new-idea form collects the clarifying answers up front as `intake.json`.
+  - **Settings:** the UI edits `config/*.yaml` through the `ideaforge.config` models. `harness.config.json` is out of scope.
+  - **Persistence:** the existing `ideaforge.db` and `runs/`, plus versioned migrations, job and settings-history tables, job logs and a backup command.
+  - New dependencies: `fastapi`, `uvicorn`, `python-multipart`, `markdown-it-py`, `ruamel.yaml` (keeps the hand-commented YAML's comments), and `httpx` in the dev group.
+- Consequences:
+  - Seven tickets, IF-601 and IF-604–IF-609 (F-030–F-036), with the rules in TICKETS.md plan note 36. IF-601 and IF-604 are promoted from the backlog and widened.
+  - Non-negotiable 1 is unaffected: everything is local and free.
+  - Settings changed in the UI make `config/` differ from git, which `meta.json` already records as `config_dirty`.
+  - The live headless path is first exercised by the human acceptance ticket IF-609.
