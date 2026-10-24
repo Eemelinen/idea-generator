@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from ideaforge import agents, config, debate, guard, runs, validate_file
+from ideaforge import agents, config, debate, golden, guard, runs, validate_file
 
 ROOT = config.ROOT  # captured before the project fixture repoints config.ROOT
 SKILLS_DIR = ROOT / ".claude" / "skills"
@@ -69,7 +69,7 @@ def fill(command: str) -> str:
 
 
 def test_pipeline_skills_exist():
-    assert {"validate", "research", "status", "synthesize", "debate"} <= set(SKILLS)
+    assert {"validate", "research", "status", "synthesize", "debate", "eval"} <= set(SKILLS)
 
 
 @pytest.mark.parametrize("skill", SKILLS)
@@ -117,7 +117,7 @@ def test_commands_pass_the_guard_and_allowed_tools(skill, project):
         for script in re.findall(r"scripts/([\w-]+\.py)", pattern):
             assert (ROOT / "scripts" / script).is_file(), pattern
     cited = commands(body)
-    if skill in ("validate", "research", "synthesize", "debate"):
+    if skill in ("validate", "research", "synthesize", "debate", "eval"):
         assert cited
     for command in cited:
         filled = fill(command)
@@ -437,3 +437,53 @@ def test_debate_judge_briefs_never_name_a_persona_file():
             assert not any(f"/{p}.json" in path for p in agents.PERSONA_EVIDENCE), path
     _, body = split("debate")
     assert body.count(".mapping.json") == 1 and body.find(".mapping.json") < body.find("## Start")
+
+
+# ---------------------------------------------------------------- eval (IF-502)
+
+EVAL_SECTIONS = ["Start", "Golden ideas, one at a time", "Check", "End"]
+
+
+def test_eval_skill_has_every_section_in_order():
+    front, body = split("eval")
+    assert list(sections(body)) == EVAL_SECTIONS
+    assert front["argument-hint"] == "[--limit N] [--fresh]"
+
+
+def test_eval_plans_then_runs_each_idea_sequentially_then_checks():
+    _, body = split("eval")
+    in_order(
+        body,
+        "uv run python scripts/eval_check.py --plan --limit <N>",
+        "**sequentially**",
+        "never launch the research agents of two ideas together",
+        "uv run python scripts/new_run.py '<idea text>'",
+        ".claude/skills/validate/SKILL.md",
+        "**\"Just run it\"**",
+        ".claude/skills/synthesize/SKILL.md",
+        "uv run python scripts/usage_report.py <run_id>",
+        "uv run python scripts/eval_check.py --limit <N>",
+        "passed: X of N",
+    )
+    assert golden.new_run_command("<idea text>") in body  # the command golden.load checks
+    # the plan states eval_check.py --plan prints
+    for state in ("`none`", "`incomplete`", "`complete`", "`--fresh`"):
+        assert state in sections(body)["Golden ideas, one at a time"], state
+
+
+def test_eval_follows_sections_that_exist_in_the_pipeline_skills():
+    text = sections(split("eval")[1])["Golden ideas, one at a time"]
+    validate, synthesize = sections(split("validate")[1]), sections(split("synthesize")[1])
+    for title in ("Stage 0 — Intake", "End"):
+        assert f"**{title}**" in text and title in validate, title
+    assert "Start: new run or resume" in validate and '"Just run it"' in read("validate")
+    for title in ("Start", "End"):
+        assert title in synthesize, title
+    assert "/debate" in text  # the eval stops at stage 5
+
+
+def test_eval_never_shows_the_answer_key_to_the_orchestrator():
+    """eval_check.py --plan prints no facts or verdicts (test_eval_check.py); the skill reads none."""
+    front, body = split("eval")
+    assert "never read `tests/golden/`" in body
+    assert "Read" in front["allowed-tools"] and "AskUserQuestion" not in front["allowed-tools"]

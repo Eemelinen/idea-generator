@@ -1,0 +1,12 @@
+# SYNTHETIC golden idea for the eval_check.py logic tests (TICKETS.md plan note 14): the idea,
+# the facts and the URLs are invented and are not research. The real golden set is IF-501.
+idea: Synthetic berry drying service for pickers in a small municipality
+expected_verdicts: [NO_GO, PIVOT]
+must_find:
+  - fact: A synthetic competitor already dries berries nearby
+    source_urls: [https://example.invalid/synthetic/competitor]
+    keywords: [drying, competitor]
+    dimensions: [competition, killcause]
+  - fact: A synthetic food-premises notification is required
+    source_urls: [https://example.invalid/synthetic/notification]
+notes: synthetic

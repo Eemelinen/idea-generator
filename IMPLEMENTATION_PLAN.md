@@ -93,6 +93,7 @@ ideaforge/
 │   ├── mini_research.py           # debate mini-research tasks: open (≤ max per debate) and finish
 │   ├── usage.py                   # JSONL log of tool calls; per-run tallies
 │   ├── status.py                  # /status text: recent runs, one run's claims, flags, markers, usage
+│   ├── golden.py                  # eval golden set: load + validate, find each idea's run, the three checks
 │   ├── validate_file.py           # CLI: validate a JSON file against a schema (used by hooks)
 │   └── fi/                        # free Finnish data tools
 │       ├── pxweb.py               # Statistics Finland + Luke PxWeb client
@@ -109,7 +110,8 @@ ideaforge/
 │   ├── debate_validate.py         # validate a round's rebuttals; reject unsupported stance changes
 │   ├── debate_converged.py        # exit code 0 if converged
 │   ├── usage_report.py
-│   └── status.py                  # /status [run_id]
+│   ├── status.py                  # /status [run_id]
+│   └── eval_check.py              # /eval: check the golden runs, print the summary table
 ├── runs/                          # one folder per run (gitignored)
 │   └── <run_id>/
 │       ├── idea.md
@@ -145,7 +147,8 @@ ideaforge/
 │   ├── test_debate_validate.py
 │   ├── fixtures/api/              # recorded Finnish API responses (IF-200, the only source of API fixtures)
 │   ├── unit/harness/              # Vitest tests of the harness scripts
-│   └── golden/                    # 10–20 test ideas with expected verdict ranges
+│   ├── fixtures/eval/             # synthetic golden ideas for the eval_check.py tests
+│   └── golden/                    # 10–20 test ideas with expected verdict ranges (schema GoldenIdea)
 ├── ideaforge.db                   # SQLite (gitignored)
 ├── pyproject.toml                 # managed with uv
 └── .gitignore

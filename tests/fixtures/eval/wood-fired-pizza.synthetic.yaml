@@ -1,0 +1,9 @@
+# SYNTHETIC golden idea for the eval_check.py logic tests (TICKETS.md plan note 14): never run,
+# so the checker reports it as having no run.
+idea: Synthetic wood-fired pizza van for village events
+expected_verdicts: [PIVOT]
+must_find:
+  - fact: A synthetic event calendar
+    source_urls: [https://example.invalid/synthetic/events]
+  - fact: A synthetic mobile food permit
+    source_urls: [https://example.invalid/synthetic/mobile-permit]
