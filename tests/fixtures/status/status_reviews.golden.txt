@@ -12,6 +12,7 @@ dimensions        -    -    -
 funding           -    -    -
 location          -    -    -
 risks           2.5  2.0    -
+business_plan     -    -    -
 sources         4.0    -    -
 usage             -    -    -
 all sections    3.6  3.0  1.0

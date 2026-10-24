@@ -33,6 +33,7 @@ SECTIONS: dict[str, str] = {
     "funding": "Finland funding fit",
     "location": "Rääkkylä location notes",
     "risks": "Risk register",
+    "business_plan": "Starttiraha business-plan draft",
     "sources": "Sources",
     "usage": "Usage summary",
 }

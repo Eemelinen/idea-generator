@@ -436,12 +436,12 @@ def compute(inputs: Inputs, *, vat_registered: bool = True) -> UnitEconomics:
     cac = treated("cac", inputs.cac) if inputs.cac else None
     volume = inputs.volume.value if inputs.volume else None
     frequency = inputs.purchases_per_customer.value if inputs.purchases_per_customer else None
-    used = [a for role in ROLES for a in _role_amounts(inputs, role)]
+    used = {role: _role_amounts(inputs, role) for role in ROLES}
     if inputs.subscription:
         if inputs.purchases_per_customer:
             ids = ", ".join(inputs.purchases_per_customer.claim_ids) or "input"
             notes.append(f"purchases_per_customer: {ids} ignored; a subscription month is the unit sold")
-            used.remove(inputs.purchases_per_customer)
+            used["purchases_per_customer"] = []
         frequency = 1.0
     variable_missing = (not inputs.variable_cost and not inputs.variable_cost_pct) or bool(
         {"variable_cost", "variable_cost_pct"} & inputs.incomplete
@@ -503,7 +503,12 @@ def compute(inputs: Inputs, *, vat_registered: bool = True) -> UnitEconomics:
         vat_registered=vat_registered,
         vat_rate_pct=rate,
         missing_inputs=[name for name, missing in absent.items() if missing],
-        input_claim_ids=list(dict.fromkeys(cid for a in used for cid in a.claim_ids)),
+        input_claim_ids=list(dict.fromkeys(cid for amounts in used.values() for a in amounts for cid in a.claim_ids)),
+        input_claims={
+            role: ids
+            for role, amounts in used.items()
+            if (ids := list(dict.fromkeys(cid for a in amounts for cid in a.claim_ids)))
+        },
         notes=list(dict.fromkeys(notes)),
     )
 

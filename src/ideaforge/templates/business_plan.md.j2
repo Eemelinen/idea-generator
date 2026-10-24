@@ -1,0 +1,136 @@
+{#- The starttiraha business-plan draft (IF-307), included by report.md.j2; `bp` is business_plan.context. -#}
+{% set t = bp.t %}
+{% macro claims_block(key) %}
+{% set s = bp.sections[key] %}
+{% for dim, score in s.scores %}
+- {{ t.score }} (`{{ dim }}`): {{ score }} {{ t.of5 }}
+{% endfor %}
+{% if s.claims %}
+- {{ t.verified }}:
+{% for c in s.claims %}
+  - `{{ c.claim_id }}`: {{ c | claim }}
+{% endfor %}
+{% else %}
+- {{ t.verified }}: {{ t.no_claims }}.
+{% endif %}
+{% endmacro %}
+### {{ t.title }}
+
+{{ t.intro }}
+
+#### {{ t.sections.summary }}
+
+- {{ t.idea }}: {{ spec.title }}: {{ spec.one_liner | oneline }}
+- {{ t.customer }}: {{ spec.customer | oneline }}
+- {{ t.geography }}: {{ spec.geography | join(" → ") }}
+- {{ t.verdict }}: {{ sheet.verdict }} ({{ t.weighted }} {{ bp.weighted_total }} {{ t.of5 }})
+- **{{ t.fill }}**: {{ t.summary_fill }}
+
+#### {{ t.sections.founder }}
+
+- {{ t.skills }}: {{ bp.skills }}
+- {{ t.hours }}: {{ bp.hours }} {{ t.hours_unit }} (**{{ t.assumption }}**: {{ t.founder_stated }})
+- {{ t.goal }}: {{ bp.goal }}
+{{ claims_block("founder") -}}
+- **{{ t.fill }}**: {{ t.founder_fill }}
+
+#### {{ t.sections.product }}
+
+- {{ t.problem }}: {{ spec.problem | oneline }}
+- {{ t.solution }}: {{ spec.solution | oneline }}
+- **{{ t.fill }}**: {{ t.product_fill }}
+
+#### {{ t.sections.market }}
+
+- {{ t.customer }}: {{ spec.customer | oneline }}
+{{ claims_block("market") -}}
+- **{{ t.fill }}**: {{ t.market_fill }}
+
+#### {{ t.sections.competition }}
+
+{{ claims_block("competition") -}}
+- **{{ t.fill }}**: {{ t.competition_fill }}
+
+#### {{ t.sections.pricing }}
+
+- {{ t.revenue_model }}: {{ spec.revenue_model | oneline }}
+{{ claims_block("pricing") -}}
+- **{{ t.fill }}**: {{ t.pricing_fill }}
+
+#### {{ t.sections.marketing }}
+
+{{ claims_block("marketing") -}}
+- **{{ t.fill }}**: {{ t.marketing_fill }}
+
+#### {{ t.sections.location }}
+
+- {{ t.geography }}: {{ spec.geography | join(" → ") }}
+{{ claims_block("location") -}}
+- **{{ t.fill }}**: {{ t.location_fill }}
+
+#### {{ t.sections.regulation }}
+
+{{ claims_block("regulation") -}}
+- **{{ t.fill }}**: {{ t.regulation_fill }}
+
+#### {{ t.sections.risks }}
+
+{% if bp.risks %}
+| {{ t.risk_cols | join(" | ") }} |
+| --- | ---: | ---: | --- | --- |
+{% for r, ids in bp.risks %}
+| {{ r.risk | cell }} | {{ r.likelihood }} | {{ r.impact }} | {{ r.mitigation | cell }} | {{ ids | cell }} |
+{% endfor %}
+{% if bp.more_risks %}
+
+{{ t.risks_more }}
+{% endif %}
+{% else %}
+{{ t.risks_none }}
+{% endif %}
+
+#### {{ t.sections.financing }}
+
+- {{ t.own_capital }}: {{ bp.capital }} € (**{{ t.assumption }}**: {{ t.founder_stated }})
+- {{ t.funding }}:
+{% for p in bp.funding %}
+  - {{ p.name }}: {% if p.backing %}{% for c in p.backing %}`{{ c.claim_id }}`{{ ", " if not loop.last }}{% endfor %}{% else %}**{{ t.unverified }}**{% endif %}
+
+{% endfor %}
+- **{{ t.fill }}**: {{ t.financing_fill }}
+
+#### {{ t.sections.calculation }}
+
+{{ t.amounts }}: {{ bp.vat_basis }}.
+
+| {{ t.calc_cols | join(" | ") }} |
+| --- | ---: | ---: | --- |
+{% for r in bp.rows %}
+| {{ r.label }} | {{ r.month }} | {{ r.year }} | {{ r.source }} |
+{% endfor %}
+
+{{ t.assumptions }}:
+
+- **{{ t.assumption }}**: {{ t.assume_year }}
+- **{{ t.assumption }}**: {{ t.assume_vat.format(state=bp.vat_state) }}
+- {{ t.assume_salary }}
+{% if bp.notes %}
+
+{{ t.calc_notes }}:
+
+{% for note in bp.notes %}
+- {{ note }}
+{% endfor %}
+{% endif %}
+
+#### {{ t.sections.todo }}
+
+{% if bp.missing %}
+{{ t.todo_missing }}:
+
+{% for role, name in bp.missing %}
+- `{{ role }}` ({{ name }}): {{ t.missing_fill }}
+{% endfor %}
+{% else %}
+{{ t.todo_none }}
+{% endif %}

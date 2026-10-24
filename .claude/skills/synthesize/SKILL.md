@@ -69,7 +69,8 @@ Arguments: `$ARGUMENTS` (one run id, `YYYYMMDD-HHMMSS-slug`, optionally `-vN`). 
 1. `uv run python scripts/run_stage.py <run_id> report --begin`
 2. `uv run python scripts/render_report.py <run_id>`: it writes `runs/<run_id>/05_report.md`
    (verdict, score table with cap labels, kill triggers, unit economics and sensitivity,
-   dimension sections, Finland funding fit, Rääkkylä notes, risk register, sources, usage) and
+   dimension sections, Finland funding fit, Rääkkylä notes, risk register, the starttiraha
+   business-plan draft, sources, usage) and
    its `reports` row. Reports are immutable: if it says the report already exists, do not
    delete or edit it; a new version is a new run. Any other exit 1 → report the error and stop.
 3. `uv run python scripts/run_stage.py <run_id> report --finish`

@@ -280,6 +280,9 @@ class UnitEconomics(Strict):
     vat_rate_pct: float | None = None
     missing_inputs: list[str] = []
     input_claim_ids: list[str] = []
+    # The claim ids each input role used (economics.ROLES order), so every figure traces to its
+    # claims (the starttiraha calculation, IF-307). Empty in score sheets written before it.
+    input_claims: dict[str, list[str]] = {}
     notes: list[str] = []
 
 

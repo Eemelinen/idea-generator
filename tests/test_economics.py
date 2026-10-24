@@ -61,6 +61,11 @@ def test_known_inputs():
     assert ue.vat_registered is True
     assert ue.input_claim_ids == ["pricing-001", "unit_economics-001", "unit_economics-002", "gtm-001",
                                   "unit_economics-003", "customer-001"]  # fmt: skip
+    # per role, in ROLES order: what the starttiraha calculation traces each figure to (IF-307)
+    assert ue.input_claims == {
+        "price": ["pricing-001"], "variable_cost": ["unit_economics-001"], "fixed_costs": ["unit_economics-002"],
+        "cac": ["gtm-001"], "volume": ["unit_economics-003"], "purchases_per_customer": ["customer-001"],
+    }  # fmt: skip
     assert economics.computed_triggers(ue) == []
 
 
@@ -497,6 +502,7 @@ def test_subscription_ignores_an_assigned_frequency():
     ue = economics.unit_economics(claims, {"price": ["pricing-001"], "purchases_per_customer": ["customer-001"]})
     assert ue.purchases_per_customer_month == 1
     assert "customer-001" not in ue.input_claim_ids
+    assert ue.input_claims == {"price": ["pricing-001"]}
     assert "purchases_per_customer: customer-001 ignored; a subscription month is the unit sold" in ue.notes
 
 
