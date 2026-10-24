@@ -9,7 +9,8 @@ the same `review.store` as `/status --review`.
 
 Pipeline control (`control`, IF-607): the new-idea and new-version forms, the run actions and the
 eval action queue jobs (`ideaforge.jobs`); the jobs page shows them with a live log tail, cancel
-and retry. The server runs one background worker from start to shutdown. A request that changes
+and retry. The server runs one background worker from start to shutdown. The settings pages
+(`settings`, IF-608) edit `config/*.yaml` with a history of saves, refused while a job runs. A request that changes
 anything (POST) is refused unless it comes from this UI: a loopback Host and, when the browser
 names one, the same Origin, so another web page cannot start jobs through the browser.
 """
@@ -31,7 +32,7 @@ from starlette.concurrency import run_in_threadpool
 
 from ideaforge import config, db, debate, jobs, report, review, scoring, status
 from ideaforge.schemas import KILL_TRIGGERS, VerdictLabel
-from ideaforge.web import control, dashboard, debate_view, reviews, run_detail
+from ideaforge.web import control, dashboard, debate_view, reviews, run_detail, settings
 from ideaforge.web.run_detail import ClaimFilters, NotFound
 
 HOST = "127.0.0.1"
@@ -429,8 +430,96 @@ def create_app(root: Path | None = None, *, worker_poll: float = jobs.POLL_SECON
             return job_page(request, job_id, status_code=409, error=f"Retry refused: {e}.")
         return queued(ids)
 
+    # ------------------------------------------------------------ settings (IF-608)
+
+    def settings_file(key: str) -> settings.SettingsFile:
+        try:
+            return settings.settings_file(key)
+        except LookupError as e:
+            raise NotFound(str(e)) from None
+
+    def settings_page(
+        request: Request, f: settings.SettingsFile, status_code: int = 200, *,
+        form: Mapping[str, str] | None = None, raw: str | None = None, **context,
+    ) -> HTMLResponse:
+        text = settings.read(f)
+        doc = settings.load(text)
+        return page(
+            request, "settings_file.html", "settings", status_code=status_code,
+            file=f, header=settings.header(text), fields=settings.fields(f.key, doc, form),
+            summary=settings.summary(f.key, doc), raw=text if raw is None else raw,
+            history=settings.history(f.key), refusal=settings.job_refusal(), **context,
+        )
+
+    def saved_page(request: Request, f: settings.SettingsFile, saved: settings.Saved) -> HTMLResponse:
+        if saved.entry_id is None:
+            return settings_page(request, f, message="No changes: nothing was saved.")
+        return settings_page(
+            request, f, message=f"Saved config/{f.name}.", entry_id=saved.entry_id, output=saved.output,
+        )
+
+    def save_error(e: settings.SettingsError) -> int:
+        return 409 if isinstance(e, settings.SaveRefused) else 400
+
     @app.get("/settings", response_class=HTMLResponse)
-    def settings(request: Request) -> HTMLResponse:
-        return page(request, "placeholder.html", "settings", title="Settings", ticket="IF-608")
+    def settings_index(request: Request) -> HTMLResponse:
+        return page(
+            request, "settings.html", "settings",
+            files=settings.FILES.values(), last=settings.last_saves(), refusal=settings.job_refusal(),
+        )
+
+    @app.get("/settings/{key}", response_class=HTMLResponse)
+    def settings_form(request: Request, key: str) -> HTMLResponse:
+        return settings_page(request, settings_file(key))
+
+    @app.post("/settings/{key}", response_class=HTMLResponse)
+    async def save_settings_form(request: Request, key: str) -> HTMLResponse:
+        """Save the form: its values go into the file with comments kept, then the validated save."""
+        f = settings_file(key)
+        fields, _ = await form_fields(request)
+        try:
+            saved = await run_in_threadpool(lambda: settings.save(key, settings.form_text(key, fields)))
+        except settings.SettingsError as e:
+            return settings_page(request, f, save_error(e), form=fields, errors=e.errors, output=e.output)
+        return saved_page(request, f, saved)
+
+    @app.post("/settings/{key}/raw", response_class=HTMLResponse)
+    async def save_settings_raw(request: Request, key: str) -> HTMLResponse:
+        """Save the raw YAML as typed (the fallback for what the form cannot change)."""
+        f = settings_file(key)
+        fields, _ = await form_fields(request)
+        raw = fields.get("raw", "")
+        try:
+            saved = await run_in_threadpool(settings.save, key, raw)
+        except settings.SettingsError as e:
+            return settings_page(request, f, save_error(e), raw=raw, errors=e.errors, output=e.output)
+        return saved_page(request, f, saved)
+
+    def entry_page(request: Request, f: settings.SettingsFile, entry_id: int, status_code: int = 200,
+                   **context) -> HTMLResponse:
+        try:
+            row = settings.entry(f.key, entry_id)
+        except LookupError as e:
+            raise NotFound(str(e)) from None
+        return page(
+            request, "settings_entry.html", "settings", status_code=status_code,
+            file=f, entry=row, diff=settings.diff(row), refusal=settings.job_refusal(), **context,
+        )
+
+    @app.get("/settings/{key}/history/{entry_id}", response_class=HTMLResponse)
+    def settings_entry(request: Request, key: str, entry_id: int) -> HTMLResponse:
+        return entry_page(request, settings_file(key), entry_id)
+
+    @app.post("/settings/{key}/history/{entry_id}/revert", response_class=HTMLResponse)
+    def revert_settings(request: Request, key: str, entry_id: int) -> HTMLResponse:
+        """Put the file back as it was before this save: validated and recorded like any save."""
+        f = settings_file(key)
+        try:
+            saved = settings.revert(key, entry_id)
+        except LookupError as e:
+            raise NotFound(str(e)) from None
+        except settings.SettingsError as e:
+            return entry_page(request, f, entry_id, save_error(e), errors=e.errors, output=e.output)
+        return saved_page(request, f, saved)
 
     return app

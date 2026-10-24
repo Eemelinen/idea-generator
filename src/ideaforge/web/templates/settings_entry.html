@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Save #{{ entry.id }} · {{ file.title }} · Ideaforge{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="/settings">Settings</a> › <a href="/settings/{{ file.key }}">{{ file.title }}</a> › save #{{ entry.id }}</p>
+<h1>Save #{{ entry.id }} <span class="muted"><code>config/{{ file.name }}</code> at {{ entry.ts }}</span></h1>
+{% if refusal %}<div class="banner warn" role="alert" id="settings-refused"><strong>Saving is off:</strong> {{ refusal }}.</div>{% endif %}
+{% if errors %}
+<div class="banner warn" role="alert" id="settings-errors">
+  <strong>Not reverted: <code>config/{{ file.name }}</code> is unchanged.</strong>
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+{% if output %}<pre class="log" id="gen-agents-output">{{ output }}</pre>{% endif %}
+<pre class="diff" id="settings-diff">{% for kind, line in diff %}<span class="{{ kind }}">{{ line }}</span>
+{% endfor %}</pre>
+<form method="post" action="/settings/{{ file.key }}/history/{{ entry.id }}/revert">
+  <button type="submit"{% if refusal %} disabled{% endif %}>Revert this save</button>
+  <span class="muted">Puts back the file as it was before this save, as a new validated save.</span>
+</form>
+{% endblock %}

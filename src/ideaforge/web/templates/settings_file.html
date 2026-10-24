@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ file.title }} · Settings · Ideaforge{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="/settings">Settings</a> › {{ file.title }}</p>
+<h1>{{ file.title }} <span class="muted"><code>config/{{ file.name }}</code></span></h1>
+{% if file.key == "finland" %}
+<div class="banner warn" id="hints-not-facts"><strong>Hints to verify, not facts.</strong> Research agents confirm every value on its <code>verify_url</code> and cite that page, never this file.</div>
+{% endif %}
+<p>{{ file.note }}</p>
+{% if header %}<pre class="yaml-header">{{ header }}</pre>{% endif %}
+{% if refusal %}<div class="banner warn" role="alert" id="settings-refused"><strong>Saving is off:</strong> {{ refusal }}.</div>{% endif %}
+{% if message %}<p class="banner ok" role="status" id="settings-saved">{{ message }}{% if entry_id %} <a href="/settings/{{ file.key }}/history/{{ entry_id }}">See the diff</a>.{% endif %}</p>{% endif %}
+{% if errors %}
+<div class="banner warn" role="alert" id="settings-errors">
+  <strong>Not saved: <code>config/{{ file.name }}</code> is unchanged.</strong>
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+{% if output %}<pre class="log" id="gen-agents-output">{{ output }}</pre>{% endif %}
+
+<form method="post" action="/settings/{{ file.key }}" class="settings">
+  {% if summary %}<p id="settings-summary">{{ summary }}</p>{% endif %}
+  <table class="grid settings">
+    <thead><tr><th>Setting</th><th>Value</th><th>Note</th></tr></thead>
+    <tbody>
+      {% for f in fields %}
+      <tr data-field="{{ f.name }}">
+        <td><label for="{{ f.name }}">{{ f.label }}</label></td>
+        <td>
+          {% if f.kind == "readonly" %}
+          <code id="{{ f.name }}">{{ f.value }}</code> <span class="tag">read-only</span>
+          {% elif f.kind == "select" %}
+          <select id="{{ f.name }}" name="{{ f.name }}">
+            {% for c in f.choices %}<option value="{{ c }}"{% if c == f.value %} selected{% endif %}>{{ c }}</option>{% endfor %}
+          </select>
+          {% elif f.kind in ("lines", "textarea") %}
+          <textarea id="{{ f.name }}" name="{{ f.name }}" rows="{{ [f.value.count('\n') + 1, 3]|max }}">{{ f.value }}</textarea>
+          {% else %}
+          <input type="text" id="{{ f.name }}" name="{{ f.name }}" value="{{ f.value }}"{% if f.kind == "number" %} inputmode="decimal" class="number"{% endif %}>
+          {% endif %}
+        </td>
+        <td class="muted">{{ f.help }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <button type="submit"{% if refusal %} disabled{% endif %}>Save</button>
+</form>
+
+<h2>Raw YAML</h2>
+<p class="muted">For what the form cannot change (adding or removing a preset, a dimension, a hint or a rule). The whole file is replaced by this text after the same validation.</p>
+<form method="post" action="/settings/{{ file.key }}/raw" class="settings">
+  <textarea name="raw" class="raw" rows="24" aria-label="config/{{ file.name }} as YAML">{{ raw }}</textarea>
+  <button type="submit"{% if refusal %} disabled{% endif %}>Save raw YAML</button>
+</form>
+
+<h2>History</h2>
+{% if history %}
+<table class="grid history">
+  <thead><tr><th>Save</th><th>Time (UTC)</th><th>Before → after</th></tr></thead>
+  <tbody>
+    {% for h in history %}
+    <tr data-entry="{{ h.id }}">
+      <td><a href="/settings/{{ file.key }}/history/{{ h.id }}">#{{ h.id }}</a></td>
+      <td>{{ h.ts }}</td>
+      <td><code>{{ h.sha_before[:12] }}</code> → <code>{{ h.sha_after[:12] }}</code></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">No saves from this page yet.</p>
+{% endif %}
+{% endblock %}

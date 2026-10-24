@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Settings · Ideaforge{% endblock %}
+{% block content %}
+<h1>Settings <span class="muted">the pipeline's <code>config/*.yaml</code></span></h1>
+{% if refusal %}<div class="banner warn" role="alert" id="settings-refused"><strong>Saving is off:</strong> {{ refusal }}.</div>{% endif %}
+<table class="grid settings-files">
+  <thead><tr><th>File</th><th>What it sets</th><th>Last save here</th></tr></thead>
+  <tbody>
+    {% for f in files %}
+    <tr data-file="{{ f.key }}">
+      <td><a href="/settings/{{ f.key }}">{{ f.title }}</a><br><code>config/{{ f.name }}</code></td>
+      <td>{{ f.note }}</td>
+      <td>{{ last.get(f.name, "-") }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p class="muted">Every save is validated by the file's config model, keeps the file's comments and is recorded with a diff and a revert. The development harness settings (<code>harness.config.json</code>) are not edited here.</p>
+{% endblock %}

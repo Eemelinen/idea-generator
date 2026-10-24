@@ -256,9 +256,25 @@ CREATE TABLE IF NOT EXISTS jobs (
 CREATE INDEX IF NOT EXISTS jobs_status ON jobs(status, job_id);
 """
 
+SETTINGS_HISTORY_SCHEMA = """
+-- Every save of a config/*.yaml file from the web UI (IF-608, ideaforge.web.settings): the file
+-- before and after, so each save has a diff and can be reverted.
+CREATE TABLE IF NOT EXISTS settings_history (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts             TEXT NOT NULL,
+    file           TEXT NOT NULL,
+    sha_before     TEXT NOT NULL,
+    sha_after      TEXT NOT NULL,
+    content_before TEXT NOT NULL,
+    content_after  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS settings_history_file ON settings_history(file, id);
+"""
+
 MIGRATIONS: list[str] = [
     SCHEMA,  # 1: the pipeline schema as it stood before versioning
     JOBS_SCHEMA,  # 2: the job queue (IF-604)
+    SETTINGS_HISTORY_SCHEMA,  # 3: settings saves (IF-608)
 ]
 
 

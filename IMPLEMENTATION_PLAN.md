@@ -109,6 +109,7 @@ ideaforge/
 │   │   ├── debate_view.py         # run page debate tab: next step, rounds, verdict, revised plan (IF-606)
 │   │   ├── reviews.py             # review form entries, compare choices; trend and diff from review/status (IF-606)
 │   │   ├── control.py             # new-idea/version forms, run actions by state, eval, log tail, server worker (IF-607)
+│   │   ├── settings.py            # settings editor: config/*.yaml forms, validated round-trip saves, history, revert (IF-608)
 │   │   ├── templates/             # Jinja2 page templates
 │   │   └── static/                # CSS, the job log-tail poller (HTMX not vendored yet, plan notes 37 and 41)
 │   └── fi/                        # free Finnish data tools
@@ -294,7 +295,7 @@ Pydantic models (all with `model_config = ConfigDict(extra="forbid")`):
 - `MiniResearchRequest`: `question`, `dimension`, `requested_by`.
 - `Verdict`: `accepted_changes[]`, `rejected_changes[]` (with reasons), `assumption_register[]` {assumption, evidence_state, risk_if_wrong}, `experiments[]` {name, cost_eur, days, success_threshold, info_value: 1–5}, `projected_scores`, `conformity_flag: bool`.
 
-SQLite tables mirror these: `runs`, `idea_versions`, `stages` (run_id, stage, status, started_at, finished_at, attempts), `claims`, `sources` (url, domain, content_sha, cache_path, fetched_at), `scores`, `reports`, `debates`, `debate_turns`, `assumptions`, `experiments`, `usage` (ts, run_id, stage, agent, tool, model, approx_tokens).
+SQLite tables mirror these: `runs`, `idea_versions`, `stages` (run_id, stage, status, started_at, finished_at, attempts), `claims`, `sources` (url, domain, content_sha, cache_path, fetched_at), `scores`, `reports`, `debates`, `debate_turns`, `assumptions`, `experiments`, `usage` (ts, run_id, stage, agent, tool, model, approx_tokens). Phase 6 migrations add `jobs` (IF-604) and `settings_history` (ts, file, sha_before, sha_after, content_before, content_after; every settings save from the UI, IF-608).
 
 `db.py` exposes `init()`, `upsert_claims(run_id, claims)`, `stage_set(run_id, stage, status)`, `stage_done(run_id, stage) -> bool`.
 

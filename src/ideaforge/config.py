@@ -152,6 +152,20 @@ class ReportConfig(_Cfg):
     business_plan_language: ReportLanguage
 
 
+class FinlandHint(BaseModel):
+    """A hint to verify, never a fact: its values are free-form, the verify flags are not."""
+
+    model_config = ConfigDict(extra="allow")
+    description: str
+    verify_at_runtime: Literal[True]
+    verify_url: str = Field(pattern=r"^https://")
+
+
+class FinlandConfig(_Cfg):
+    geography_ladder: list[str] = Field(min_length=1)
+    hints: dict[str, FinlandHint] = Field(min_length=1)
+
+
 def load_yaml(name: str) -> Any:
     with open(CONFIG_DIR / name, encoding="utf-8") as f:
         return yaml.safe_load(f)
@@ -189,10 +203,23 @@ def report() -> ReportConfig:
 
 @cache
 def finland() -> dict[str, Any]:
-    # Free-form hints; only the verify flags are enforced (see tests/test_config.py).
-    return load_yaml("finland.yaml")
+    # Free-form hints; only the shape and the verify flags are enforced (FinlandConfig).
+    data = load_yaml("finland.yaml")
+    FinlandConfig.model_validate(data)
+    return data
+
+
+LOADERS = (models, budget, rubric, domains, founder, report, finland)
 
 
 def load_all() -> None:
     """Validate every config file; raises on the first invalid one."""
-    models(), budget(), rubric(), domains(), founder(), report(), finland()
+    for loader in LOADERS:
+        loader()
+
+
+def reload() -> None:
+    """Forget the cached config, so the next read sees the files as they are now (a settings
+    save from the web UI, IF-608)."""
+    for loader in LOADERS:
+        loader.cache_clear()
