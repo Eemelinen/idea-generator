@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Reviews · Ideaforge{% endblock %}
+{% block content %}
+<h1>Review scores</h1>
+{% if not trend.versions %}
+<p class="muted">No reviews yet; score a report on its run's Review tab or with <code>/status &lt;run_id&gt; --review</code>.</p>
+{% else %}
+<p class="muted">By prompt/config and model version, oldest first; mean of 1–5. The same figures as <code>/status --reviews</code>.</p>
+<ul class="versions">
+  {% for v in trend.versions %}<li data-version="{{ v.label }}"><strong>{{ v.label }}</strong>: config <code>{{ v.config }}</code> · models {{ models_text(v.models) }} · {{ v.run_ids|length }} run(s)</li>{% endfor %}
+</ul>
+<table class="grid trend">
+  <thead><tr><th>Section</th>{% for v in trend.versions %}<th>{{ v.label }}</th>{% endfor %}</tr></thead>
+  <tbody>{% for row in trend.section_rows %}<tr data-section="{{ row[0] }}">{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+</table>
+<h2>Reviewed runs</h2>
+<table class="grid reviewed-runs">
+  <thead><tr><th>Run</th><th>Version</th><th>Sections</th><th>Mean</th></tr></thead>
+  <tbody>{% for run_id, label, n, mean in trend.run_rows %}<tr data-run="{{ run_id }}"><td><a href="/runs/{{ run_id }}/review">{{ run_id }}</a></td><td>{{ label }}</td><td>{{ n }}</td><td>{{ mean }}</td></tr>{% endfor %}</tbody>
+</table>
+{% endif %}
+{% endblock %}

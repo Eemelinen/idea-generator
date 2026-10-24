@@ -23,7 +23,7 @@ from ideaforge.web.run_detail import ClaimFilters, NotFound
 FINISHED = "20261023-130000-sauna-cabins"
 STOPPED = "20261023-150000-berry-drying"
 NOW = datetime(2026, 10, 23, 14, 0, tzinfo=UTC)
-TABS = ("", "/idea", "/claims", "/scores", "/economics", "/report", "/usage", "/files")
+TABS = ("", "/idea", "/claims", "/scores", "/economics", "/report", "/debate", "/review", "/usage", "/files")
 CONFLICT = ["market-003", "market-004"]
 
 

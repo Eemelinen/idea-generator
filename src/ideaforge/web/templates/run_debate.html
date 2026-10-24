@@ -1,0 +1,135 @@
+{% extends "run_base.html" %}
+{% from "_run_macros.html" import invalid, claim_link, num %}
+{% macro ids(list) -%}
+{% for cid in list or [] %}{{ claim_link(run.run_id, cid, known) }}{% if not loop.last %}, {% endif %}{% else %}-{% endfor %}
+{%- endmacro %}
+{% macro pid(p) -%}
+<strong>{{ p }}</strong>{% if p in view.role_of %} <span class="muted">({{ view.role_of[p] }})</span>{% endif %}
+{%- endmacro %}
+{% macro basis(b) -%}
+{% if b %}{% if b.new_claim_ids %}new claims {{ ids(b.new_claim_ids) }}{% endif %}{% if b.computation %}{% if b.new_claim_ids %} · {% endif %}computation: {{ link_claims(b.computation, run.run_id, known) }}{% endif %}{% if b.evidence_gap %}{% if b.new_claim_ids or b.computation %} · {% endif %}evidence gap: {{ b.evidence_gap }}{% endif %}{% else %}-{% endif %}
+{%- endmacro %}
+{% block tab %}
+<h2>Debate <span class="muted"><code>debate/</code></span></h2>
+
+{% if not run.has_dir %}
+<p class="muted">The run has no directory.</p>
+{% else %}
+<p class="next-step">{% if not view.started %}Not started. {% endif %}{% if view.next_step %}<code id="next-step">{{ view.next_step }}</code>{% endif %}
+  <span class="muted">(as <code>python -m ideaforge.debate status {{ run.run_id }}</code> names it{% if not view.roles_shown %}; roles as P-ids until the verdict{% endif %})</span></p>
+{% for n in view.notes %}<p class="muted">{{ n }}</p>{% endfor %}
+{% if view.error %}{{ invalid(view.error) }}{% endif %}
+
+{% if view.verdict and view.verdict.conformity_flag %}
+<div class="banner warn conformity" role="alert" id="conformity-flag">
+  <strong>Conformity flag.</strong> At least {{ min_agree }} of 5 personas backed the same change while no new claim id entered the debate: agreement without new evidence is a warning sign, not support.
+  {% if view.verdict.judge_flag != view.verdict.conformity_flag %}<p>The judge wrote <code>conformity_flag: {{ view.verdict.judge_flag|lower }}</code>; the computed flag is shown.</p>{% endif %}
+</div>
+{% elif view.verdict and view.verdict.judge_flag %}
+<p class="muted" id="judge-flag-corrected">The judge set the conformity flag; the computed flag is off.</p>
+{% endif %}
+
+{% for r in view.rounds %}
+<section class="round" id="round-{{ r.number }}" data-round="{{ r.number }}">
+  <h3>Round {{ r.number }}{% if r.number == 0 %} · positions{% else %} · rebuttals{% endif %}</h3>
+  {% if r.positions_error %}{{ invalid(r.positions_error) }}
+  {% elif r.positions is none %}
+  <p class="muted not-anonymized">Not anonymized yet: {{ r.persona_files }} of 5 persona files written.</p>
+  {% else %}
+  {% for p in r.positions %}
+  <div class="position" data-position="{{ p.position_id }}">
+    <p>{{ pid(p.position_id) }}{% if p.confidence is defined %} · confidence {{ num(p.confidence) }}{% endif %}</p>
+    {% if p.objections %}
+    <ul class="objections">{% for o in p.objections %}<li>{{ link_claims(o.text, run.run_id, known) }} <span class="muted">{{ ids(o.claim_ids) }}</span></li>{% endfor %}</ul>
+    {% endif %}
+    {% if p.proposed_change %}<p>Proposed change: {{ link_claims(p.proposed_change, run.run_id, known) }}</p>{% endif %}
+    {% if p.expected_score_impact %}<p class="muted">Expected score impact: {% for dim, x in p.expected_score_impact.items() %}{{ dim }} {{ "%+g"|format(x) }}{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+    {% if p.responses %}
+    <table class="grid responses">
+      <thead><tr><th>On</th><th>Stance</th><th>Basis</th><th>Cited claims</th></tr></thead>
+      <tbody>{% for x in p.responses %}<tr data-target="{{ x.target_position_id }}"><td>{{ x.target_position_id }}</td><td>{{ x.stance }}</td><td>{{ basis(x.basis) }}</td><td>{{ ids(x.cited_claim_ids) }}</td></tr>{% endfor %}</tbody>
+    </table>
+    {% endif %}
+    {% if p.updated_change %}<p>Updated change: {{ link_claims(p.updated_change, run.run_id, known) }} <span class="muted">({{ basis(p.updated_change_basis) }})</span></p>{% endif %}
+    {% if p.mini_research %}<p>Mini-research request ({{ p.mini_research.dimension }}): {{ p.mini_research.question }}</p>{% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% set rejected = r.turns|rejectattr("accepted")|list %}
+  {% if rejected or r.reprompted %}
+  <h4>Rejected and re-prompted turns</h4>
+  <table class="grid turns">
+    <thead><tr><th>Position</th><th>Attempt</th><th>Reasons</th></tr></thead>
+    <tbody>{% for t in rejected %}<tr class="rejected"><td>{{ t.who }}</td><td>{{ t.attempt }}</td><td>{% for line in t.reasons %}{{ link_claims(line, run.run_id, known) }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td></tr>{% endfor %}</tbody>
+  </table>
+  {% if r.reprompted %}<p class="muted reprompted">Re-prompted once: {{ r.reprompted|join(", ") }}.</p>{% endif %}
+  {% endif %}
+
+  {% for t in r.mini %}
+  <div class="mini-research" data-task="{{ t.n }}">
+    <h4>Mini-research task {{ t.n }} · {{ t.dimension }} · {{ t.status }}</h4>
+    <p>Requested by {{ t.who }}: {{ t.question }}{% if t.reason %} <span class="muted">({{ t.reason }})</span>{% endif %}</p>
+    <p class="muted">Claims: {% for cid, state in t.claims %}{{ claim_link(run.run_id, cid, known) }} {{ state }}{% if not loop.last %}, {% endif %}{% else %}none yet{% endfor %}</p>
+  </div>
+  {% endfor %}
+
+  {% if r.interim_error %}{{ invalid(r.interim_error) }}
+  {% elif r.interim %}
+  <h4>Judge's interim scores</h4>
+  <table class="grid interim">
+    <thead><tr><th>Dimension</th><th>Projected</th></tr></thead>
+    <tbody>{% for dim, x in r.interim.projected_scores.items() %}<tr data-dimension="{{ dim }}"><td>{{ dim }}</td><td>{{ num(x) }}</td></tr>{% endfor %}</tbody>
+  </table>
+  {% elif r.interim_skipped %}<p class="muted">The judge's interim projection was set aside after two failures.</p>
+  {% endif %}
+</section>
+{% endfor %}
+
+{% if view.verdict_error %}{{ invalid(view.verdict_error) }}{% endif %}
+{% if view.verdict %}
+{% set v = view.verdict.verdict %}
+<section id="verdict">
+  <h3>Verdict <span class="muted"><code>debate/verdict.json</code></span></h3>
+  {% if view.verdict.error %}<div class="banner warn" role="alert"><strong>Not accepted yet.</strong> {{ view.verdict.error }}</div>{% endif %}
+  <h4>Accepted changes</h4>
+  <table class="grid accepted">
+    <thead><tr><th>Change</th><th>Claims</th><th>Reason</th></tr></thead>
+    <tbody>{% for c in v.accepted_changes %}<tr><td>{{ c.change }}</td><td>{{ ids(c.claim_ids) }}</td><td>{{ c.reason }}</td></tr>{% else %}<tr><td colspan="3">none</td></tr>{% endfor %}</tbody>
+  </table>
+  <h4>Rejected changes</h4>
+  <table class="grid rejected-changes">
+    <thead><tr><th>Change</th><th>Claims</th><th>Reason</th></tr></thead>
+    <tbody>{% for c in v.rejected_changes %}<tr><td>{{ c.change }}</td><td>{{ ids(c.claim_ids) }}</td><td>{{ c.reason }}</td></tr>{% else %}<tr><td colspan="3">none</td></tr>{% endfor %}</tbody>
+  </table>
+  <h4>Assumption register</h4>
+  <table class="grid assumptions">
+    <thead><tr><th>Assumption</th><th>Evidence</th><th>Risk if wrong</th></tr></thead>
+    <tbody>{% for a in view.verdict.assumptions %}<tr><td>{{ a.assumption }}</td><td>{{ a.evidence_state }}</td><td>{{ a.risk_if_wrong }}</td></tr>{% endfor %}</tbody>
+  </table>
+  <h4>Experiments <span class="muted">by info value per cost, highest first</span></h4>
+  <table class="grid experiments">
+    <thead><tr><th>#</th><th>Experiment</th><th>Cost EUR</th><th>Days</th><th>Info value</th><th>Info per 100 EUR</th><th>Success threshold</th></tr></thead>
+    <tbody>{% for e, per100 in view.verdict.experiments %}<tr data-experiment="{{ e.name }}"><td>{{ loop.index }}</td><td>{{ e.name }}</td><td>{{ "%g"|format(e.cost_eur) }}</td><td>{{ "%g"|format(e.days) }}</td><td>{{ e.info_value }}</td><td>{{ per100 }}</td><td>{{ e.success_threshold }}</td></tr>{% endfor %}</tbody>
+  </table>
+  <h4>Projected scores</h4>
+  <table class="grid projected">
+    <thead><tr><th>Dimension</th><th>Projected</th></tr></thead>
+    <tbody>{% for dim, x in v.projected_scores.items() %}<tr><td>{{ dim }}</td><td>{{ num(x) }}</td></tr>{% endfor %}</tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if view.plan_html %}
+<section id="revised-plan">
+  <h3>Revised plan <span class="muted"><code>debate/revised_plan.md</code></span></h3>
+  <p><a class="download" href="/runs/{{ run.run_id }}/raw/debate/revised_plan.md" download>Download revised_plan.md</a></p>
+  <article class="report markdown">
+  {{ view.plan_html }}
+  </article>
+</section>
+{% elif view.verdict %}
+<p class="muted">No <code>debate/revised_plan.md</code> yet: <code>render_report.py --debate</code> writes it from the verdict.</p>
+{% endif %}
+{% endif %}
+{% endblock %}

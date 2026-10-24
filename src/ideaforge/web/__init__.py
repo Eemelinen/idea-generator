@@ -2,8 +2,10 @@
 
 `create_app()` builds it for the project root the rest of the package uses (`config.ROOT`, set
 by `IDEAFORGE_ROOT`); `python -m ideaforge.web` serves it on 127.0.0.1 only. Pages read through
-the pipeline modules and never write a run's artefacts: the runs dashboard (`dashboard`) and the
-run page with its tabs (`run_detail`).
+the pipeline modules and never write a run's artefacts: the runs dashboard (`dashboard`), the
+run page with its tabs (`run_detail`, the debate tab `debate_view`), and the review form, review
+trend and run comparison (`reviews`). Review scores are the only thing a page writes, through
+the same `review.store` as `/status --review`.
 """
 
 from __future__ import annotations
@@ -12,20 +14,26 @@ from pathlib import Path
 from typing import get_args
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from ideaforge import config, db, report
+from ideaforge import config, db, debate, report, review, scoring, status
 from ideaforge.schemas import VerdictLabel
-from ideaforge.web import dashboard, run_detail
+from ideaforge.web import dashboard, debate_view, reviews, run_detail
 from ideaforge.web.run_detail import ClaimFilters, NotFound
 
 HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 WEB_DIR = Path(__file__).resolve().parent
 
-NAV = (("runs", "Runs", "/"), ("jobs", "Jobs", "/jobs"), ("settings", "Settings", "/settings"))
+NAV = (
+    ("runs", "Runs", "/"),
+    ("reviews", "Reviews", "/reviews"),
+    ("compare", "Compare", "/compare"),
+    ("jobs", "Jobs", "/jobs"),
+    ("settings", "Settings", "/settings"),
+)
 VERDICTS = (*get_args(VerdictLabel), dashboard.UNSCORED)
 
 
@@ -43,6 +51,7 @@ def create_app(root: Path | None = None) -> FastAPI:
     app.mount("/static", StaticFiles(directory=WEB_DIR / "static"), name="static")
     templates = Jinja2Templates(directory=WEB_DIR / "templates")
     templates.env.globals["link_claims"] = run_detail.link_claims
+    templates.env.globals["models_text"] = review.models_text
 
     def page(request: Request, name: str, active: str, status_code: int = 200, **context) -> HTMLResponse:
         return templates.TemplateResponse(
@@ -160,6 +169,62 @@ def create_app(root: Path | None = None) -> FastAPI:
         return FileResponse(
             file, media_type="application/octet-stream", filename=file.name,
             headers={"X-Content-Type-Options": "nosniff"},
+        )
+
+    @app.get("/runs/{run_id}/debate", response_class=HTMLResponse)
+    def run_debate(request: Request, run_id: str) -> HTMLResponse:
+        r = run_detail.run(run_id)
+        ledger = run_detail.ledger(run_id, r.run_dir)
+        return run_page(
+            request, r, "debate",
+            view=debate_view.debate_view(run_id, r.run_dir, r.in_db, ledger.by_id()),
+            known=set(ledger.by_id()), min_agree=debate.CONFORMITY_MIN_AGREE,
+        )
+
+    def review_page(request: Request, r: run_detail.Run, **context) -> HTMLResponse:
+        return run_page(
+            request, r, "review",
+            sections=review.SECTIONS, stored=review.stored(r.run_id) if r.in_db else {},
+            unreviewable=reviews.unreviewable(r.run_id, r.in_db), **context,
+        )
+
+    @app.get("/runs/{run_id}/review", response_class=HTMLResponse)
+    def run_review(request: Request, run_id: str, stored: str = "") -> HTMLResponse:
+        # ?stored=1 follows a stored POST (redirected, so a reload does not resubmit the form)
+        r = run_detail.run(run_id)
+        return review_page(request, r, message="Review scores stored." if stored == "1" else None)
+
+    @app.post("/runs/{run_id}/review", response_model=None)
+    async def store_review(request: Request, run_id: str) -> HTMLResponse | RedirectResponse:
+        """Store the form's scores with `review.store` (as /status --review); a bad entry or a
+        run without a report stores nothing and shows why."""
+        r = run_detail.run(run_id)
+        form = await request.form()
+        fields = {k: v for k, v in form.items() if isinstance(v, str)}
+        try:
+            review.store(run_id, reviews.entries(fields))
+        except (review.ReviewError, LookupError) as e:
+            return review_page(request, r, status_code=400, error=str(e))
+        return RedirectResponse(f"/runs/{run_id}/review?stored=1", status_code=303)
+
+    @app.get("/reviews", response_class=HTMLResponse)
+    def review_trend(request: Request) -> HTMLResponse:
+        return page(request, "reviews.html", "reviews", trend=review.trend_data())
+
+    @app.get("/compare", response_class=HTMLResponse)
+    def compare(request: Request, a: str = "", b: str = "") -> HTMLResponse:
+        diff = error = None
+        if a and b:
+            try:
+                diff = status.score_diff(a, b)
+            except (LookupError, ValueError) as e:
+                error = str(e)
+        elif a or b:
+            error = "choose two runs"
+        return page(
+            request, "compare.html", "compare",
+            choices=reviews.choices(), a=a, b=b, diff=diff, error=error, cap=f"{scoring.CAP:g}",
+            status_code=400 if error and a and b else 200,
         )
 
     @app.get("/jobs", response_class=HTMLResponse)

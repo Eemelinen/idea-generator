@@ -719,7 +719,7 @@
       "area": "ui",
       "title": "Debate, review scores and run comparison in the UI",
       "user_visible_behavior": "A run's debate tab shows each round's anonymized positions and rebuttals, the judge's interim scores, the verdict with a conformity-flag banner, the revised plan, the assumption register and the experiments ordered by info value per cost; a review form stores 1–5 section scores in the reviews table with the trend view; any two runs can be compared per dimension, verdict and kill triggers.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-023", "F-031"],
       "ticket": "IF-606",
       "spec": "docs/TICKETS.md#if-606-debate-review-scores-and-run-comparison-in-the-ui",
@@ -727,7 +727,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_web_debate.py (debate tab on a synthetic finished debate and on one stopped mid-round; review scores persist and match /status --reviews; diff matches /status --diff on the v1/v2 fixture pair)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-24 pnpm check → pass (working tree on 34756e2)",
+        "2026-10-24 uv run pytest tests/test_web_debate.py → pass (working tree on 34756e2)"
+      ],
       "attempts": 0,
       "notes": "The review form writes the same rows as `/status --review` (IF-504)."
     },

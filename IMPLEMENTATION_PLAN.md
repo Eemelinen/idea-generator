@@ -97,7 +97,7 @@ ideaforge/
 │   ├── mini_research.py           # debate mini-research tasks: open (≤ max per debate) and finish
 │   ├── usage.py                   # JSONL log of tool calls; per-run tallies
 │   ├── brief.py                   # run-specific research-brief lines: preset budget line, back-test header
-│   ├── status.py                  # /status text: recent runs, one run's claims, flags, markers, usage; score-sheet diff
+│   ├── status.py                  # /status text: recent runs, one run's claims, flags, markers, usage; score-sheet diff (also the UI's compare)
 │   ├── review.py                  # /status --review / --reviews: report-section scores 1–5, trend by prompt/model version
 │   ├── golden.py                  # eval golden set: load + validate, find each idea's run, the three checks
 │   ├── validate_file.py           # CLI: validate a JSON file against a schema (used by hooks)
@@ -105,6 +105,8 @@ ideaforge/
 │   │   ├── __init__.py            # create_app(): FastAPI app, routes
 │   │   ├── dashboard.py           # runs dashboard rows, lineages, runs/ ↔ DB mismatch (IF-601)
 │   │   ├── run_detail.py          # run page tabs: stages, idea, claims, scores, economics, report, usage, files (IF-605)
+│   │   ├── debate_view.py         # run page debate tab: next step, rounds, verdict, revised plan (IF-606)
+│   │   ├── reviews.py             # review form entries, compare choices; trend and diff from review/status (IF-606)
 │   │   ├── templates/             # Jinja2 page templates
 │   │   └── static/                # CSS (and vendored HTMX, plan note 37)
 │   └── fi/                        # free Finnish data tools

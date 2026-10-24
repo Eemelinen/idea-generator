@@ -1,5 +1,6 @@
 """The run page (IF-605): one run's stages and markers, idea spec and research plan, claim ledger,
-score sheet, unit economics, report, usage and a read-only browser over runs/<run_id>/.
+score sheet, unit economics, report, usage and a read-only browser over runs/<run_id>/. The debate
+and review tabs (IF-606) are built by `web.debate_view` and `web.reviews`.
 
 Reads only, through the pipeline's own loaders and helpers (`synthesis.load_*`,
 `verify.load_conflicts`, `status`, `usage.summarize`, `report.kill_trigger_rows` /
@@ -48,6 +49,8 @@ TABS = (
     ("scores", "Scores", "/scores"),
     ("economics", "Economics", "/economics"),
     ("report", "Report", "/report"),
+    ("debate", "Debate", "/debate"),
+    ("review", "Review", "/review"),
     ("usage", "Usage", "/usage"),
     ("files", "Files", "/files"),
 )
