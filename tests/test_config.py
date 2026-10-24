@@ -5,7 +5,7 @@ import pytest
 from pydantic import ValidationError
 
 from ideaforge import config
-from ideaforge.schemas import RUBRIC_DIMENSIONS
+from ideaforge.schemas import RUBRIC_DIMENSIONS, IdeaSpec
 
 
 def test_all_configs_load():
@@ -43,6 +43,34 @@ def test_finland_hints_are_flagged_for_verification():
     for name, hint in hints.items():
         assert hint.get("verify_at_runtime") is True, name
         assert str(hint.get("verify_url", "")).startswith("https://"), name
+
+
+def test_founder_constraints_are_confirmed():
+    """IF-150: the founder constraints are the user's answers, not placeholders."""
+    founder = config.founder()
+    assert founder.confirmed is True
+    assert founder.skills
+
+
+def test_report_language_is_set():
+    """IF-150: the report and the business-plan draft each have a language."""
+    report = config.report()
+    assert report.language in {"en", "fi"}
+    assert report.business_plan_language in {"en", "fi"}
+
+
+def test_report_language_rejects_unknown():
+    with pytest.raises(ValidationError):
+        config.ReportConfig.model_validate({"language": "sv", "business_plan_language": "fi"})
+
+
+def test_geography_ladder_is_the_same_everywhere():
+    """IF-150: the user's ladder is the spec default and what the research agents and /validate use."""
+    ladder = config.finland()["geography_ladder"]
+    assert IdeaSpec.model_fields["geography"].default == ladder
+    assert " → ".join(ladder) in (config.PROMPTS_DIR / "research_base.md").read_text(encoding="utf-8")
+    skill = (config.ROOT / ".claude" / "skills" / "validate" / "SKILL.md").read_text(encoding="utf-8")
+    assert "[" + ", ".join(f'"{step}"' for step in ladder) + "]" in skill
 
 
 def test_official_domains_include_core_sources():

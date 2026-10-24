@@ -1,7 +1,15 @@
 # Founder constraints applied to every idea (open decision IF-150).
-# PLACEHOLDER VALUES: set confirmed: true once the user has confirmed them.
-confirmed: false
+# Confirmed by the user under IF-150. While confirmed is false, /validate treats the values as placeholders.
+confirmed: true
 hours_per_week: 20
 capital_eur: 5000
-skills: []
+skills:
+  - software engineering (web/backend, 8 years)
+  - building and running websites, booking systems and online shops
+  - automation and data analysis
+  - English (fluent)
+  - Finnish (native)
+  - driving licence B
+  - customer service / sales experience
+  - marketing (social media, SEO)
 goal: side_income        # side_income | full_time | starttiraha

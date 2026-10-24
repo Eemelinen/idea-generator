@@ -243,6 +243,11 @@ Absorbs IF-102–IF-107. Kept for reference:
   4. Report language: English, Finnish or both. Recommended: business-plan draft in Finnish.
 - **Verification:** `L1: pnpm check` · `L1: uv run pytest tests/test_config.py` (extended: `founder.yaml` is confirmed and the report language is set) · `manual:` the user answered the four questions.
 - **Acceptance:** `founder.yaml` has `confirmed: true`; the answers are recorded below this ticket.
+- **Answers (2026-10-24):**
+  1. Geography ladder: Rääkkylä → North Karelia → Finland → online/EU. Keski-Karjala is dropped: the founder does not live in a Keski-Karjala municipality. The same ladder is in `config/finland.yaml`, the `IdeaSpec.geography` default, `prompts/research_base.md` and the validate skill; `tests/test_config.py` keeps them equal.
+  2. Founder constraints: 20 h/week, 5 000 EUR capital, goal `side_income`; skills are software engineering (web/backend, 8 years), building and running websites, booking systems and online shops, automation and data analysis, English (fluent), Finnish (native), driving licence B, customer service / sales experience and marketing (social media, SEO). `confirmed: true`.
+  3. Verdict thresholds and weights: the user has no preference yet, so the defaults stay (GO ≥ 3.5, PIVOT ≥ 2.5, at most 2 insufficient dimensions; weights as in `config/rubric.yaml`). Revisit after the Phase 2 run (F-013).
+  4. Report language: either is fine for the user, so the recommendation is taken: the report in English (`config/report.yaml: language: en`, the existing templates) and the starttiraha business-plan draft in Finnish (`business_plan_language: fi`, used by IF-307).
 
 ### IF-200 Record Finnish open-data API fixtures
 

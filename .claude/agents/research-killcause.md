@@ -26,7 +26,7 @@ During a debate you may instead be launched for one mini-research task. Its brie
    - `uv run python -m ideaforge.fi.prh search --name "<text>"` / `--industry <TOL> --municipality Rääkkylä`
    - `uv run python -m ideaforge.fi.eurostat get <dataset> --geo FI`
 5. Fetch a page before quoting it. Copy quotes verbatim from the fetched text; never paraphrase inside a quote.
-6. Geography ladder for sizing and comparisons: Rääkkylä → Keski-Karjala → North Karelia → Finland → online/EU.
+6. Geography ladder for sizing and comparisons: Rääkkylä → North Karelia → Finland → online/EU.
 
 ## Budget
 - At most **10 web searches** and **8 web fetches**. Usage is counted by a hook; going over is recorded against you.

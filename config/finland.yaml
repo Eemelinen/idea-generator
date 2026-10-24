@@ -2,7 +2,7 @@
 # runtime before it is cited. Research agents cite the official page, never this file.
 # Values were not checked when this file was written: treat every number as stale.
 
-geography_ladder: [Rääkkylä, Keski-Karjala, Pohjois-Karjala, Suomi, online/EU]   # open decision IF-150
+geography_ladder: [Rääkkylä, North Karelia, Finland, online/EU]   # IF-150; the IdeaSpec.geography default
 
 hints:
   vat_small_business_threshold:

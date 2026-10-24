@@ -102,7 +102,8 @@ class IdeaSpec(Strict):
     problem: str
     solution: str
     revenue_model: str
-    geography: list[str] = ["Rääkkylä", "North Karelia", "Finland", "online"]
+    # The ladder from config/finland.yaml (IF-150; tests/test_config.py keeps them equal).
+    geography: list[str] = ["Rääkkylä", "North Karelia", "Finland", "online/EU"]
     founder_constraints: FounderConstraints
     clarifications: list[Clarification] = Field(default_factory=list, max_length=5)
     # Kill triggers the user has explicitly accepted the risk of; score_run.py will not

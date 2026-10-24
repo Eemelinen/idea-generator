@@ -75,7 +75,7 @@ that first, never work around it.
    - `idea_id`: `idea_id` from `runs/<run_id>/meta.json`.
    - `title`, `one_liner`, `customer`, `problem`, `solution`, `revenue_model` from the idea
      and the answers. Unknown is written as unknown; never invent facts about the market.
-   - `geography`: the default ladder `["Rääkkylä", "North Karelia", "Finland", "online"]`
+   - `geography`: the default ladder `["Rääkkylä", "North Karelia", "Finland", "online/EU"]`
      unless an answer changes it.
    - `founder_constraints`: `hours_per_week`, `capital_eur`, `skills`, `goal` from
      `config/founder.yaml`, overridden by the user's answers.
