@@ -104,7 +104,7 @@
       "source": {
         "source": "github",
         "repo": "Eemelinen/harness",
-        "ref": "v0.3.0"
+        "ref": "v0.3.1"
       }
     }
   },
