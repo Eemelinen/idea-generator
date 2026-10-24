@@ -10,7 +10,7 @@ import pytest
 from conftest import DEBATE_RUN, debate_position
 
 from ideaforge import db, debate
-from ideaforge.schemas import PERSONAS
+from ideaforge.schemas import PERSONAS, Rebuttal
 
 
 def anon_file(run_dir, round_no=0):
@@ -321,3 +321,89 @@ def test_cli(debate_run, capsys):
         assert role not in out
     assert debate.main(["anonymize", DEBATE_RUN, "0", "--seed", "12"]) == 1
     assert "already has seed 11" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------- conformity flag (IF-405)
+
+CONF_SEED = 2026
+CONF_MAP = debate.mapping_for(CONF_SEED)
+TARGET = "founder"  # the position the others agree on
+COMPUTATION = {"computation": "market-001 gives 1200 nights x 0.3 = 360 bookable nights"}
+
+
+def stance(role, stance_name, basis=None, target=TARGET):
+    basis = basis or ({"evidence_gap": "No verified claim."} if stance_name == "disagree" else COMPUTATION)
+    return {"target_position_id": CONF_MAP[target], "stance": stance_name, "basis": basis}
+
+
+def conf_rebuttal(role, *responses, round_no=1):
+    if not responses:
+        responses = (stance(role, "disagree", target="investor" if role != "investor" else "customer"),)
+    return Rebuttal.model_validate({"role": role, "round": round_no, "responses": list(responses)})
+
+
+def turns(*agreeing, stance_name="agree"):
+    out = {role: conf_rebuttal(role) for role in PERSONAS}
+    for role in agreeing:
+        out[role] = conf_rebuttal(role, stance(role, stance_name))
+    return out
+
+
+def test_conformity_four_of_five_backing_one_change_without_new_claims():
+    # the author backs its own change, so three agreeing personas make four of five
+    assert debate.conformity_flag(turns("investor", "customer", "accountant"), CONF_MAP, set())
+    assert debate.conformity_flag(turns("investor", "customer", "accountant", "operator"), CONF_MAP, set())
+
+
+def test_conformity_needs_four_backers():
+    assert not debate.conformity_flag(turns("investor", "customer"), CONF_MAP, set())
+    assert debate.backers(turns("investor", "customer"), CONF_MAP)[CONF_MAP[TARGET]] == {"founder", "investor", "customer"}
+
+
+def test_conformity_is_off_when_a_new_claim_id_entered():
+    assert not debate.conformity_flag(turns("investor", "customer", "accountant", "operator"), CONF_MAP, {"market-002"})
+
+
+@pytest.mark.parametrize("stance_name", ["modify", "disagree"])
+def test_conformity_counts_only_agree(stance_name):
+    assert not debate.conformity_flag(turns("investor", "customer", "accountant", stance_name=stance_name), CONF_MAP, set())
+
+
+def test_conformity_agreement_split_over_two_changes_is_not_conformity():
+    t = turns("investor", "customer")
+    t["accountant"] = conf_rebuttal("accountant", stance("accountant", "agree", target="operator"))
+    t["operator"] = conf_rebuttal("operator", stance("operator", "agree", target="investor"))
+    assert not debate.conformity_flag(t, CONF_MAP, set())
+
+
+def write_conf_round(run_dir, round_no, data):
+    for role, turn in data.items():
+        write_role(run_dir, round_no, role, turn if isinstance(turn, dict) else turn.model_dump(mode="json"))
+    return debate.validate_round(DEBATE_RUN, round_no)
+
+
+def test_run_conformity_flag_from_the_validated_last_round(debate_run):
+    debate.anonymize(DEBATE_RUN, 0, seed=CONF_SEED)
+    assert not debate.run_conformity_flag(DEBATE_RUN)  # no rebuttal round yet
+    # agreement backed only by computations over market-001, which every round-0 position cites
+    assert not write_conf_round(debate_run, 1, turns("investor", "customer", "accountant")).rejected
+    assert debate.run_conformity_flag(DEBATE_RUN)
+
+
+def test_run_conformity_flag_off_once_new_evidence_entered_in_any_round(debate_run):
+    debate.anonymize(DEBATE_RUN, 0, seed=CONF_SEED)
+    first = turns()
+    first["operator"] = conf_rebuttal("operator", stance("operator", "disagree", {"new_claim_ids": ["pricing-001"]}))
+    assert not write_conf_round(debate_run, 1, first).rejected
+    second = {r: conf_rebuttal(r, *t.responses, round_no=2) for r, t in turns("investor", "customer", "accountant").items()}
+    assert not write_conf_round(debate_run, 2, second).rejected
+    assert not debate.run_conformity_flag(DEBATE_RUN)
+
+
+def test_run_conformity_flag_ignores_rejected_agreement(debate_run):
+    debate.anonymize(DEBATE_RUN, 0, seed=CONF_SEED)
+    t = turns("investor", "customer")
+    t["accountant"] = conf_rebuttal("accountant", stance("accountant", "agree", {"evidence_gap": "None."}))
+    result = write_conf_round(debate_run, 1, t)
+    assert list(result.rejected) == ["accountant"]
+    assert not debate.run_conformity_flag(DEBATE_RUN)

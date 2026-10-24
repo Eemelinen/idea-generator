@@ -347,16 +347,21 @@ class Experiment(Strict):
     name: str
     cost_eur: Annotated[float, Field(ge=0)]
     days: Annotated[float, Field(gt=0)]
-    success_threshold: str
+    success_threshold: Annotated[str, Field(pattern=r"\S")]
     info_value: Annotated[int, Field(ge=1, le=5)]
+
+
+# Plan §11: the revised plan lists at least this many experiments.
+MIN_EXPERIMENTS = 5
 
 
 class Verdict(Strict):
     accepted_changes: list[ChangeDecision]
     rejected_changes: list[ChangeDecision]
     assumption_register: list[Assumption]
-    experiments: list[Experiment]
+    experiments: Annotated[list[Experiment], Field(min_length=MIN_EXPERIMENTS)]
     projected_scores: dict[RubricDimension, Score]
+    # The judge's value; `debate.finalize_verdict` overwrites it with the one Python computes.
     conformity_flag: bool = False
 
     @model_validator(mode="after")
@@ -365,6 +370,14 @@ class Verdict(Strict):
             if not c.claim_ids:
                 raise ValueError(f"accepted change {c.change!r} must cite at least one claim id")
         return self
+
+
+class InterimScores(Strict):
+    """`debate/round<N>/interim_scores.json`: the judge's projected scores after round N, which
+    the convergence check compares with the previous round's (IF-405)."""
+
+    round: Annotated[int, Field(ge=0)]
+    projected_scores: dict[RubricDimension, Score]
 
 
 # ---------------------------------------------------------------- run metadata
@@ -408,6 +421,7 @@ SCHEMAS: dict[str, type[BaseModel]] = {
     "rebuttal": Rebuttal,
     "mini_research": MiniResearchRequest,
     "verdict": Verdict,
+    "interim_scores": InterimScores,
     "meta": RunMeta,
 }
 # Kinds whose file holds a JSON list of the model rather than a single object.

@@ -111,3 +111,14 @@ def test_verdict_accepted_change_needs_claim_id():
     data["accepted_changes"][0]["claim_ids"] = []
     with pytest.raises(ValidationError, match="must cite"):
         Verdict.model_validate(data)
+
+
+def test_verdict_needs_five_experiments_with_a_threshold():
+    data = load("verdict.json")
+    Verdict.model_validate(data)
+    with pytest.raises(ValidationError, match="at least 5"):
+        Verdict.model_validate(data | {"experiments": data["experiments"][:4]})
+    for blank in ("", "  "):
+        data["experiments"][0]["success_threshold"] = blank
+        with pytest.raises(ValidationError, match="success_threshold"):
+            Verdict.model_validate(data)

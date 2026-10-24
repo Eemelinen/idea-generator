@@ -5,13 +5,14 @@
 
 Policy (exit 2 = deny, reason on stderr):
 - Writes outside the project root, or into .git/, are always denied.
-- runs/<run_id>/05_report.md is never written by a tool: render_report.py writes it once
-  (reports are immutable).
+- runs/<run_id>/05_report.md and runs/<run_id>/debate/revised_plan.md are never written by a
+  tool: render_report.py (with --debate for the plan) writes each once (they are immutable).
 - Subagents are always strict: a research agent may write only its own
   runs/<run_id>/02_research/<dimension>.md, the synthesizer only
   runs/<run_id>/04_scores_proposed.json and 04_risks.json, a debate agent only
   under runs/<run_id>/debate/ (never the files debate.py writes: .mapping.json,
-  positions_anon.json, REJECTED_<role>), any other subagent only under runs/ or cache/.
+  positions_anon.json, REJECTED_<role>, revised_plan.md; the judge's interim_scores.json and
+  verdict.json are the judge's only), any other subagent only under runs/ or cache/.
 - The main session is strict (runs/ and cache/ only) unless it is a development
   session: the dev marker file .ideaforge-dev exists at the project root, or the
   harness loop driver started it (HARNESS_LOOP=1, docs/DECISIONS.md D-005). A
@@ -36,6 +37,7 @@ from typing import Any
 from ideaforge import agents, config, debate, hookio, runs
 
 REPORT_NAME = runs.STAGE_OUTPUTS["report"][0][0]
+REVISED_PLAN_NAME = "revised_plan.md"
 NETWORK_RE = re.compile(
     r"(?i)(^|[\s;&|(])(curl|wget|invoke-webrequest|iwr|invoke-restmethod|irm|start-bitstransfer)(\.exe)?\b"
 )
@@ -109,6 +111,15 @@ def check_write(data: dict[str, Any]) -> str | None:
         return "write denied: .git/ is never written by tools"
     if target.name == REPORT_NAME and target.parent.parent == config.RUNS_DIR.resolve():
         return f"write denied: {REPORT_NAME} is written only by scripts/render_report.py, and reports are immutable"
+    if (
+        target.name == REVISED_PLAN_NAME
+        and target.parent.name == "debate"
+        and target.parent.parent.parent == config.RUNS_DIR.resolve()
+    ):
+        return (
+            f"write denied: debate/{REVISED_PLAN_NAME} is written only by scripts/render_report.py --debate,"
+            " and it is immutable"
+        )
 
     runs_dir, cache_dir = config.RUNS_DIR, config.CACHE_DIR
     if hookio.is_subagent(data):
@@ -136,6 +147,8 @@ def check_write(data: dict[str, Any]) -> str | None:
                 return f"write denied: {spec.name} may only write under runs/{run_id}/debate/"
             if target.name in (debate.MAPPING_NAME, debate.ANON_NAME) or target.name.startswith(debate.REJECTED_PREFIX):
                 return f"write denied: {target.name} is written only by ideaforge.debate"
+            if spec.kind == "debate" and target.name in (debate.INTERIM_NAME, debate.VERDICT_NAME):
+                return f"write denied: {target.name} is written only by the debate judge"
             return None
         if _within(target, runs_dir) or _within(target, cache_dir):
             return None

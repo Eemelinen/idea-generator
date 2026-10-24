@@ -401,7 +401,7 @@ class ReportResult:
     sheet: ScoreSheet
 
 
-def _write_new(path: Path, text: str) -> None:
+def write_new(path: Path, text: str) -> None:
     """Create `path` with `text` in one step, failing if it exists: a crash leaves no half report."""
     tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     try:
@@ -426,7 +426,7 @@ def render(run_id: str, now: datetime | None = None) -> ReportResult:
     try:
         db.add_report(
             run_id, "report", rel, weighted_total=sheet.weighted_total, verdict=sheet.verdict,
-            created_at=now.isoformat(timespec="seconds"), then=lambda: _write_new(path, text),
+            created_at=now.isoformat(timespec="seconds"), then=lambda: write_new(path, text),
         )  # fmt: skip
     except FileExistsError:
         raise ReportExists(f"{rel} was written concurrently; reports are immutable") from None

@@ -9,7 +9,11 @@
     {"assumption": "Remote workers will book week-long stays in winter.", "evidence_state": "untested", "risk_if_wrong": "Fixed costs are not covered for five months a year."}
   ],
   "experiments": [
-    {"name": "Winter landing page with deposit", "cost_eur": 60, "days": 14, "success_threshold": "5 paid deposits", "info_value": 5}
+    {"name": "Winter landing page with deposit", "cost_eur": 60, "days": 14, "success_threshold": "5 paid deposits", "info_value": 5},
+    {"name": "Remote-work forum post with a booking form", "cost_eur": 0, "days": 7, "success_threshold": "10 booking enquiries", "info_value": 3},
+    {"name": "Price test at two nightly rates", "cost_eur": 40, "days": 21, "success_threshold": "Higher rate converts at least half as often", "info_value": 4},
+    {"name": "Cleaning cost quote from two local providers", "cost_eur": 0, "days": 5, "success_threshold": "Quote under the assumed cost per stay", "info_value": 2},
+    {"name": "One weekend pilot stay", "cost_eur": 150, "days": 30, "success_threshold": "Guest rates the stay 4/5 or better", "info_value": 4}
   ],
   "projected_scores": {"market": 2.5},
   "conformity_flag": false
