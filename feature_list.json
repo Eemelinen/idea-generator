@@ -515,8 +515,8 @@
         "2026-10-24 pnpm check → pass (commit 7474fc0)",
         "2026-10-24 uv run pytest tests/test_gen_agents.py tests/test_debate.py tests/test_skills.py → pass (commit 7474fc0)"
       ],
-      "attempts": 0,
-      "notes": "Absorbs IF-401 (persona and judge prompts) and IF-404 (mini-research). The live debate moved to F-024."
+      "attempts": 1,
+      "notes": "Absorbs IF-401 (persona and judge prompts) and IF-404 (mini-research). The live debate moved to F-024. Attempt 1 failed 2026-10-24: evaluator: Revise"
     },
     {
       "id": "F-024",
