@@ -244,10 +244,8 @@ def diff_runs(run_a: str, run_b: str) -> str:
     rows = []
     for d in dims:
         sa, sb = scores_a.get(d), scores_b.get(d)
-        rows.append((
-            d, _score_cell(sa), _score_cell(sb),
-            _change(sa.final_score if sa else None, sb.final_score if sb else None),
-        ))
+        change = _change(sa.final_score if sa else None, sb.final_score if sb else None)
+        rows.append((d, _score_cell(sa), _score_cell(sb), change))
     lines += usage.table(("dimension", "A", "B", "change"), rows) if rows else ["no dimension scores in either"]
     if any(s.cap_reason for s in (*a.scores, *b.scores)):
         lines.append(f"capped: the evidence rules capped the final score at {scoring.CAP:g} (insufficient data)")

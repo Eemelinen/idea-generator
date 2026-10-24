@@ -271,7 +271,7 @@ def test_diff_same_sheet(version_pair):
     assert "in both: free_good_enough_substitute" in out and "only in" not in out
 
 
-def test_diff_without_meta_or_with_missing_dimensions(project, tmp_path):
+def test_diff_without_meta_or_with_missing_dimensions(project):
     make_run(RUN_V1, created="2026-10-23T11:00:00+00:00", scores="scores_v1.synthetic.json", write_meta=False)
     sheet = json.loads((STATUS_FIXTURES / "scores_v2.synthetic.json").read_text(encoding="utf-8"))
     sheet["scores"] = [s for s in sheet["scores"] if s["dimension"] != "market"]
