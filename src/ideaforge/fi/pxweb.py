@@ -36,8 +36,9 @@ import math
 import os
 import sys
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
@@ -174,13 +175,9 @@ class Client:
         path = config.CACHE_DIR / "pxweb" / f"{hashlib.sha256(key.encode('utf-8')).hexdigest()}.json"
         now = self.now()
         if path.is_file():
-            try:
-                entry = json.loads(path.read_text(encoding="utf-8"))
-                retrieved_at = datetime.fromisoformat(entry["retrieved_at"])
-            except (ValueError, KeyError):
-                entry = None  # unreadable entry: fetch again and overwrite it
-            if entry is not None and now - retrieved_at < CACHE_TTL:
-                return Response(method, url, body, entry["data"], retrieved_at, from_cache=True)
+            cached = _read_cache_entry(path)  # None if unreadable: fetch again and overwrite it
+            if cached is not None and now - cached[1] < CACHE_TTL:
+                return Response(method, url, body, cached[0], cached[1], from_cache=True)
         data = self.transport(method, url, body)
         entry = {"method": method, "url": url, "body": body, "retrieved_at": now.isoformat(), "data": data}
         # Write then rename, so a killed process never leaves a truncated entry that counts as cached.
@@ -192,6 +189,19 @@ class Client:
         finally:
             tmp.unlink(missing_ok=True)
         return Response(method, url, body, data, now, from_cache=False)
+
+
+def _read_cache_entry(path: Path) -> tuple[Any, datetime] | None:
+    """(data, retrieved_at) of a cache file, or None if it is not a JSON object with `data` and an
+    aware ISO `retrieved_at` (the shape `Client.request` writes)."""
+    try:
+        entry = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(entry, dict) or "data" not in entry:
+            return None
+        retrieved_at = datetime.fromisoformat(entry["retrieved_at"])
+    except (ValueError, KeyError, TypeError):
+        return None
+    return (entry["data"], retrieved_at) if retrieved_at.tzinfo is not None else None
 
 
 # ---------------------------------------------------------------- listing and search
@@ -246,11 +256,37 @@ def search(
     for db in dbs:
         resp = client.request("GET", DATABASES[db].search_url(client.lang, keyword))
         responses.append(resp)
-        for hit in resp.data or []:
-            folder = str(hit.get("path", "")).strip("/")
-            table = f"{folder}/{hit['id']}" if folder else hit["id"]
-            found.append(TableRef(f"{db}/{table}", hit.get("title", ""), hit.get("published")))
+        found.extend(_search_hits(db, resp))
     return found, responses
+
+
+def _search_hits(db: str, resp: Response) -> list[TableRef]:
+    """The hits of a PxWeb v1 search (`[{"id", "path", "title", "published", …}]`) as table paths.
+
+    No live search response is recorded yet (IF-204), so an unexpected shape fails with the URL
+    instead of a traceback.
+    """
+    hits = [] if resp.data is None else resp.data
+    if not isinstance(hits, list):
+        raise PxWebError(f"{resp.url} did not return a list of search hits; try --path <db>/<folder>/")
+    refs = []
+    for hit in hits:
+        if not isinstance(hit, dict) or not isinstance(hit.get("id"), str) or not hit["id"].strip("/"):
+            raise PxWebError(
+                f"{resp.url} returned a search hit without a table id: {json.dumps(hit, ensure_ascii=False)[:200]}; "
+                "try --path <db>/<folder>/"
+            )
+        folder = str(hit.get("path") or "").strip("/")
+        table = hit["id"].strip("/")
+        published = hit.get("published")
+        refs.append(
+            TableRef(
+                path=f"{db}/{folder}/{table}" if folder else f"{db}/{table}",
+                text=str(hit.get("title") or ""),
+                updated=str(published) if published else None,
+            )
+        )
+    return refs
 
 
 # ---------------------------------------------------------------- metadata and query
@@ -461,8 +497,14 @@ def query(
     data = resp.data
     if not isinstance(data, dict) or "id" not in data:
         raise PxWebError(f"{resp.url} did not return a JSON-stat dataset")
-    return QueryResult(meta.table_path, jsonstat_frame(data), resp, data.get("label", meta.title),
-                       data.get("source", ""), data.get("updated"))
+    return QueryResult(
+        meta.table_path,
+        jsonstat_frame(data),
+        resp,
+        data.get("label", meta.title),
+        data.get("source", ""),
+        data.get("updated"),
+    )
 
 
 # ---------------------------------------------------------------- CLI
@@ -497,7 +539,7 @@ def _cmd_search(args: argparse.Namespace, client: Client) -> int:
         out = {
             "keyword": args.keyword,
             "requests": [_request_json(r) for r in responses],
-            "tables": [r.__dict__ for r in refs],
+            "tables": [asdict(r) for r in refs],
         }
         print(json.dumps(out, ensure_ascii=False, indent=1))
         return 0
@@ -519,7 +561,7 @@ def _cmd_meta(args: argparse.Namespace, client: Client) -> int:
             "table": meta.table_path,
             "title": meta.title,
             "request": _request_json(meta.response),
-            "variables": [v.__dict__ for v in meta.variables],
+            "variables": [asdict(v) for v in meta.variables],
         }
         print(json.dumps(out, ensure_ascii=False, indent=1))
         return 0
@@ -538,8 +580,12 @@ def _cmd_meta(args: argparse.Namespace, client: Client) -> int:
 
 
 def _cmd_get(args: argparse.Namespace, client: Client) -> int:
-    result = query(args.table_path, parse_filters(args.filter or []), client,
-                   warn=lambda m: print(f"note: {m}", file=sys.stderr))
+    result = query(
+        args.table_path,
+        parse_filters(args.filter or []),
+        client,
+        warn=lambda m: print(f"note: {m}", file=sys.stderr),
+    )
     if args.json:
         out = {
             "table": result.table_path,
@@ -577,8 +623,11 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
-def main(argv: list[str] | None = None, transport: Transport | None = None,
-         now: Callable[[], datetime] = _now) -> int:
+def main(
+    argv: list[str] | None = None,
+    transport: Transport | None = None,
+    now: Callable[[], datetime] = _now,
+) -> int:
     args = build_parser().parse_args(argv)
     try:
         client = Client(transport, args.lang, now)

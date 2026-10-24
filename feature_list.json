@@ -112,7 +112,9 @@
       ],
       "evidence": [
         "2026-10-24 pnpm check → pass (working tree on 9327346)",
-        "2026-10-24 uv run pytest tests/test_pxweb.py → pass (working tree on 9327346)"
+        "2026-10-24 uv run pytest tests/test_pxweb.py → pass (working tree on 9327346)",
+        "2026-10-24 pnpm check → pass (working tree on 0475c24)",
+        "2026-10-24 uv run pytest tests/test_pxweb.py → pass (working tree on 0475c24)"
       ],
       "attempts": 1,
       "notes": "Attempt 1 failed 2026-10-24: evaluator: Revise"

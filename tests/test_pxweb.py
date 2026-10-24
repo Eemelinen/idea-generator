@@ -106,6 +106,55 @@ def test_search_without_path_uses_the_api_search_of_each_database(project):
     assert all(r.url.startswith(API_URL_PREFIXES) for r in responses)
 
 
+# Synthetic (TICKETS.md plan note 14): no live `?query=` response is recorded yet (IF-204). These
+# hits only follow the documented PxWeb v1 search shape (`id`, `path`, `title`, `published`); the
+# titles and dates are invented and never cited.
+SYNTHETIC_SEARCH_HITS = {
+    "statfin": [
+        {"id": "11ra.px", "path": "/vaerak", "title": "Synthetic title A", "score": 2.5,
+         "published": "2026-01-01T08:00:00"},
+        {"id": "top.px", "path": "", "title": "Synthetic title B", "score": 1.0, "published": None},
+    ],
+    "luke": [{"id": "0100_muuyri.px", "path": "/maa/muuyri/", "title": "Synthetic title C", "score": 1.0}],
+}  # fmt: skip
+
+
+def synthetic_search(method, url, body):
+    assert (method, body) == ("GET", None) and "?query=" in url
+    return SYNTHETIC_SEARCH_HITS["luke" if "/LUKE/" in url else "statfin"]
+
+
+def test_search_hits_become_table_paths(capsys, project):
+    code, out, err = run(capsys, synthetic_search, "search", "väkiluku")
+    assert code == 0
+    assert out.splitlines() == [
+        "statfin/vaerak/11ra.px\tSynthetic title A  (updated 2026-01-01T08:00:00)",
+        "statfin/top.px\tSynthetic title B",
+        "luke/maa/muuyri/0100_muuyri.px\tSynthetic title C",
+    ]
+    assert "request: GET https://pxdata.stat.fi/PXWeb/api/v1/fi/StatFin/?query=v%C3%A4kiluku" in err
+    assert "request: GET https://statdb.luke.fi/PXWeb/api/v1/fi/LUKE/?query=v%C3%A4kiluku" in err
+
+    code, out, _ = run(capsys, synthetic_search, "search", "väkiluku", "--db", "luke", "--json")
+    assert code == 0
+    data = json.loads(out)
+    assert data["tables"] == [
+        {"path": "luke/maa/muuyri/0100_muuyri.px", "text": "Synthetic title C", "updated": None, "is_folder": False}
+    ]
+    assert [r["url"] for r in data["requests"]] == ["https://statdb.luke.fi/PXWeb/api/v1/fi/LUKE/?query=v%C3%A4kiluku"]
+
+
+@pytest.mark.parametrize(
+    "response",
+    [{"error": "unexpected"}, "text", [{"path": "/vaerak", "title": "no id"}], ["11ra.px"], [{"id": 7}]],
+)
+def test_a_malformed_search_response_is_an_error_naming_the_url(capsys, project, response):
+    code, out, err = run(capsys, lambda method, url, body: response, "search", "väkiluku", "--db", "statfin")
+    assert (code, out) == (1, "")
+    assert "https://pxdata.stat.fi/PXWeb/api/v1/fi/StatFin/?query=v%C3%A4kiluku" in err
+    assert "Traceback" not in err
+
+
 # ---------------------------------------------------------------- get
 
 
@@ -234,15 +283,28 @@ def test_second_get_within_24_hours_is_a_cache_hit(capsys, recorded, project):
     assert "(from cache)" not in err
 
 
-def test_a_broken_cache_entry_is_fetched_again(recorded, project):
+@pytest.mark.parametrize(
+    "broken",
+    [
+        "{not json",
+        "[]",
+        '"text"',
+        json.dumps({"retrieved_at": T0.isoformat()}),  # no data
+        json.dumps({"data": {}}),  # no retrieval time
+        json.dumps({"data": {}, "retrieved_at": 1}),
+        json.dumps({"data": {}, "retrieved_at": "2026-10-24T12:00:00"}),  # no time zone
+    ],
+)
+def test_a_broken_cache_entry_is_fetched_again(recorded, project, broken):
     client = pxweb.Client(recorded, now=lambda: T0)
     pxweb.metadata("statfin/vaerak/11ra.px", client)
     (entry,) = (project / "cache" / "pxweb").glob("*.json")
-    entry.write_text("{not json", encoding="utf-8")
+    entry.write_text(broken, encoding="utf-8")
     meta = pxweb.metadata("statfin/vaerak/11ra.px", client)
     assert meta.response.from_cache is False
     assert len(recorded.calls) == 2
     assert json.loads(entry.read_text(encoding="utf-8"))["url"] == STATFIN_11RA
+    assert pxweb.metadata("statfin/vaerak/11ra.px", client).response.from_cache is True
 
 
 # ---------------------------------------------------------------- API wrapper
