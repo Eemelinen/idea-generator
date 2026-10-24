@@ -1,0 +1,25 @@
+score sheet diff (04_scores.json, final scores)
+A: 20261023-110000-sauna-cabins · idea sauna-cabins v1 · config aaaaaaa · models opus (all roles)
+B: 20261023-110000-sauna-cabins-v2 · idea sauna-cabins v2 · config bbbbbbb · models opus except debate_judge=sonnet, synthesizer=sonnet
+config: aaaaaaa → bbbbbbb
+models: changed debate_judge opus → sonnet, synthesizer opus → sonnet
+
+verdict: NO_GO → PIVOT
+weighted total: 2.65 → 2.95 (+0.3)
+
+dimension              A         B  change
+customer               3       3.5    +0.5
+market          2 capped         3      +1
+competition            2         2       0
+pricing                3         3       0
+unit_economics       2.5         3    +0.5
+gtm             2 capped  2 capped       0
+regulation             4         4       0
+financing              3       3.5    +0.5
+location               3         3       0
+founder_risk           3       2.5    -0.5
+capped: the evidence rules capped the final score at 2 (insufficient data)
+
+kill triggers fired
+only in A: free_good_enough_substitute
+only in B: beachhead_below_founder_income

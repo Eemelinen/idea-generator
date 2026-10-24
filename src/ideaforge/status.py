@@ -1,4 +1,5 @@
-"""Text for /status: the recent runs, or one run's stages, claims, kill flags, markers and usage.
+"""Text for /status: the recent runs, or one run's stages, claims, kill flags, markers and usage;
+`diff_runs` compares two runs' score sheets (IF-505). Review scores live in `ideaforge.review`.
 
 Reads only what earlier stages wrote (SQLite and runs/<run_id>/); computes nothing that feeds a
 score. A kill flag "fires" when a verified claim carries it (config/rubric.yaml); triggers the
@@ -12,8 +13,9 @@ import sqlite3
 from collections import Counter
 from pathlib import Path
 
-from ideaforge import config, db, runs, usage
-from ideaforge.schemas import KILL_TRIGGERS, RESEARCH_DIMENSIONS
+from ideaforge import config, db, review, runs, scoring, usage
+from ideaforge.schemas import KILL_TRIGGERS, RESEARCH_DIMENSIONS, RUBRIC_DIMENSIONS, DimensionScore, ScoreSheet
+from ideaforge.synthesis import InputError, load_scores
 
 STAGE_STATUSES = ("done", "insufficient_data", "running", "failed", "pending")
 CLAIM_STATES = ("verified", "unverified", "conflict", "pending")
@@ -164,4 +166,101 @@ def run_status(run_id: str) -> str:
             lines.append(f"warning: skipped {summary.skipped_lines} malformed line(s) in usage.jsonl")
         if t.calls:
             lines += usage.usage_table("stage", summary.by_stage, t)
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------- score sheet diff (IF-505)
+
+
+def _num(x: float) -> str:
+    return f"{round(x, 2):g}"
+
+
+def _change(a: float | None, b: float | None) -> str:
+    if a is None or b is None:
+        return "-"
+    return f"{round(b - a, 2):+g}" if round(b - a, 2) else "0"
+
+
+def _score_cell(s: DimensionScore | None) -> str:
+    if s is None:
+        return "-"
+    if s.final_score is None:
+        return "n/a"
+    return f"{_num(s.final_score)} capped" if s.cap_reason else _num(s.final_score)
+
+
+def _load_sheet(run_id: str) -> ScoreSheet:
+    run_dir = runs.run_dir(run_id)
+    if not run_dir.is_dir():
+        raise LookupError(f"unknown run {run_id!r}: {run_dir.relative_to(config.ROOT)} does not exist")
+    try:
+        return load_scores(run_dir)
+    except InputError as e:
+        raise LookupError(f"run {run_id} has no valid 04_scores.json: {e}") from None
+
+
+def _provenance(run_id: str) -> tuple[str, str, dict[str, str] | None]:
+    """(idea version text, config text, models) from meta.json."""
+    m = review.run_meta(run_id)
+    idea = "meta.json missing or invalid" if m is None else f"idea {m.idea_id or '?'} v{m.version}"
+    return (idea, *review.version_key(m))
+
+
+def diff_runs(run_a: str, run_b: str) -> str:
+    """Compare two runs' 04_scores.json: per-dimension final score, weighted total, verdict and
+    kill triggers, with the prompt/config and model versions from meta.json. Raises
+    ValueError / LookupError for a bad run id or a missing or invalid score sheet."""
+    a, b = _load_sheet(run_a), _load_sheet(run_b)
+    (idea_a, cfg_a, models_a), (idea_b, cfg_b, models_b) = _provenance(run_a), _provenance(run_b)
+    lines = [
+        "score sheet diff (04_scores.json, final scores)",
+        f"A: {run_a} · {idea_a} · config {cfg_a} · models {review.models_text(models_a)}",
+        f"B: {run_b} · {idea_b} · config {cfg_b} · models {review.models_text(models_b)}",
+        f"config: same ({cfg_a})" if cfg_a == cfg_b else f"config: {cfg_a} → {cfg_b}",
+    ]
+    if models_a is None or models_b is None:
+        lines.append("models: unknown (meta.json missing)")
+    else:
+        moved = [
+            f"{role} {models_a.get(role, '-')} → {models_b.get(role, '-')}"
+            for role in sorted(models_a.keys() | models_b.keys())
+            if models_a.get(role) != models_b.get(role)
+        ]
+        lines.append(f"models: changed {', '.join(moved)}" if moved else "models: same")
+
+    verdict = f"{a.verdict} → {b.verdict}" if a.verdict != b.verdict else f"{a.verdict} (same)"
+    lines += [
+        "",
+        f"verdict: {verdict}",
+        f"weighted total: {_num(a.weighted_total)} → {_num(b.weighted_total)}"
+        f" ({_change(a.weighted_total, b.weighted_total)})",
+        "",
+    ]
+
+    scores_a = {s.dimension: s for s in a.scores}
+    scores_b = {s.dimension: s for s in b.scores}
+    dims = [d for d in RUBRIC_DIMENSIONS if d in scores_a or d in scores_b]
+    rows = []
+    for d in dims:
+        sa, sb = scores_a.get(d), scores_b.get(d)
+        rows.append((
+            d, _score_cell(sa), _score_cell(sb),
+            _change(sa.final_score if sa else None, sb.final_score if sb else None),
+        ))
+    lines += usage.table(("dimension", "A", "B", "change"), rows) if rows else ["no dimension scores in either"]
+    if any(s.cap_reason for s in (*a.scores, *b.scores)):
+        lines.append(f"capped: the evidence rules capped the final score at {scoring.CAP:g} (insufficient data)")
+
+    fired_a, fired_b = set(a.kill_triggers_fired), set(b.kill_triggers_fired)
+    lines += ["", "kill triggers fired"]
+    if not fired_a | fired_b:
+        lines.append("none in either")
+    for label, triggers in (
+        ("in both", fired_a & fired_b),
+        ("only in A", fired_a - fired_b),
+        ("only in B", fired_b - fired_a),
+    ):
+        if triggers:
+            lines.append(f"{label}: {', '.join(t for t in KILL_TRIGGERS if t in triggers)}")
     return "\n".join(lines)
