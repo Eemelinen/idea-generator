@@ -73,3 +73,71 @@ def test_a_mini_research_task_has_its_own_budget(active_run):
     assert counters["research-pricing.mini-1"]["WebSearch"] == 9
     assert not (active_run / "BUDGET_EXCEEDED_research-pricing").exists()
     assert "WebSearch: 9 > 8" in (active_run / "BUDGET_EXCEEDED_research-pricing.mini-1").read_text(encoding="utf-8")
+
+
+# ---------------------------------------------------------------- presets and briefs (IF-503)
+
+
+def economy_run(project, *extra):
+    import new_run
+
+    from ideaforge import runs
+
+    assert new_run.main(["sauna cabins by the lake", "--preset", "economy", *extra]) == 0
+    run_id = runs.active_run_id()
+    return run_id, project / "runs" / run_id
+
+
+def test_economy_run_flags_budget_exceeded_at_7_searches(project, capsys):
+    """`/validate --preset economy` → new_run.py --preset → meta.json → the hook's limits."""
+    _, run_dir = economy_run(project)
+    for _ in range(6):  # economy research_subagent: 6 searches allowed
+        usage.log(hook("WebSearch", agent="research-pricing"))
+    marker = run_dir / "BUDGET_EXCEEDED_research-pricing"
+    assert not marker.exists()
+    usage.log(hook("WebSearch", agent="research-pricing"))
+    assert "WebSearch: 7 > 6" in marker.read_text(encoding="utf-8")
+
+
+def test_brief_budget_line_is_the_hooks_limit(project, capsys):
+    import research_brief
+
+    from ideaforge import brief, config
+
+    run_id, _ = economy_run(project)
+    capsys.readouterr()
+    assert research_brief.main([run_id, "pricing"]) == 0
+    economy = config.budget().preset("economy")
+    r = economy.research_subagent
+    assert capsys.readouterr().out.strip() == (
+        f"Budget (preset economy): at most {r.max_web_searches} web searches, {r.max_web_fetches} web fetches"
+        f" and {r.max_output_words} words of prose. These replace the numbers in your own prompt."
+    )
+    k = economy.killcause_scout
+    assert f"at most {k.max_web_searches} web searches, {k.max_web_fetches} web fetches" in brief.budget_line(
+        "economy", "killcause"
+    )
+    assert brief.run_settings(run_id) == ("economy", None)
+
+
+def test_brief_has_the_back_test_header(project, capsys):
+    import research_brief
+
+    run_id, _ = economy_run(project, "--as-of", "2024-06-30")
+    capsys.readouterr()
+    assert research_brief.main([run_id, "market"]) == 0
+    lines = capsys.readouterr().out.splitlines()
+    assert len(lines) == 2 and lines[0].startswith("Budget (preset economy)")
+    assert lines[1].startswith("Back-test as of 2024-06-30:")
+    assert "published on or before 2024-06-30" in lines[1] and "after_as_of" in lines[1]
+
+
+def test_brief_rejects_unknown_runs_and_dimensions(project, capsys):
+    import research_brief
+
+    run_id, _ = economy_run(project)
+    assert research_brief.main([run_id, "astrology"]) == 1
+    assert research_brief.main(["20261023-120000-missing", "market"]) == 1
+    assert research_brief.main(["not a run id", "market"]) == 1
+    err = capsys.readouterr().err
+    assert "unknown research dimension 'astrology'" in err and "not in the database" in err

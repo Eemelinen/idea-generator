@@ -587,7 +587,7 @@
       "area": "pipeline",
       "title": "Back-test as-of, preset wiring and usage-limit docs",
       "user_visible_behavior": "`/validate --as-of YYYY-MM-DD` adds the no-later-sources header to research briefs and `verify_claims.py` marks claims published after it `unverified` with `after_as_of`; `/validate --preset economy|standard|deep` sets the budget lines and the usage hook’s limits; the README documents usage limits, presets and the model downgrade procedure.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-007", "F-011", "F-025"],
       "ticket": "IF-503",
       "spec": "docs/TICKETS.md#if-503-back-test-as-of-preset-wiring-and-usage-limit-docs",
@@ -595,7 +595,12 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_verify.py tests/test_usage.py tests/test_skills.py (after_as_of flag; economy flags BUDGET_EXCEEDED at 7 searches; preset budget lines passed)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-24 pnpm check → pass (working tree on 81c82a2)",
+        "2026-10-24 uv run pytest tests/test_verify.py tests/test_usage.py tests/test_skills.py → pass (working tree on 81c82a2)",
+        "2026-10-24 pnpm check → pass (working tree on e14c62c)",
+        "2026-10-24 uv run pytest tests/test_verify.py tests/test_usage.py tests/test_skills.py → pass (working tree on e14c62c)"
+      ],
       "attempts": 0,
       "notes": "Absorbs IF-506 (--preset wiring) and IF-508 (README usage limits and model downgrade)."
     },

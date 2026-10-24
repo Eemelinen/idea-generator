@@ -2,7 +2,7 @@
 name: debate
 description: Run the Ideaforge multi-agent debate (stage 7) on a run whose report exists. Five persona subagents take independent positions from their own evidence subsets, positions are anonymized, rebuttal rounds are validated in Python (stance changes need a new claim id or a computation), rejected personas are re-prompted once, at most one mini-research task per round (and a per-debate limit) brings in new verified claims, the judge projects scores after each round until the convergence check stops, then writes the verdict, and scripts/render_report.py writes the revised plan. Resumable per round. Use when the user types /debate <run_id>.
 argument-hint: '<run_id>'
-allowed-tools: Read Agent Bash(uv run python -m ideaforge.debate*) Bash(uv run python -m ideaforge.mini_research*) Bash(uv run python -m ideaforge.validate_file*) Bash(uv run python scripts/run_stage.py*) Bash(uv run python scripts/debate_validate.py*) Bash(uv run python scripts/debate_converged.py*) Bash(uv run python scripts/verify_claims.py*) Bash(uv run python scripts/render_report.py*) Bash(uv run python scripts/usage_report.py*) Bash(uv run python scripts/status.py*) Bash(ls*)
+allowed-tools: Read Agent Bash(uv run python -m ideaforge.debate*) Bash(uv run python -m ideaforge.mini_research*) Bash(uv run python -m ideaforge.validate_file*) Bash(uv run python scripts/run_stage.py*) Bash(uv run python scripts/research_brief.py*) Bash(uv run python scripts/debate_validate.py*) Bash(uv run python scripts/debate_converged.py*) Bash(uv run python scripts/verify_claims.py*) Bash(uv run python scripts/render_report.py*) Bash(uv run python scripts/usage_report.py*) Bash(uv run python scripts/status.py*) Bash(ls*)
 ---
 
 You are the orchestrator of an Ideaforge debate on an existing run. The personas, the judge and
@@ -131,8 +131,9 @@ per debate, enforced in Python.
    contains exactly:
    - `run_id: <run_id>`, the spec path `runs/<run_id>/00_spec.json` and "This is a debate mini-research task."
    - the printed `question`, `dimension`, `output` and `first claim id`
-   - the budget line: `max_web_searches`, `max_web_fetches` and `max_output_words` from the
-     preset's `research_subagent` entry (`killcause_scout` for killcause)
+   - the lines `uv run python scripts/research_brief.py <run_id> <dim>` prints for the task's
+     dimension, verbatim: the budget line of the run's preset and, in a back-test run, the
+     header that forbids sources published after the as-of date
    - "write no other file"
 3. `uv run python -m ideaforge.mini_research finish <run_id> <n>`: it validates the file
    against the research output contract. Exit 0 → step 4. Exit 2 → **re-launch it once** with

@@ -92,6 +92,7 @@ ideaforge/
 │   ├── debate.py                  # anonymization (P1…P5, seeded), rebuttal validation, evidence subsets, resume status
 │   ├── mini_research.py           # debate mini-research tasks: open (≤ max per debate) and finish
 │   ├── usage.py                   # JSONL log of tool calls; per-run tallies
+│   ├── brief.py                   # run-specific research-brief lines: preset budget line, back-test header
 │   ├── status.py                  # /status text: recent runs, one run's claims, flags, markers, usage
 │   ├── golden.py                  # eval golden set: load + validate, find each idea's run, the three checks
 │   ├── validate_file.py           # CLI: validate a JSON file against a schema (used by hooks)
@@ -103,6 +104,7 @@ ideaforge/
 │   ├── gen_agents.py              # render agent_templates/* with config/models.yaml → .claude/agents/
 │   ├── new_run.py                 # create run dir + db row + meta.json, print run_id; --from = next version
 │   ├── run_stage.py               # stage state machine: --begin/--finish/--insufficient-data/--resume/--next
+│   ├── research_brief.py          # print a research brief's budget line and back-test header for <run_id> <dim>
 │   ├── verify_claims.py           # stage 3 verification over a run
 │   ├── synthesis_input.py         # stage 5: the synthesizer's only input file
 │   ├── score_run.py               # stage 5 scoring
@@ -398,7 +400,7 @@ All free, no keys. Thin wrappers with on-disk caching (24 h) and a `--json` flag
 - **Unit tests** (`pytest`): scoring caps and kill triggers (table-driven); verification fuzzy-match thresholds; conflict detection; economics on known inputs; debate validator (rejects unsupported stance change, accepts one with a new claim id).
 - **Schema tests**: every example JSON in `tests/fixtures/` validates.
 - **Golden set** (`tests/golden/*.yaml`, 10 ideas for v1, 20 for v2): a short idea, expected verdict range, and 2–3 "must-find" facts (e.g. an existing local competitor, a known regulatory requirement). `/eval` runs the pipeline on each (sequentially, to respect usage limits), then checks: verdict within range, must-find facts present among verified claims, zero unverified claims cited in the score sheet. Include obviously bad ideas, one real existing Rääkkylä business, and one with a Finnish regulatory trap.
-- **Back-test mode**: `--as-of YYYY-MM-DD` adds a header to every research prompt forbidding sources after that date and makes `verify_claims.py` reject claims with `published_date` after it.
+- **Back-test mode**: `--as-of YYYY-MM-DD` adds a header to every research prompt forbidding sources after that date and makes `verify_claims.py` reject claims with `published_date` after it. The header goes in the research brief (`scripts/research_brief.py`), since the agent files are rendered without a run; a claim with no `published_date` is not rejected (TICKETS.md plan note 29).
 - **Human review**: `/status` lets the user score each report section 1–5; stored in `reviews` table to track drift after prompt or model changes.
 - **Harness verification layer (§14)**: L1 `pnpm check` runs the full pytest suite plus the harness checks, and is the gate for every feature. Tests are **offline**. Finnish API responses are recorded once from the live APIs by a human feature (IF-200, `tests/fixtures/api/`) and never invented. Anything that needs a real Claude run or the network (the golden-set `/eval`, phase acceptance runs) is a `manual:` step done interactively.
 

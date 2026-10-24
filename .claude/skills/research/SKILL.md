@@ -2,7 +2,7 @@
 name: research
 description: Run Ideaforge stages 1–3 (research plan, the 11 parallel research subagents, claim verification) for an existing run whose intake is done. Resumable; completed stages and dimensions are skipped. Use when the user types /research <run_id>.
 argument-hint: '<run_id>'
-allowed-tools: Read Write Agent Bash(uv run python scripts/run_stage.py*) Bash(uv run python scripts/verify_claims.py*) Bash(uv run python scripts/usage_report.py*) Bash(uv run python scripts/status.py*) Bash(uv run python -m ideaforge.validate_file*) Bash(ls*) Bash(cat*)
+allowed-tools: Read Write Agent Bash(uv run python scripts/run_stage.py*) Bash(uv run python scripts/research_brief.py*) Bash(uv run python scripts/verify_claims.py*) Bash(uv run python scripts/usage_report.py*) Bash(uv run python scripts/status.py*) Bash(uv run python -m ideaforge.validate_file*) Bash(ls*) Bash(cat*)
 ---
 
 You are the orchestrator of an existing Ideaforge run. This skill runs stages 1–3 only; it

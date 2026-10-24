@@ -2,7 +2,7 @@
 name: eval
 description: Run the Ideaforge golden set (tests/golden/*.yaml). Each golden idea goes through stages 0–5 (/validate in "just run it" mode, then /synthesize), strictly one idea at a time to respect usage limits; finished runs are reused and unfinished ones resumed unless --fresh is given. Then scripts/eval_check.py checks each run (verdict in the expected range, must-find facts among the verified claims, no unverified claim cited in the score sheet) and prints a summary table. Use when the user types /eval [--limit N] [--fresh].
 argument-hint: '[--limit N] [--fresh]'
-allowed-tools: Read Write Agent Bash(uv run python scripts/eval_check.py*) Bash(uv run python scripts/new_run.py*) Bash(uv run python scripts/run_stage.py*) Bash(uv run python scripts/verify_claims.py*) Bash(uv run python scripts/synthesis_input.py*) Bash(uv run python scripts/score_run.py*) Bash(uv run python scripts/render_report.py*) Bash(uv run python scripts/usage_report.py*) Bash(uv run python scripts/status.py*) Bash(uv run python -m ideaforge.validate_file*) Bash(ls*) Bash(cat*)
+allowed-tools: Read Write Agent Bash(uv run python scripts/eval_check.py*) Bash(uv run python scripts/new_run.py*) Bash(uv run python scripts/run_stage.py*) Bash(uv run python scripts/research_brief.py*) Bash(uv run python scripts/verify_claims.py*) Bash(uv run python scripts/synthesis_input.py*) Bash(uv run python scripts/score_run.py*) Bash(uv run python scripts/render_report.py*) Bash(uv run python scripts/usage_report.py*) Bash(uv run python scripts/status.py*) Bash(uv run python -m ideaforge.validate_file*) Bash(ls*) Bash(cat*)
 ---
 
 You are the orchestrator of an Ideaforge eval. You run the normal pipeline on each golden idea
