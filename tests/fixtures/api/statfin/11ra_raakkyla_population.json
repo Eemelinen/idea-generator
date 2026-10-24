@@ -1,0 +1,161 @@
+{
+ "version": "2.0",
+ "class": "dataset",
+ "label": "Tunnuslukuja väestöstä muuttujina Alue, Tiedot ja Vuosi",
+ "source": "Tilastokeskus, väestörakenne",
+ "updated": "2026-05-29T05:00:00Z",
+ "note": [
+  "<A HREF='https://stat.fi/tilasto/dokumentaatio/vaerak' TARGET=_blank>Tilaston dokumentaatio</A>",
+  ". tieto on puuttuva",
+  "<A HREF=http://guides.stat.fi/historiallisentilastotiedonopas TARGET=_blank>Historiallisen tilastotiedon opas, ks. linkki</A>\r\n \r\n Väestötilastoja vuodesta 1750 alkaen pdf-muodossa:\r\n <A HREF=https://tilastokeskus.finna.fi/Search/Results?sort=main_date_str+desc%2Cid+asc&filter%5B%5D=%7Ebuilding%3A%221%2FSTAT%2Fdoria%2F%22&join=AND&bool0%5B%5D=OR&lookfor0%5B%5D=v%C3%A4est%C3%B6rakenne&lookfor0%5B%5D=v%C3%A4est%C3%B6nmuutokset&type0%5B%5D=Subject&type0%5B%5D=Subject&limit=50&filter%5B%5D=%7Ebuilding%3A%221%2FSTAT%2Fdoria%2F%22&bool0%5B%5D=OR&lookfor0%5B%5D=v%C3%A4est%C3%B6rakenne&lookfor0%5B%5D=v%C3%A4est%C3%B6nmuutokset&type0%5B%5D=Subject&type0%5B%5D=Subject TARGET=_blank> Väestörakenne ja Väestönmuutokset-julkaisuja (Finna) </A>\r\n <A HREF=https://tilastokeskus.finna.fi/Search/Results?limit=50&filter%5B%5D=%7Ebuilding%3A%221%2FSTAT%2Fdoria%2F%22&join=AND&bool0%5B%5D=OR&lookfor0%5B%5D=v%C3%A4est%C3%B6laskenta&lookfor0%5B%5D=v%C3%A4est%C3%B6laskenta&type0%5B%5D=Subject&type0%5B%5D=Title&sort=main_date_str+desc%2Cid+asc&filter%5B%5D=%7Ebuilding%3A%221%2FSTAT%2Fdoria%2F%22&bool0%5B%5D=OR&lookfor0%5B%5D=v%C3%A4est%C3%B6laskenta&lookfor0%5B%5D=v%C3%A4est%C3%B6laskenta&type0%5B%5D=Subject&type0%5B%5D=Title TARGET=_blank>  Väestölaskenta-julkaisuja (Finna) </A>\r\n \r\n ---"
+ ],
+ "role": {
+  "time": [
+   "timeperiod_y"
+  ],
+  "geo": [
+   "alue_23_20260101"
+  ],
+  "metric": [
+   "contentscode"
+  ]
+ },
+ "id": [
+  "alue_23_20260101",
+  "contentscode",
+  "timeperiod_y"
+ ],
+ "size": [
+  2,
+  1,
+  5
+ ],
+ "dimension": {
+  "alue_23_20260101": {
+   "label": "Alue",
+   "note": [
+    "Tilastossa käytetään 1.1.2026 aluejakoa koko aikasarjassa. Alueliitoskuntien tiedot yhdistetty. Osakuntaliitoksia ei ole huomioitu liitosta edeltävinä vuosina."
+   ],
+   "category": {
+    "index": {
+     "KU707": 0,
+     "MK12": 1
+    },
+    "label": {
+     "KU707": "Rääkkylä",
+     "MK12": "MK12 Pohjois-Karjala"
+    }
+   },
+   "extension": {
+    "elimination": false,
+    "show": "value"
+   },
+   "link": {
+    "describedby": [
+     {
+      "extension": {
+       "alue_23_20260101": "SCALE-TYPE=nominal"
+      }
+     }
+    ]
+   }
+  },
+  "contentscode": {
+   "label": "Tiedot",
+   "category": {
+    "index": {
+     "vaerak-vaesto": 0
+    },
+    "label": {
+     "vaerak-vaesto": "Väestö 31.12."
+    },
+    "note": {
+     "vaerak-vaesto": [
+      "Väkiluku tilastoajanjakson lopussa."
+     ]
+    },
+    "unit": {
+     "vaerak-vaesto": {
+      "base": "lukumäärä",
+      "decimals": 0
+     }
+    }
+   },
+   "extension": {
+    "elimination": false,
+    "show": "value"
+   }
+  },
+  "timeperiod_y": {
+   "label": "Vuosi",
+   "category": {
+    "index": {
+     "2021": 0,
+     "2022": 1,
+     "2023": 2,
+     "2024": 3,
+     "2025": 4
+    },
+    "label": {
+     "2021": "2021",
+     "2022": "2022",
+     "2023": "2023",
+     "2024": "2024",
+     "2025": "2025"
+    }
+   },
+   "extension": {
+    "elimination": false,
+    "show": "value"
+   },
+   "link": {
+    "describedby": [
+     {
+      "extension": {
+       "timeperiod_y": "SCALE-TYPE=None"
+      }
+     }
+    ]
+   }
+  }
+ },
+ "extension": {
+  "px": {
+   "tableid": "11ra",
+   "decimals": 0,
+   "official-statistics": true,
+   "aggregallowed": true,
+   "language": "fi",
+   "contents": "Tunnuslukuja väestöstä",
+   "description": "11ra -- Tunnuslukuja väestöstä alueittain, 1990-2025",
+   "descriptiondefault": false,
+   "heading": [
+    "timeperiod_y"
+   ],
+   "stub": [
+    "alue_23_20260101",
+    "contentscode"
+   ],
+   "matrix": "11ra",
+   "subject-code": "vaerak",
+   "subject-area": "Väestörakenne"
+  },
+  "contact": [
+   {
+    "raw": "<A HREF='https://stat.fi/tilasto/vaerak' TARGET=_blank>Tilaston kotisivu</A>"
+   }
+  ]
+ },
+ "value": [
+  2032,
+  1960,
+  1902,
+  1881,
+  1830,
+  163281,
+  162540,
+  162321,
+  162091,
+  161418
+ ]
+}

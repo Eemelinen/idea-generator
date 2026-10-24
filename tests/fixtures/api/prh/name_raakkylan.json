@@ -1,0 +1,1633 @@
+{
+ "totalResults": 54,
+ "companies": [
+  {
+   "businessId": {
+    "value": "0226367-2",
+    "registrationDate": "1978-11-11",
+    "source": "3"
+   },
+   "names": [
+    {
+     "name": "Asunto Oy Rääkkylän Koivupelto",
+     "type": "1",
+     "registrationDate": "1976-05-28",
+     "version": 1,
+     "source": "1"
+    }
+   ],
+   "mainBusinessLine": {
+    "type": "68202",
+    "descriptions": [
+     {
+      "languageCode": "1",
+      "description": "Asuntojen ja asuinkiinteistöjen hallinta"
+     },
+     {
+      "languageCode": "2",
+      "description": "Förvaltning av bostäder och bostadsfastigheter"
+     },
+     {
+      "languageCode": "3",
+      "description": "Operating of own or leased dwellings and residential real estate"
+     }
+    ],
+    "typeCodeSet": "TOIMI4",
+    "registrationDate": "2026-01-01",
+    "source": "2"
+   },
+   "companyForms": [
+    {
+     "type": "2",
+     "descriptions": [
+      {
+       "languageCode": "1",
+       "description": "Asunto-osakeyhtiö"
+      },
+      {
+       "languageCode": "2",
+       "description": "Bostadsaktiebolag"
+      },
+      {
+       "languageCode": "3",
+       "description": "Housing corporation"
+      }
+     ],
+     "version": 1,
+     "source": "1"
+    }
+   ],
+   "companySituations": [],
+   "registeredEntries": [
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1976-05-28",
+     "register": "1",
+     "authority": "2"
+    },
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1978-11-11",
+     "register": "4",
+     "authority": "1"
+    },
+    {
+     "type": "41",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1978-10-01",
+     "endDate": "1990-03-31",
+     "register": "7",
+     "authority": "1"
+    }
+   ],
+   "addresses": [
+    {
+     "type": 1,
+     "street": "Kinnulantie",
+     "postCode": "82300",
+     "postOffices": [
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "1",
+       "municipalityCode": "707"
+      },
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "2",
+       "municipalityCode": "707"
+      }
+     ],
+     "buildingNumber": "1",
+     "entrance": "",
+     "apartmentNumber": "",
+     "apartmentIdSuffix": "",
+     "co": "",
+     "registrationDate": "2017-03-06",
+     "source": "0"
+    },
+    {
+     "type": 2,
+     "street": "Kinnulantie",
+     "postCode": "82300",
+     "postOffices": [
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "1",
+       "municipalityCode": "707"
+      },
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "2",
+       "municipalityCode": "707"
+      }
+     ],
+     "postOfficeBox": "",
+     "buildingNumber": "1",
+     "entrance": "",
+     "apartmentNumber": "",
+     "apartmentIdSuffix": "",
+     "co": "",
+     "registrationDate": "2017-03-06",
+     "source": "0"
+    }
+   ],
+   "tradeRegisterStatus": "1",
+   "status": "2",
+   "registrationDate": "1976-05-28",
+   "lastModified": "2025-12-31T07:39:20"
+  },
+  {
+   "businessId": {
+    "value": "0226368-0",
+    "registrationDate": "1978-11-11",
+    "source": "3"
+   },
+   "names": [
+    {
+     "name": "Asunto Oy Rääkkylän Veljesrinne",
+     "type": "1",
+     "registrationDate": "1974-04-26",
+     "version": 1,
+     "source": "1"
+    }
+   ],
+   "mainBusinessLine": {
+    "type": "68202",
+    "descriptions": [
+     {
+      "languageCode": "1",
+      "description": "Asuntojen ja asuinkiinteistöjen hallinta"
+     },
+     {
+      "languageCode": "2",
+      "description": "Förvaltning av bostäder och bostadsfastigheter"
+     },
+     {
+      "languageCode": "3",
+      "description": "Operating of own or leased dwellings and residential real estate"
+     }
+    ],
+    "typeCodeSet": "TOIMI4",
+    "registrationDate": "2026-01-01",
+    "source": "2"
+   },
+   "companyForms": [
+    {
+     "type": "2",
+     "descriptions": [
+      {
+       "languageCode": "1",
+       "description": "Asunto-osakeyhtiö"
+      },
+      {
+       "languageCode": "2",
+       "description": "Bostadsaktiebolag"
+      },
+      {
+       "languageCode": "3",
+       "description": "Housing corporation"
+      }
+     ],
+     "version": 1,
+     "source": "1"
+    }
+   ],
+   "companySituations": [],
+   "registeredEntries": [
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1974-04-26",
+     "register": "1",
+     "authority": "2"
+    },
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1978-11-11",
+     "register": "4",
+     "authority": "1"
+    }
+   ],
+   "addresses": [
+    {
+     "type": 2,
+     "street": "Kinnulantie",
+     "postCode": "82300",
+     "postOffices": [
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "1",
+       "municipalityCode": "707"
+      },
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "2",
+       "municipalityCode": "707"
+      }
+     ],
+     "postOfficeBox": "",
+     "buildingNumber": "1",
+     "entrance": "",
+     "apartmentNumber": "",
+     "apartmentIdSuffix": "",
+     "co": "",
+     "registrationDate": "2017-02-03",
+     "source": "0"
+    }
+   ],
+   "tradeRegisterStatus": "1",
+   "status": "2",
+   "registrationDate": "1974-04-26",
+   "lastModified": "2025-12-31T07:39:20"
+  },
+  {
+   "businessId": {
+    "value": "0226369-9",
+    "registrationDate": "1978-11-11",
+    "source": "3"
+   },
+   "euId": {
+    "value": "FIFPRO.0226369-9",
+    "source": "1"
+   },
+   "names": [
+    {
+     "name": "Kiinteistö Oy Rääkkylän Vuokratalot",
+     "type": "1",
+     "registrationDate": "1998-12-31",
+     "version": 1,
+     "source": "1"
+    },
+    {
+     "name": "Kiinteistö Oy Rääkkylän Haka",
+     "type": "1",
+     "registrationDate": "1971-11-12",
+     "endDate": "1998-12-30",
+     "version": 2,
+     "source": "1"
+    }
+   ],
+   "mainBusinessLine": {
+    "type": "68201",
+    "descriptions": [
+     {
+      "languageCode": "1",
+      "description": "Asuntojen vuokraus"
+     },
+     {
+      "languageCode": "3",
+      "description": "Rental of own or leased dwellings and residential real estate"
+     },
+     {
+      "languageCode": "2",
+      "description": "Uthyrning av bostäder"
+     }
+    ],
+    "typeCodeSet": "TOIMI4",
+    "registrationDate": "2026-01-01",
+    "source": "2"
+   },
+   "companyForms": [
+    {
+     "type": "16",
+     "descriptions": [
+      {
+       "languageCode": "2",
+       "description": "Aktiebolag"
+      },
+      {
+       "languageCode": "3",
+       "description": "Limited company"
+      },
+      {
+       "languageCode": "1",
+       "description": "Osakeyhtiö"
+      }
+     ],
+     "version": 1,
+     "source": "1"
+    }
+   ],
+   "companySituations": [],
+   "registeredEntries": [
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1971-11-12",
+     "register": "1",
+     "authority": "2"
+    },
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1978-11-11",
+     "register": "4",
+     "authority": "1"
+    },
+    {
+     "type": "41",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1978-10-01",
+     "endDate": "1983-12-31",
+     "register": "7",
+     "authority": "1"
+    }
+   ],
+   "addresses": [
+    {
+     "type": 2,
+     "street": "Kinnulantie",
+     "postCode": "82300",
+     "postOffices": [
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "1",
+       "municipalityCode": "707"
+      },
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "2",
+       "municipalityCode": "707"
+      }
+     ],
+     "postOfficeBox": "",
+     "buildingNumber": "1",
+     "entrance": "",
+     "apartmentNumber": "",
+     "apartmentIdSuffix": "",
+     "co": "c/o Rääkkylän Kiinteistöpalvelu Oy",
+     "registrationDate": "2023-10-26",
+     "source": "0"
+    }
+   ],
+   "tradeRegisterStatus": "1",
+   "status": "2",
+   "registrationDate": "1971-11-12",
+   "lastModified": "2026-07-20T07:30:45"
+  },
+  {
+   "businessId": {
+    "value": "0226372-8",
+    "registrationDate": "1978-11-11",
+    "source": "3"
+   },
+   "names": [
+    {
+     "name": "Asunto Oy Rääkkylän Kinnulanrinne",
+     "type": "1",
+     "registrationDate": "1974-11-29",
+     "version": 1,
+     "source": "1"
+    }
+   ],
+   "mainBusinessLine": {
+    "type": "68202",
+    "descriptions": [
+     {
+      "languageCode": "1",
+      "description": "Asuntojen ja asuinkiinteistöjen hallinta"
+     },
+     {
+      "languageCode": "2",
+      "description": "Förvaltning av bostäder och bostadsfastigheter"
+     },
+     {
+      "languageCode": "3",
+      "description": "Operating of own or leased dwellings and residential real estate"
+     }
+    ],
+    "typeCodeSet": "TOIMI4",
+    "registrationDate": "2026-01-01",
+    "source": "2"
+   },
+   "companyForms": [
+    {
+     "type": "2",
+     "descriptions": [
+      {
+       "languageCode": "1",
+       "description": "Asunto-osakeyhtiö"
+      },
+      {
+       "languageCode": "2",
+       "description": "Bostadsaktiebolag"
+      },
+      {
+       "languageCode": "3",
+       "description": "Housing corporation"
+      }
+     ],
+     "version": 1,
+     "source": "1"
+    }
+   ],
+   "companySituations": [],
+   "registeredEntries": [
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1974-11-29",
+     "register": "1",
+     "authority": "2"
+    },
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1978-11-11",
+     "register": "4",
+     "authority": "1"
+    },
+    {
+     "type": "41",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1978-10-01",
+     "endDate": "1983-12-31",
+     "register": "7",
+     "authority": "1"
+    }
+   ],
+   "addresses": [
+    {
+     "type": 1,
+     "street": "Kinnulantie",
+     "postCode": "82300",
+     "postOffices": [
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "1",
+       "municipalityCode": "707"
+      },
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "2",
+       "municipalityCode": "707"
+      }
+     ],
+     "buildingNumber": "1",
+     "entrance": "",
+     "apartmentNumber": "",
+     "apartmentIdSuffix": "",
+     "co": "",
+     "registrationDate": "2017-01-20",
+     "source": "0"
+    },
+    {
+     "type": 2,
+     "street": "Kinnulantie",
+     "postCode": "82300",
+     "postOffices": [
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "1",
+       "municipalityCode": "707"
+      },
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "2",
+       "municipalityCode": "707"
+      }
+     ],
+     "postOfficeBox": "",
+     "buildingNumber": "1",
+     "entrance": "",
+     "apartmentNumber": "",
+     "apartmentIdSuffix": "",
+     "co": "",
+     "registrationDate": "2017-01-20",
+     "source": "0"
+    }
+   ],
+   "tradeRegisterStatus": "1",
+   "status": "2",
+   "registrationDate": "1974-11-29",
+   "lastModified": "2025-12-31T07:39:20"
+  },
+  {
+   "businessId": {
+    "value": "0404514-2",
+    "registrationDate": "1981-04-15",
+    "source": "3"
+   },
+   "names": [
+    {
+     "name": "Asunto Oy Rääkkylän Kotirivi",
+     "type": "1",
+     "registrationDate": "1978-11-03",
+     "version": 1,
+     "source": "1"
+    }
+   ],
+   "mainBusinessLine": {
+    "type": "68202",
+    "descriptions": [
+     {
+      "languageCode": "1",
+      "description": "Asuntojen ja asuinkiinteistöjen hallinta"
+     },
+     {
+      "languageCode": "2",
+      "description": "Förvaltning av bostäder och bostadsfastigheter"
+     },
+     {
+      "languageCode": "3",
+      "description": "Operating of own or leased dwellings and residential real estate"
+     }
+    ],
+    "typeCodeSet": "TOIMI4",
+    "registrationDate": "2026-01-01",
+    "source": "2"
+   },
+   "companyForms": [
+    {
+     "type": "2",
+     "descriptions": [
+      {
+       "languageCode": "1",
+       "description": "Asunto-osakeyhtiö"
+      },
+      {
+       "languageCode": "2",
+       "description": "Bostadsaktiebolag"
+      },
+      {
+       "languageCode": "3",
+       "description": "Housing corporation"
+      }
+     ],
+     "version": 1,
+     "source": "1"
+    }
+   ],
+   "companySituations": [],
+   "registeredEntries": [
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1978-11-03",
+     "register": "1",
+     "authority": "2"
+    },
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1981-04-15",
+     "register": "4",
+     "authority": "1"
+    }
+   ],
+   "addresses": [
+    {
+     "type": 1,
+     "street": "Kinnulantie",
+     "postCode": "82300",
+     "postOffices": [
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "1",
+       "municipalityCode": "707"
+      },
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "2",
+       "municipalityCode": "707"
+      }
+     ],
+     "buildingNumber": "1",
+     "entrance": "",
+     "apartmentNumber": "",
+     "apartmentIdSuffix": "",
+     "co": "",
+     "registrationDate": "2017-03-07",
+     "source": "0"
+    },
+    {
+     "type": 2,
+     "street": "Kinnulantie",
+     "postCode": "82300",
+     "postOffices": [
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "1",
+       "municipalityCode": "707"
+      },
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "2",
+       "municipalityCode": "707"
+      }
+     ],
+     "postOfficeBox": "",
+     "buildingNumber": "1",
+     "entrance": "",
+     "apartmentNumber": "",
+     "apartmentIdSuffix": "",
+     "co": "",
+     "registrationDate": "2017-03-07",
+     "source": "0"
+    }
+   ],
+   "tradeRegisterStatus": "1",
+   "status": "2",
+   "registrationDate": "1978-11-03",
+   "lastModified": "2025-12-31T07:39:20"
+  },
+  {
+   "businessId": {
+    "value": "0404516-9",
+    "registrationDate": "1981-04-15",
+    "source": "3"
+   },
+   "names": [
+    {
+     "name": "Kiinteistö Oy Rääkkylän Yrittäjätalo",
+     "type": "1",
+     "registrationDate": "1978-12-22",
+     "version": 1,
+     "source": "1"
+    }
+   ],
+   "mainBusinessLine": {
+    "type": "68203",
+    "descriptions": [
+     {
+      "languageCode": "1",
+      "description": "Muu kiinteistöjen vuokraus ja hallinta"
+     },
+     {
+      "languageCode": "3",
+      "description": "Rental and operating of own or leased non-residential real estate"
+     },
+     {
+      "languageCode": "2",
+      "description": "Övrig uthyrning och förvaltning av fastigheter"
+     }
+    ],
+    "typeCodeSet": "TOIMI4",
+    "registrationDate": "2026-01-01",
+    "source": "2"
+   },
+   "companyForms": [
+    {
+     "type": "16",
+     "descriptions": [
+      {
+       "languageCode": "2",
+       "description": "Aktiebolag"
+      },
+      {
+       "languageCode": "3",
+       "description": "Limited company"
+      },
+      {
+       "languageCode": "1",
+       "description": "Osakeyhtiö"
+      }
+     ],
+     "endDate": "2021-06-08",
+     "version": 2,
+     "source": "1"
+    },
+    {
+     "type": "10",
+     "descriptions": [
+      {
+       "languageCode": "1",
+       "description": "Keskinäinen kiinteistöosakeyhtiö"
+      },
+      {
+       "languageCode": "3",
+       "description": "Mutual real estate limited company"
+      },
+      {
+       "languageCode": "2",
+       "description": "Ömsesidigt fastighetsaktiebolag"
+      }
+     ],
+     "registrationDate": "2021-06-09",
+     "version": 1,
+     "source": "1"
+    }
+   ],
+   "companySituations": [],
+   "registeredEntries": [
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1978-12-22",
+     "register": "1",
+     "authority": "2"
+    },
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1981-04-15",
+     "register": "4",
+     "authority": "1"
+    },
+    {
+     "type": "82",
+     "descriptions": [
+      {
+       "languageCode": "2",
+       "description": "För överlåtelse av nyttjanderätten till en fastighet"
+      },
+      {
+       "languageCode": "1",
+       "description": "Kiinteistön käyttöoikeuden luovuttamisesta"
+      },
+      {
+       "languageCode": "3",
+       "description": "VAT-obliged for the transfer of rights to use immovable property"
+      }
+     ],
+     "registrationDate": "1994-07-01",
+     "register": "6",
+     "authority": "1"
+    }
+   ],
+   "addresses": [
+    {
+     "type": 1,
+     "street": "KOTITIE",
+     "postCode": "82300",
+     "postOffices": [
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "1",
+       "municipalityCode": "707"
+      },
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "2",
+       "municipalityCode": "707"
+      }
+     ],
+     "postOfficeBox": "",
+     "buildingNumber": "17",
+     "entrance": "",
+     "apartmentNumber": "",
+     "apartmentIdSuffix": "",
+     "co": "",
+     "registrationDate": "1994-06-30",
+     "source": "0"
+    },
+    {
+     "type": 2,
+     "street": "Kinnulantie",
+     "postCode": "82300",
+     "postOffices": [
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "1",
+       "municipalityCode": "707"
+      },
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "2",
+       "municipalityCode": "707"
+      }
+     ],
+     "postOfficeBox": "",
+     "buildingNumber": "1",
+     "entrance": "",
+     "apartmentNumber": "",
+     "apartmentIdSuffix": "",
+     "co": "",
+     "registrationDate": "2017-01-31",
+     "source": "0"
+    }
+   ],
+   "tradeRegisterStatus": "1",
+   "status": "2",
+   "registrationDate": "1978-12-22",
+   "lastModified": "2026-10-07T03:07:45"
+  },
+  {
+   "businessId": {
+    "value": "0428289-3",
+    "registrationDate": "1981-10-05",
+    "source": "3"
+   },
+   "names": [
+    {
+     "name": "Kiinteistö Oy Rääkkylän Liike-Virastotalo",
+     "type": "1",
+     "registrationDate": "1980-07-11",
+     "version": 1,
+     "source": "1"
+    }
+   ],
+   "mainBusinessLine": {
+    "type": "68202",
+    "descriptions": [
+     {
+      "languageCode": "1",
+      "description": "Asuntojen ja asuinkiinteistöjen hallinta"
+     },
+     {
+      "languageCode": "2",
+      "description": "Förvaltning av bostäder och bostadsfastigheter"
+     },
+     {
+      "languageCode": "3",
+      "description": "Operating of own or leased dwellings and residential real estate"
+     }
+    ],
+    "typeCodeSet": "TOIMI4",
+    "registrationDate": "2026-01-01",
+    "source": "2"
+   },
+   "companyForms": [
+    {
+     "type": "16",
+     "descriptions": [
+      {
+       "languageCode": "2",
+       "description": "Aktiebolag"
+      },
+      {
+       "languageCode": "3",
+       "description": "Limited company"
+      },
+      {
+       "languageCode": "1",
+       "description": "Osakeyhtiö"
+      }
+     ],
+     "endDate": "2021-06-14",
+     "version": 2,
+     "source": "1"
+    },
+    {
+     "type": "10",
+     "descriptions": [
+      {
+       "languageCode": "1",
+       "description": "Keskinäinen kiinteistöosakeyhtiö"
+      },
+      {
+       "languageCode": "3",
+       "description": "Mutual real estate limited company"
+      },
+      {
+       "languageCode": "2",
+       "description": "Ömsesidigt fastighetsaktiebolag"
+      }
+     ],
+     "registrationDate": "2021-06-15",
+     "version": 1,
+     "source": "1"
+    }
+   ],
+   "companySituations": [],
+   "registeredEntries": [
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1980-07-11",
+     "register": "1",
+     "authority": "2"
+    },
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1981-10-05",
+     "register": "4",
+     "authority": "1"
+    }
+   ],
+   "addresses": [
+    {
+     "type": 2,
+     "street": "Kinnulantie",
+     "postCode": "82300",
+     "postOffices": [
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "1",
+       "municipalityCode": "707"
+      },
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "2",
+       "municipalityCode": "707"
+      }
+     ],
+     "buildingNumber": "1",
+     "registrationDate": "2017-07-07",
+     "source": "0"
+    }
+   ],
+   "tradeRegisterStatus": "1",
+   "status": "2",
+   "registrationDate": "1980-07-11",
+   "lastModified": "2025-12-31T07:39:20"
+  },
+  {
+   "businessId": {
+    "value": "0429211-9",
+    "registrationDate": "1981-10-05",
+    "source": "3"
+   },
+   "names": [
+    {
+     "name": "Rääkkylän Kiinteistötoimisto Ky",
+     "type": "1",
+     "registrationDate": "1989-03-08",
+     "endDate": "2018-11-26",
+     "version": 1,
+     "source": "1"
+    }
+   ],
+   "mainBusinessLine": {
+    "type": "81100",
+    "descriptions": [
+     {
+      "languageCode": "3",
+      "description": "Combined facilities support activities"
+     },
+     {
+      "languageCode": "2",
+      "description": "Fastighetsrelaterade stödtjänster"
+     },
+     {
+      "languageCode": "1",
+      "description": "Kiinteistönhoito"
+     }
+    ],
+    "typeCodeSet": "TOIMI3",
+    "registrationDate": "2007-12-31",
+    "source": "2"
+   },
+   "companyForms": [
+    {
+     "type": "13",
+     "descriptions": [
+      {
+       "languageCode": "1",
+       "description": "Kommandiittiyhtiö"
+      },
+      {
+       "languageCode": "2",
+       "description": "Kommanditbolag"
+      },
+      {
+       "languageCode": "3",
+       "description": "Limited partnership"
+      }
+     ],
+     "endDate": "2018-11-26",
+     "version": 1,
+     "source": "1"
+    }
+   ],
+   "companySituations": [],
+   "registeredEntries": [
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1989-03-08",
+     "endDate": "2018-11-25",
+     "register": "1",
+     "authority": "2"
+    },
+    {
+     "type": "4",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Ceased"
+      },
+      {
+       "languageCode": "1",
+       "description": "Lakannut"
+      },
+      {
+       "languageCode": "2",
+       "description": "Upphört"
+      }
+     ],
+     "registrationDate": "2018-11-26",
+     "register": "1",
+     "authority": "2"
+    },
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1981-10-05",
+     "endDate": "2018-11-26",
+     "register": "4",
+     "authority": "1"
+    },
+    {
+     "type": "55",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1995-03-01",
+     "endDate": "2018-03-21",
+     "register": "5",
+     "authority": "1"
+    },
+    {
+     "type": "80",
+     "descriptions": [
+      {
+       "languageCode": "1",
+       "description": "Liiketoiminnasta arvonlisäverovelvollinen"
+      },
+      {
+       "languageCode": "2",
+       "description": "Momsskyldig för rörelseverksamhet"
+      },
+      {
+       "languageCode": "3",
+       "description": "VAT-liable for business activity"
+      }
+     ],
+     "registrationDate": "1994-06-01",
+     "endDate": "2018-03-31",
+     "register": "6",
+     "authority": "1"
+    }
+   ],
+   "addresses": [],
+   "tradeRegisterStatus": "4",
+   "status": "2",
+   "registrationDate": "1989-03-08",
+   "endDate": "2018-11-26",
+   "lastModified": "2019-11-26T01:30:04"
+  },
+  {
+   "businessId": {
+    "value": "0462490-2",
+    "registrationDate": "1982-03-18",
+    "source": "3"
+   },
+   "names": [
+    {
+     "name": "Asunto Oy Rääkkylän Kekälekuja",
+     "type": "1",
+     "registrationDate": "1982-05-13",
+     "version": 1,
+     "source": "1"
+    }
+   ],
+   "mainBusinessLine": {
+    "type": "68202",
+    "descriptions": [
+     {
+      "languageCode": "1",
+      "description": "Asuntojen ja asuinkiinteistöjen hallinta"
+     },
+     {
+      "languageCode": "2",
+      "description": "Förvaltning av bostäder och bostadsfastigheter"
+     },
+     {
+      "languageCode": "3",
+      "description": "Operating of own or leased dwellings and residential real estate"
+     }
+    ],
+    "typeCodeSet": "TOIMI4",
+    "registrationDate": "2026-01-01",
+    "source": "2"
+   },
+   "companyForms": [
+    {
+     "type": "2",
+     "descriptions": [
+      {
+       "languageCode": "1",
+       "description": "Asunto-osakeyhtiö"
+      },
+      {
+       "languageCode": "2",
+       "description": "Bostadsaktiebolag"
+      },
+      {
+       "languageCode": "3",
+       "description": "Housing corporation"
+      }
+     ],
+     "version": 1,
+     "source": "1"
+    }
+   ],
+   "companySituations": [],
+   "registeredEntries": [
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1982-05-13",
+     "register": "1",
+     "authority": "2"
+    },
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1982-03-18",
+     "register": "4",
+     "authority": "1"
+    }
+   ],
+   "addresses": [
+    {
+     "type": 1,
+     "street": "Kinnulantie",
+     "postCode": "82300",
+     "postOffices": [
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "1",
+       "municipalityCode": "707"
+      },
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "2",
+       "municipalityCode": "707"
+      }
+     ],
+     "buildingNumber": "1",
+     "entrance": "",
+     "apartmentNumber": "",
+     "apartmentIdSuffix": "",
+     "co": "",
+     "registrationDate": "2017-02-13",
+     "source": "0"
+    },
+    {
+     "type": 2,
+     "street": "Kinnulantie",
+     "postCode": "82300",
+     "postOffices": [
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "1",
+       "municipalityCode": "707"
+      },
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "2",
+       "municipalityCode": "707"
+      }
+     ],
+     "postOfficeBox": "",
+     "buildingNumber": "1",
+     "entrance": "",
+     "apartmentNumber": "",
+     "apartmentIdSuffix": "",
+     "co": "",
+     "registrationDate": "2017-02-13",
+     "source": "0"
+    }
+   ],
+   "tradeRegisterStatus": "1",
+   "status": "2",
+   "registrationDate": "1982-05-13",
+   "lastModified": "2025-12-31T07:39:20"
+  },
+  {
+   "businessId": {
+    "value": "0462491-0",
+    "registrationDate": "1982-03-18",
+    "source": "3"
+   },
+   "names": [
+    {
+     "name": "Asunto Oy Rääkkylän Säästökulma",
+     "type": "1",
+     "registrationDate": "1981-09-17",
+     "version": 1,
+     "source": "1"
+    }
+   ],
+   "mainBusinessLine": {
+    "type": "68202",
+    "descriptions": [
+     {
+      "languageCode": "1",
+      "description": "Asuntojen ja asuinkiinteistöjen hallinta"
+     },
+     {
+      "languageCode": "2",
+      "description": "Förvaltning av bostäder och bostadsfastigheter"
+     },
+     {
+      "languageCode": "3",
+      "description": "Operating of own or leased dwellings and residential real estate"
+     }
+    ],
+    "typeCodeSet": "TOIMI4",
+    "registrationDate": "2026-01-01",
+    "source": "2"
+   },
+   "companyForms": [
+    {
+     "type": "2",
+     "descriptions": [
+      {
+       "languageCode": "1",
+       "description": "Asunto-osakeyhtiö"
+      },
+      {
+       "languageCode": "2",
+       "description": "Bostadsaktiebolag"
+      },
+      {
+       "languageCode": "3",
+       "description": "Housing corporation"
+      }
+     ],
+     "version": 1,
+     "source": "1"
+    }
+   ],
+   "companySituations": [],
+   "registeredEntries": [
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1981-09-17",
+     "register": "1",
+     "authority": "2"
+    },
+    {
+     "type": "1",
+     "descriptions": [
+      {
+       "languageCode": "3",
+       "description": "Registered"
+      },
+      {
+       "languageCode": "2",
+       "description": "Registrerad"
+      },
+      {
+       "languageCode": "1",
+       "description": "Rekisterissä"
+      }
+     ],
+     "registrationDate": "1982-03-18",
+     "register": "4",
+     "authority": "1"
+    }
+   ],
+   "addresses": [
+    {
+     "type": 1,
+     "street": "Kinnulantie",
+     "postCode": "82300",
+     "postOffices": [
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "1",
+       "municipalityCode": "707"
+      },
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "2",
+       "municipalityCode": "707"
+      }
+     ],
+     "buildingNumber": "1",
+     "entrance": "",
+     "apartmentNumber": "",
+     "apartmentIdSuffix": "",
+     "co": "",
+     "registrationDate": "2017-02-15",
+     "source": "0"
+    },
+    {
+     "type": 2,
+     "street": "Kinnulantie",
+     "postCode": "82300",
+     "postOffices": [
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "1",
+       "municipalityCode": "707"
+      },
+      {
+       "city": "RÄÄKKYLÄ",
+       "languageCode": "2",
+       "municipalityCode": "707"
+      }
+     ],
+     "postOfficeBox": "",
+     "buildingNumber": "1",
+     "entrance": "",
+     "apartmentNumber": "",
+     "apartmentIdSuffix": "",
+     "co": "",
+     "registrationDate": "2017-02-15",
+     "source": "0"
+    }
+   ],
+   "tradeRegisterStatus": "1",
+   "status": "2",
+   "registrationDate": "1981-09-17",
+   "lastModified": "2025-12-31T07:39:20"
+  }
+ ]
+}

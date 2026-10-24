@@ -1,0 +1,63 @@
+{
+  "url": "https://statdb.luke.fi/PXWeb/api/v1/fi/LUKE/maa/muuyri/0100_muuyri.px",
+  "method": "POST",
+  "request": {
+    "query": [
+      {
+        "code": "INFO",
+        "selection": {
+          "filter": "item",
+          "values": [
+            "TILA_KPL"
+          ]
+        }
+      },
+      {
+        "code": "A",
+        "selection": {
+          "filter": "item",
+          "values": [
+            "2020",
+            "2023"
+          ]
+        }
+      },
+      {
+        "code": "ELY",
+        "selection": {
+          "filter": "item",
+          "values": [
+            "SSS",
+            "ELY09"
+          ]
+        }
+      },
+      {
+        "code": "RAJ",
+        "selection": {
+          "filter": "item",
+          "values": [
+            "SUUR_TOIM",
+            "KAIK_YRI"
+          ]
+        }
+      },
+      {
+        "code": "TOL",
+        "selection": {
+          "filter": "item",
+          "values": [
+            "TOL_YHT",
+            "MATK"
+          ]
+        }
+      }
+    ],
+    "response": {
+      "format": "json-stat2"
+    }
+  },
+  "status": 200,
+  "retrieved_at": "2026-10-24T06:21:17+00:00",
+  "note": "Diversified farms, all lines and tourism/accommodation/leisure, Finland and North Karelia, 2020 and 2023. The all-lines total exists only by main line; the other cells are '..' (status)."
+}

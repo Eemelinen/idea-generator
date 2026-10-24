@@ -1,0 +1,9 @@
+{
+  "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?name=R%C3%A4%C3%A4kkyl%C3%A4n",
+  "method": "GET",
+  "request": null,
+  "status": 200,
+  "retrieved_at": "2026-10-24T06:20:15+00:00",
+  "trimmed": "companies: the first 10 of 54 returned; totalResults is as returned",
+  "note": "Name search."
+}

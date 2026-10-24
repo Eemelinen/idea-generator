@@ -1,0 +1,8 @@
+{
+  "url": "https://pxdata.stat.fi/PXWeb/api/v1/fi/StatFin/vaerak/11ra.px",
+  "method": "GET",
+  "request": null,
+  "status": 200,
+  "retrieved_at": "2026-10-24T06:20:10+00:00",
+  "note": "Key figures on population by region."
+}

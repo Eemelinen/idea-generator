@@ -1,0 +1,8 @@
+{
+  "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?mainBusinessLine=55&location=R%C3%A4%C3%A4kkyl%C3%A4",
+  "method": "GET",
+  "request": null,
+  "status": 200,
+  "retrieved_at": "2026-10-24T06:20:14+00:00",
+  "note": "Accommodation (TOL 55) in Rääkkylä. Industry codes are TOL 2025 (typeCodeSet TOIMI4) since 2026-01-01; the 5-digit 55201 of TOL 2008 finds nothing here, the 2-digit prefix matches."
+}

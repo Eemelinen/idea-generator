@@ -264,6 +264,7 @@ Absorbs IF-102–IF-107. Kept for reference:
   - `tests/test_api_fixtures.py`: every fixture parses, has its meta file, and its `url` is on an allow-listed domain from `config/domains.yaml`.
 - **Verification:** `L1: pnpm check` · `L1: uv run pytest tests/test_api_fixtures.py` · `manual:` fixtures recorded from the live APIs and reviewed.
 - **Acceptance:** the fixture set above exists, with dates; no personal data beyond public company registry fields.
+- **Recorded (2026-10-24):** nine responses, 93 kB, reviewed by the user. StatFin: the `vaerak` listing, `11ra` metadata, the `11ra` population of Rääkkylä (`KU707`) and Pohjois-Karjala (`MK12`) 2021–2025, and `11re` metadata (5 105 916 cells unfiltered). StatFin's variable codes carry a classification version (`alue_23_20260101`, `timeperiod_y`, `contentscode`), not `Alue` / `Vuosi`. Luke: `maa/muuyri/0100_muuyri.px` metadata and a query with `..` cells in `status`. PRH: TOL 55 in Rääkkylä (1 company) and a name search (the first 10 of 54 kept, said in the meta file). PRH industry codes are TOL 2025 (`typeCodeSet` `TOIMI4`) since 2026-01-01, so the TOL 2008 example 55201 finds nothing; a 2-digit prefix matches. Eurostat: `tour_occ_ninat` for `geo=FI`, 2019 onwards.
 
 ---
 

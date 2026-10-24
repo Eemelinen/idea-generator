@@ -1,0 +1,8 @@
+{
+  "url": "https://statdb.luke.fi/PXWeb/api/v1/fi/LUKE/maa/muuyri/0100_muuyri.px",
+  "method": "GET",
+  "request": null,
+  "status": 200,
+  "retrieved_at": "2026-10-24T06:21:17+00:00",
+  "note": "Diversified farms by ELY centre."
+}
