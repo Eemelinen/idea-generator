@@ -73,6 +73,7 @@ def test_research_requires_claim_blocks(tmp_path):
     ("runs/r/02_research/gtm.md", "research"),
     ("runs/r/03_claims/gtm.json", "claims"),
     ("runs/r/03_claims/verified.json", "claims"),
+    ("runs/r/03_claims/conflicts.json", "conflicts"),
     ("runs/r/04_scores_proposed.json", "scores_proposed"),
     ("runs/r/debate/round0/investor.json", "position"),
     ("runs/r/debate/round2/investor.json", "rebuttal"),

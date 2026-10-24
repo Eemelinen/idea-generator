@@ -3,10 +3,11 @@
     uv run python scripts/synthesis_input.py <run_id>
 
 Writes runs/<run_id>/04_synthesis_input.json: 00_spec.json, the verified and conflict claims of
-03_claims/verified.json (unverified and pending claims left out), the rubric (weights, evidence
-rules, kill triggers, verdict thresholds) and the unit-economics input roles. Prints the path and
-the claim count per dimension. Exit 0 once written, 1 when the run is unknown or the spec or
-verified.json is missing or invalid.
+03_claims/verified.json (unverified and pending claims left out), the conflict groups of
+03_claims/conflicts.json in preference order, the rubric (weights, evidence rules, kill triggers,
+verdict thresholds) and the unit-economics input roles. Prints the path and the claim count per
+dimension. Exit 0 once written, 1 when the run is unknown or the spec or verified.json is missing
+or invalid, or conflicts.json is invalid.
 """
 
 from __future__ import annotations

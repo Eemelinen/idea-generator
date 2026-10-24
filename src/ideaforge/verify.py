@@ -8,8 +8,21 @@ official domains as `official`, and writes 03_claims/verified.json plus the `cla
 In a back-test run (`new_run.py --as-of`), a claim whose `published_date` is after the as-of date
 is `unverified` with the flag `after_as_of`, and its source is not fetched.
 
-The HTTP layer is a plain callable (`HttpGet`) so tests inject synthetic pages and never touch
-the network. API re-query and conflict detection (IF-209) build on this module.
+API claims (IF-209): a `source_type: api` claim citing a URL of one of the `fi` tools is not
+fetched as a page; `ideaforge.fi.requery` re-runs the query and the claim stays `verified` only if
+its value is in the answer (exact for an integer count, ±1 % for a float) or, without a value, its
+quote matches the answer's text. A mismatch or a URL that is not a client call → `unverified`
+with `api_mismatch`; a failed re-query → `unfetchable`. An `api` claim on any other URL is
+fetched and quote-matched like a page.
+
+Conflicts (IF-210): `detect_conflicts` groups verified claims of one dimension whose statements
+are similar (rapidfuzz token_sort_ratio ≥ 80) and whose values differ by more than 25 %; every
+claim of a group becomes `conflict` and is kept, and the groups go to 03_claims/conflicts.json in
+preference order (official > api > industry > news > forum > vendor, then the newest) for the
+synthesizer.
+
+The HTTP layers are plain callables (`HttpGet`, `ideaforge.fi.http.Transport`) so tests inject
+synthetic pages and the IF-200 recordings and never touch the network.
 """
 
 from __future__ import annotations
@@ -34,7 +47,9 @@ from pydantic import TypeAdapter
 from rapidfuzz import fuzz
 
 from ideaforge import agents, config, db, runs
-from ideaforge.schemas import CandidateClaim, Claim, SourceType
+from ideaforge.fi import requery
+from ideaforge.fi.http import Transport
+from ideaforge.schemas import CandidateClaim, Claim, ConflictGroup, SourceType
 from ideaforge.validate_file import candidate_claims
 
 USER_AGENT = "ideaforge/0.1 (local business-idea validator; claim quote verification)"
@@ -43,7 +58,15 @@ MATCH_THRESHOLD = 90.0
 # Flags this module owns: recomputed on every run, never taken from a research agent.
 FETCH_FLAGS = ("unfetchable", "robots_disallowed")
 AS_OF_FLAG = "after_as_of"
-OWNED_FLAGS = (*FETCH_FLAGS, AS_OF_FLAG)
+API_FLAG = "api_mismatch"
+OWNED_FLAGS = (*FETCH_FLAGS, AS_OF_FLAG, API_FLAG)
+# API re-query (IF-209): an integer (a count) must match exactly, a float within ±1 %.
+FLOAT_TOLERANCE = 0.01
+# Conflicts (IF-210): similar statements (token_sort_ratio ≥ 80) whose values differ by > 25 %.
+CONFLICT_SIMILARITY = 80.0
+CONFLICT_DIFFERENCE = 0.25
+SOURCE_PREFERENCE: tuple[SourceType, ...] = ("official", "api", "industry", "news", "forum", "vendor")
+CONFLICTS_FILE = "conflicts.json"
 # HTML is reduced to its text; other text types (text/*, JSON, XML) are matched as they are;
 # anything else (PDF, images) is unfetchable.
 HTML_TYPES = ("", "text/html", "application/xhtml+xml")
@@ -317,6 +340,178 @@ def _source_known(url: str) -> bool:
         return conn.execute("SELECT 1 FROM sources WHERE url=?", (url,)).fetchone() is not None
 
 
+# ---------------------------------------------------------------- API re-query (IF-209)
+
+
+@dataclass(frozen=True)
+class ApiResult:
+    url: str
+    status: Literal["ok", "unfetchable", "not_a_query"]
+    retrieved_at: datetime
+    answer: requery.Answer | None = None
+    detail: str = ""
+
+
+@dataclass
+class Requerier:
+    """Re-runs each cited API URL once per verification run (the clients cache for 24 h)."""
+
+    transport: Transport | None = None
+    record_sources: bool = True
+    _results: dict[str, ApiResult] = field(default_factory=dict)
+
+    def get(self, url: str) -> ApiResult:
+        if url not in self._results:
+            self._results[url] = self._load(url)
+        return self._results[url]
+
+    def _load(self, url: str) -> ApiResult:
+        try:
+            answer = requery.requery(url, self.transport)
+        except requery.NotAQuery as e:
+            return ApiResult(url, "not_a_query", _now(), detail=str(e))
+        except Exception as e:  # one bad query must not cost the whole run its verified.json
+            fetched_at = _now()
+            self._record(url, None, fetched_at)
+            return ApiResult(url, "unfetchable", fetched_at, detail=f"{type(e).__name__}: {e}")
+        self._record(url, answer.text, answer.response.retrieved_at)
+        return ApiResult(url, "ok", answer.response.retrieved_at, answer)
+
+    def _record(self, url: str, text: str | None, fetched_at: datetime) -> None:
+        if not self.record_sources:
+            return
+        db.upsert_source(
+            url,
+            (urlsplit(url).hostname or "").lower(),
+            content_sha=hashlib.sha256(text.encode("utf-8")).hexdigest() if text is not None else None,
+            cache_path=None,  # the answer lives in the client's own cache/<api>/
+            fetched_at=fetched_at.isoformat(),
+            http_status=200 if text is not None else None,
+        )
+
+
+def value_matches(claimed: float, actual: int | float) -> bool:
+    """Exact for an integer (a count), within ±1 % for a float."""
+    if isinstance(actual, int):
+        return claimed == actual
+    return abs(claimed - actual) <= FLOAT_TOLERANCE * abs(actual)
+
+
+def api_confirms(claim: Claim, answer: requery.Answer) -> bool:
+    """The claim's value is in the answer; a claim without a value needs its quote in the answer."""
+    if claim.value is None:
+        return quote_matches(claim.quote, answer.text)
+    return any(value_matches(claim.value, v) for v in answer.values)
+
+
+def verify_api_claim(claim: Claim, result: ApiResult) -> Claim:
+    """The claim with retrieved_at, flags and verification set from the re-queried answer."""
+    flags = [f for f in claim.flags if f not in OWNED_FLAGS]
+    if result.answer is not None and api_confirms(claim, result.answer):
+        verification = "verified"
+    else:
+        verification = "unverified"
+        flags.append("unfetchable" if result.status == "unfetchable" else API_FLAG)
+    return claim.model_copy(
+        update={
+            "source_type": source_type(claim),
+            "retrieved_at": result.retrieved_at,
+            "flags": flags,
+            "verification": verification,
+        }
+    )
+
+
+def requery_warning(claim: Claim, result: ApiResult) -> str | None:
+    if result.answer is None:
+        flag = "unfetchable" if result.status == "unfetchable" else API_FLAG
+        return f"{claim.claim_id}: {flag} {claim.source_url} ({result.detail})"
+    if api_confirms(claim, result.answer):
+        return None
+    what = f"value {claim.value:g}" if claim.value is not None else "quote"
+    return f"{claim.claim_id}: {API_FLAG} {claim.source_url} ({what} not in the re-queried answer)"
+
+
+# ---------------------------------------------------------------- conflicts (IF-210)
+
+
+def statements_similar(a: str, b: str) -> bool:
+    return fuzz.token_sort_ratio(normalize(a), normalize(b)) >= CONFLICT_SIMILARITY
+
+
+def values_conflict(a: float, b: float) -> bool:
+    """The values differ by more than 25 % of the smaller one (100 vs 126: yes; 100 vs 124: no)."""
+    low = min(abs(a), abs(b))
+    if low == 0:
+        return a != b
+    return abs(a - b) / low > CONFLICT_DIFFERENCE
+
+
+def _units_compatible(a: str | None, b: str | None) -> bool:
+    """Equal units, or a unit missing on either side: 2100 persons and 2.1 thousand persons are
+    different units, not a conflict."""
+    if a is None or b is None or not a.strip() or not b.strip():
+        return True
+    return normalize(a) == normalize(b)
+
+
+def in_conflict(a: Claim, b: Claim) -> bool:
+    return (
+        a.dimension == b.dimension
+        and a.value is not None
+        and b.value is not None
+        and _units_compatible(a.unit, b.unit)
+        and values_conflict(a.value, b.value)
+        and statements_similar(a.statement, b.statement)
+    )
+
+
+def preference_key(claim: Claim) -> tuple[int, int, float, str]:
+    """official > api > industry > news > forum > vendor, then the newest published (undated last),
+    then the latest retrieved, then the claim id."""
+    published = -claim.published_date.toordinal() if claim.published_date else 0
+    return (SOURCE_PREFERENCE.index(claim.source_type), published, -claim.retrieved_at.timestamp(), claim.claim_id)
+
+
+def detect_conflicts(claims: Iterable[Claim]) -> list[ConflictGroup]:
+    """Groups of verified (or already conflict) claims linked by `in_conflict`, each in
+    preference order. Claims without a value never conflict. Pairs are compared within a
+    dimension, which holds a few dozen claims at most, so no full-text prefilter is needed."""
+    pool = [c for c in claims if c.verification in ("verified", "conflict") and c.value is not None]
+    parent = {c.claim_id: c.claim_id for c in pool}
+
+    def root(cid: str) -> str:
+        while parent[cid] != cid:
+            parent[cid] = parent[parent[cid]]
+            cid = parent[cid]
+        return cid
+
+    for i, a in enumerate(pool):
+        for b in pool[i + 1 :]:
+            if in_conflict(a, b):
+                parent[root(b.claim_id)] = root(a.claim_id)
+    groups: dict[str, list[Claim]] = {}
+    for c in pool:
+        groups.setdefault(root(c.claim_id), []).append(c)
+    out = [
+        ConflictGroup(dimension=g[0].dimension, claim_ids=[c.claim_id for c in sorted(g, key=preference_key)])
+        for g in groups.values()
+        if len(g) > 1
+    ]
+    return sorted(out, key=lambda g: (g.dimension, g.claim_ids[0]))
+
+
+def mark_conflicts(claims: list[Claim], groups: list[ConflictGroup], changeable: set[str] | None = None) -> list[Claim]:
+    """Every grouped claim set to `conflict` (and kept); with `changeable`, only those ids change."""
+    ids = {cid for g in groups for cid in g.claim_ids}
+    return [
+        c.model_copy(update={"verification": "conflict"})
+        if c.claim_id in ids and (changeable is None or c.claim_id in changeable)
+        else c
+        for c in claims
+    ]
+
+
 # ---------------------------------------------------------------- claims
 
 
@@ -365,9 +560,11 @@ class VerifyResult:
     # file, not by claim.dimension, which an agent may set to something other than its stem.
     by_file: dict[str, list[Claim]]
     warnings: list[str]
+    conflicts: list[ConflictGroup] = field(default_factory=list)
 
 
 _CLAIMS = TypeAdapter(list[Claim])
+_CONFLICTS = TypeAdapter(list[ConflictGroup])
 
 
 def _write_claims(path: Path, claims: list[Claim]) -> None:
@@ -428,14 +625,29 @@ def run_as_of(run_id: str) -> date | None:
     return date.fromisoformat(row["as_of"]) if row is not None and row["as_of"] else None
 
 
-def verify_run(run_id: str, http_get: HttpGet | None = None, *, only: Iterable[str] | None = None) -> VerifyResult:
+def load_conflicts(run_dir: Path) -> list[ConflictGroup]:
+    """03_claims/conflicts.json, or no groups when it does not exist (a run verified before IF-210)."""
+    path = run_dir / "03_claims" / CONFLICTS_FILE
+    return _CONFLICTS.validate_json(path.read_bytes()) if path.is_file() else []
+
+
+def verify_run(
+    run_id: str,
+    http_get: HttpGet | None = None,
+    *,
+    only: Iterable[str] | None = None,
+    fi_transport: Transport | None = None,
+) -> VerifyResult:
     """Parse, fetch, match and persist one run's claims (files first, then the DB).
 
-    `http_get` defaults to the real `requests_get`; tests pass a synthetic one. With `only` (file
+    `http_get` defaults to the real `requests_get` and `fi_transport` to each `fi` client's live
+    transport; tests pass synthetic pages and the IF-200 recordings. With `only` (file
     stems such as `mini-1-pricing`, a debate's mini-research), just those files are parsed and
     verified and added to the existing verified.json; every other claim in it keeps its state and
     `retrieved_at`, so the evidence under the score sheet does not move during a debate.
     In a back-test run a claim published after the as-of date is rejected before any fetch.
+    Conflicts are detected over the whole ledger; with `only`, just the new claims change to
+    `conflict` (a kept claim keeps its state), but every group is written to conflicts.json.
     """
     run_dir = runs.run_dir(run_id)
     if not (run_dir / "02_research").is_dir():
@@ -446,7 +658,7 @@ def verify_run(run_id: str, http_get: HttpGet | None = None, *, only: Iterable[s
     if stems is not None:
         if not ledger.is_file():
             raise FileNotFoundError(f"{ledger} does not exist; verify the whole run first")
-        others = {p.stem for p in (run_dir / "03_claims").glob("*.json")} - stems - {"verified"}
+        others = {p.stem for p in (run_dir / "03_claims").glob("*.json")} - stems - {"verified", Path(CONFLICTS_FILE).stem}
         # Claims these files contributed last time are replaced; an id another file holds stays.
         replaced = _file_claim_ids(run_dir, stems) - _file_claim_ids(run_dir, others)
         kept = [c for c in _CLAIMS.validate_json(ledger.read_bytes()) if c.claim_id not in replaced]
@@ -454,6 +666,7 @@ def verify_run(run_id: str, http_get: HttpGet | None = None, *, only: Iterable[s
     as_of = run_as_of(run_id)
 
     fetcher = Fetcher(http_get or requests_get)
+    requerier = Requerier(fi_transport)
     verified: list[Claim] = list(kept)
     by_file: dict[str, list[Claim]] = {stem: [] for stem in parsed}
     seen_ids: set[str] = {c.claim_id for c in kept}
@@ -468,15 +681,30 @@ def verify_run(run_id: str, http_get: HttpGet | None = None, *, only: Iterable[s
                 verified.append(reject_after_as_of(c, c.retrieved_at))
                 by_file[stem].append(verified[-1])
                 continue
+            if c.source_type == "api" and requery.api_of(c.source_url):
+                result = requerier.get(c.source_url)
+                if (warning := requery_warning(c, result)) is not None:
+                    warnings.append(warning)
+                verified.append(verify_api_claim(c, result))
+                by_file[stem].append(verified[-1])
+                continue
             page = fetcher.get(c.source_url)
             if page.status != "ok":
                 warnings.append(f"{c.claim_id}: {page.status} {c.source_url} ({page.detail})")
             verified.append(verify_claim(c, page))
             by_file[stem].append(verified[-1])
 
+    conflicts = detect_conflicts(verified)
+    new_ids = {c.claim_id for c in verified[len(kept) :]}
+    verified = mark_conflicts(verified, conflicts, None if stems is None else new_ids)
+    by_id = {c.claim_id: c for c in verified}
+    by_file = {stem: [by_id[c.claim_id] for c in cs] for stem, cs in by_file.items()}
+
     _write_claims(ledger, verified)
+    conflicts_path = run_dir / "03_claims" / CONFLICTS_FILE
+    conflicts_path.write_bytes(_CONFLICTS.dump_json(conflicts, indent=2) + b"\n")
     db.upsert_claims(run_id, verified[len(kept):])
-    return VerifyResult(verified, by_file, warnings)
+    return VerifyResult(verified, by_file, warnings, conflicts)
 
 
 def summary(result: VerifyResult) -> str:
@@ -487,15 +715,19 @@ def summary(result: VerifyResult) -> str:
         if not cs:
             lines.append(f"{stem}: 0 claims")
             continue
-        n = {s: sum(c.verification == s for c in cs) for s in ("verified", "unverified")}
+        n = {s: sum(c.verification == s for c in cs) for s in ("verified", "conflict", "unverified")}
         f = {fl: sum(fl in c.flags for c in cs) for fl in OWNED_FLAGS}
+        conflict = f", {n['conflict']} conflict" if n["conflict"] else ""
         late = f", {f[AS_OF_FLAG]} after as-of" if f[AS_OF_FLAG] else ""
+        api = f", {f[API_FLAG]} api mismatch" if f[API_FLAG] else ""
         lines.append(
-            f"{stem}: {n['verified']} verified, {n['unverified']} unverified"
-            f" ({f['unfetchable']} unfetchable, {f['robots_disallowed']} robots-disallowed{late})"
+            f"{stem}: {n['verified']} verified{conflict}, {n['unverified']} unverified"
+            f" ({f['unfetchable']} unfetchable, {f['robots_disallowed']} robots-disallowed{late}{api})"
         )
     total = len(result.claims)
     ok = sum(c.verification == "verified" for c in result.claims)
     lines.append(f"total: {ok}/{total} verified")
+    if result.conflicts:
+        lines.append(f"conflicts: {len(result.conflicts)} group(s) in 03_claims/{CONFLICTS_FILE}")
     return "\n".join(lines)
 

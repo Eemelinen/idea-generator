@@ -194,7 +194,7 @@
       "area": "verification",
       "title": "API re-query verification and conflict detection",
       "user_visible_behavior": "Claims with `source_type: api` are re-run through the `fi` client from their URL and stay `verified` only if counts match exactly and floats within ±1 %; same-dimension claims with similar statements whose values differ by more than 25 % are both marked `conflict` and kept, with the source preference order recorded.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-004", "F-005", "F-007"],
       "ticket": "IF-209",
       "spec": "docs/TICKETS.md#if-209-api-re-query-verification-and-conflict-detection",
@@ -202,7 +202,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_verify.py (api mismatch → unverified; conflict at 24 % no, 26 % yes, non-numeric ignored)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-24 pnpm check → pass (working tree on 5563891)",
+        "2026-10-24 uv run pytest tests/test_verify.py → pass (working tree on 5563891)"
+      ],
       "attempts": 0,
       "notes": "Absorbs IF-210 (conflict detection)."
     },
