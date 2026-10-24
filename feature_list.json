@@ -125,7 +125,7 @@
       "area": "fi-data",
       "title": "PRH and Eurostat clients",
       "user_visible_behavior": "`ideaforge.fi.prh search --industry <TOL> --municipality <name>` (or `--name`, registration date) prints a company count, rows and the request URL; `ideaforge.fi.eurostat get <dataset> --geo FI` returns a JSON-stat table as a DataFrame with its URL; both cache and support `--json`.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-003"],
       "ticket": "IF-202",
       "spec": "docs/TICKETS.md#if-202-prh-and-eurostat-clients",
@@ -133,7 +133,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_prh.py tests/test_eurostat.py (parsers on recorded fixtures)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-24 pnpm check → pass (working tree on 42698cb)",
+        "2026-10-24 uv run pytest tests/test_prh.py tests/test_eurostat.py → pass (working tree on 42698cb)"
+      ],
       "attempts": 0,
       "notes": "Absorbs IF-203 (Eurostat client)."
     },
