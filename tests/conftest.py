@@ -122,3 +122,61 @@ def synthetic_run(project):
             [(SYNTHETIC_RUN, cid, dim, json.dumps(flags), state) for cid, dim, state, flags in claims],
         )
     return run_dir
+
+
+DEBATE_RUN = "20261023-140000-sauna-debate"
+# Synthetic claim ledger for the debate tests (TICKETS.md plan note 14): id → verification state.
+DEBATE_CLAIMS = {
+    "market-001": "verified",
+    "market-002": "verified",
+    "pricing-001": "verified",
+    "pricing-002": "verified",
+    "regulation-001": "verified",
+    "unit_economics-001": "verified",
+    "gtm-001": "verified",
+    "competition-001": "unverified",
+    "competition-002": "conflict",
+    "location-001": "pending",
+}
+
+
+def debate_position(role: str, claim_id: str = "market-001", **fields) -> dict:
+    """A synthetic round-0 Position; the texts avoid persona names, so any leak is visible."""
+    return {
+        "role": role,
+        "objections": [{"text": f"Synthetic objection {role[:2]}.", "claim_ids": [claim_id]}],
+        "proposed_change": f"Synthetic change {role[:2]}.",
+        "expected_score_impact": {"pricing": 0.5},
+        "confidence": 0.6,
+    } | fields
+
+
+@pytest.fixture
+def debate_run(project):
+    """A synthetic run at the start of the debate: a claim ledger and five round-0 positions."""
+    from ideaforge import db, runs
+
+    db.init()
+    run_dir = runs.create_run_dir(DEBATE_RUN, "Sauna-and-lake cabins for remote workers")
+    db.create_run(DEBATE_RUN, "Sauna-and-lake cabins", idea_id="sauna-debate", stages=runs.STAGES)
+    claims = [
+        {
+            "claim_id": cid,
+            "dimension": cid.rsplit("-", 1)[0],
+            "statement": "A synthetic statement.",
+            "source_url": f"https://example.invalid/synthetic/{cid}",
+            "source_title": "Synthetic source",
+            "quote": "synthetic quote",
+            "retrieved_at": "2026-10-23T10:30:00+00:00",
+            "source_type": "news",
+            "confidence": 0.8,
+            "verification": state,
+        }
+        for cid, state in DEBATE_CLAIMS.items()
+    ]
+    (run_dir / "03_claims" / "verified.json").write_text(json.dumps(claims), encoding="utf-8")
+    round0 = run_dir / "debate" / "round0"
+    round0.mkdir(parents=True)
+    for role in ("founder", "investor", "customer", "accountant", "operator"):
+        (round0 / f"{role}.json").write_text(json.dumps(debate_position(role)), encoding="utf-8")
+    return run_dir

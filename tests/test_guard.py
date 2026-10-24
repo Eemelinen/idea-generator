@@ -80,6 +80,13 @@ def test_debate_agent_only_debate_dir(active_run):
     assert guard.check_write(write(active_run / "04_scores.json", **DEBATE)) is not None
 
 
+@pytest.mark.parametrize("name", [".mapping.json", "round0/positions_anon.json", "round1/REJECTED_investor"])
+def test_debate_agent_never_writes_debate_py_files(active_run, name):
+    judge = {"agent_id": "a3", "agent_type": "debate-judge"}
+    for agent in (DEBATE, judge):
+        assert "written only by ideaforge.debate" in guard.check_write(write(active_run / "debate" / name, **agent))
+
+
 def test_synthesizer_writes_only_its_two_files(active_run, project):
     (project / ".ideaforge-dev").touch()  # dev mode never relaxes subagents
     for name in ("04_scores_proposed.json", "04_risks.json"):

@@ -10,7 +10,8 @@ Policy (exit 2 = deny, reason on stderr):
 - Subagents are always strict: a research agent may write only its own
   runs/<run_id>/02_research/<dimension>.md, the synthesizer only
   runs/<run_id>/04_scores_proposed.json and 04_risks.json, a debate agent only
-  under runs/<run_id>/debate/, any other subagent only under runs/ or cache/.
+  under runs/<run_id>/debate/ (never the files debate.py writes: .mapping.json,
+  positions_anon.json, REJECTED_<role>), any other subagent only under runs/ or cache/.
 - The main session is strict (runs/ and cache/ only) unless it is a development
   session: the dev marker file .ideaforge-dev exists at the project root, or the
   harness loop driver started it (HARNESS_LOOP=1, docs/DECISIONS.md D-005). A
@@ -32,7 +33,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from ideaforge import agents, config, hookio, runs
+from ideaforge import agents, config, debate, hookio, runs
 
 REPORT_NAME = runs.STAGE_OUTPUTS["report"][0][0]
 NETWORK_RE = re.compile(
@@ -133,6 +134,8 @@ def check_write(data: dict[str, Any]) -> str | None:
                 return "write denied: no active run (runs/.active) for this debate agent"
             if not _within(target, (runs_dir / run_id / "debate").resolve()):
                 return f"write denied: {spec.name} may only write under runs/{run_id}/debate/"
+            if target.name in (debate.MAPPING_NAME, debate.ANON_NAME) or target.name.startswith(debate.REJECTED_PREFIX):
+                return f"write denied: {target.name} is written only by ideaforge.debate"
             return None
         if _within(target, runs_dir) or _within(target, cache_dir):
             return None

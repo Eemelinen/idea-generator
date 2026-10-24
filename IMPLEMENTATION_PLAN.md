@@ -89,7 +89,7 @@ ideaforge/
 │   ├── synthesis.py               # stage 5: synthesizer input, score run (score_run.py)
 │   ├── report.py                  # Markdown report renderer (render_report.py)
 │   ├── templates/report.md.j2     # Jinja2 template of 05_report.md
-│   ├── debate.py                  # debate protocol validator + convergence check
+│   ├── debate.py                  # anonymization (P1…P5, seeded) + rebuttal validation rules
 │   ├── usage.py                   # JSONL log of tool calls; per-run tallies
 │   ├── status.py                  # /status text: recent runs, one run's claims, flags, markers, usage
 │   ├── validate_file.py           # CLI: validate a JSON file against a schema (used by hooks)
@@ -123,8 +123,11 @@ ideaforge/
 │       ├── 04_risks.json
 │       ├── 04_scores.json
 │       ├── 05_report.md
+│       ├── debate/.mapping.json                # seed + role → P-id (never shown to agents)
 │       ├── debate/round0/<role>.json
+│       ├── debate/round0/positions_anon.json
 │       ├── debate/round1/<role>.json
+│       ├── debate/round1/REJECTED_<role>       # debate_validate.py reasons, for the re-prompt
 │       ├── debate/verdict.json
 │       ├── debate/revised_plan.md
 │       └── usage.jsonl
@@ -133,6 +136,7 @@ ideaforge/
 │   ├── test_scoring.py
 │   ├── test_verify.py
 │   ├── test_economics.py
+│   ├── test_debate.py
 │   ├── test_debate_validate.py
 │   ├── fixtures/api/              # recorded Finnish API responses (IF-200, the only source of API fixtures)
 │   ├── unit/harness/              # Vitest tests of the harness scripts
@@ -341,10 +345,10 @@ Already written by stage 3. `/status <run_id>` prints: claims per dimension (ver
 **Protocol**
 
 1. **Round 0 (independent).** Launch the 5 personas in one message. Each gets: the report, its evidence subset, and the `Position` schema. Writes `debate/round0/<role>.json`. Hook validates.
-2. **Anonymize.** `debate.py anonymize round0` → `debate/round0/positions_anon.json` (role names replaced with P1…P5, order shuffled with a seeded RNG; mapping stored privately).
+2. **Anonymize.** `uv run python -m ideaforge.debate anonymize <run_id> 0` → `debate/round0/positions_anon.json` (role names replaced with P1…P5, order shuffled with a seeded RNG; seed in the `debates` table, mapping in `debate/.mapping.json`; one mapping for the whole debate). Later rounds are anonymized the same way for the judge. Rules: TICKETS.md plan note 25.
 3. **Rounds 1..N.** Each persona receives all anonymized positions and writes a `Rebuttal`. Rules enforced by `scripts/debate_validate.py`:
-   - `stance: modify|agree` on another position, or any change to its own `proposed_change`, **must** carry `basis.new_claim_ids` (ids that were _not_ cited in that role's previous turn) **or** `basis.computation` (a number derived from existing claims, shown); otherwise the response is rejected and the persona is re-prompted once with the rejection reason. `disagree` needs only a claim id or an explicit `evidence_gap`.
-   - A persona may emit up to 1 `MiniResearchRequest` per round (max 3 per debate). The orchestrator runs it as a research subagent (same contract as stage 2), the result passes through `verify_claims.py`, and new claim ids become available next round. This is the only way new information enters the debate.
+   - `stance: modify|agree` on another position, or any change to its own `proposed_change`, **must** carry `basis.new_claim_ids` (ids that were _not_ cited in any of that role's earlier turns) **or** `basis.computation` (a number derived from existing claims, shown); otherwise the response is rejected and the persona is re-prompted once with the rejection reason. `disagree` needs only a claim id or an explicit `evidence_gap`.
+   - At most 1 `MiniResearchRequest` per round across the personas (the lowest P-id keeps it; max 3 per debate). The orchestrator runs it as a research subagent (same contract as stage 2), the result passes through `verify_claims.py`, and new claim ids become available next round. This is the only way new information enters the debate.
 4. **Convergence** (`scripts/debate_converged.py`, exit 0 = stop): stop after a round if (a) no new claim ids were introduced and no `proposed_change` changed, or (b) the judge's interim projected scores moved < 0.25 on every dimension, or (c) round == `max_rounds`.
 5. **Conformity flag.** If stances converged (≥ 4 of 5 personas `agree` on the same change) while zero new claim ids entered the debate → `conformity_flag = true`, shown prominently in the output.
 6. **Judge.** Receives anonymized positions and rebuttals, the verified ledger, and the score sheet. Writes `debate/verdict.json` (`Verdict`). Must cite claim ids for every accepted change; may not introduce new facts. Then `render_report.py --debate` produces `debate/revised_plan.md` (diff-style vs `05_report.md`), the assumption register, and the experiments list ordered by `info_value / cost`.
