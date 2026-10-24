@@ -1,0 +1,65 @@
+{% extends "run_base.html" %}
+{% from "_run_macros.html" import not_run, invalid, claim_link %}
+{% block tab %}
+<h2>Claims</h2>
+{% if ledger.error %}{{ invalid(ledger.error) }}{% endif %}
+{% if ledger.source is none %}
+{{ not_run(stage, stage_status, "03_claims/verified.json") }}
+{% else %}
+<p class="muted">From <code>{{ ledger.source }}</code>{% if ledger.source != "03_claims/verified.json" %} (stage 3 has not written <code>03_claims/verified.json</code> yet){% endif %}.</p>
+
+<form class="filters" method="get" action="/runs/{{ run.run_id }}/claims">
+  {% for key, label in (("dimension", "Dimension"), ("verification", "Verification"), ("source_type", "Source type"), ("flag", "Flag")) %}
+  <label>{{ label }}
+    <select name="{{ key }}">
+      <option value="">all</option>
+      {% for v in options[key] %}<option value="{{ v }}"{% if v == filters[key] %} selected{% endif %}>{{ v }}</option>{% endfor %}
+    </select>
+  </label>
+  {% endfor %}
+  <button type="submit">Filter</button>
+  {% if filters.active() %}<a href="/runs/{{ run.run_id }}/claims">clear</a>{% endif %}
+  <span class="muted">{{ shown|length }} of {{ ledger.claims|length }} claim(s)</span>
+</form>
+
+{% if shown %}
+<table class="grid claims">
+  <thead><tr><th>Claim</th><th>Statement and quote</th><th>Value</th><th>Source</th><th>State</th><th>Flags</th></tr></thead>
+  <tbody>
+    {% for c in shown %}
+    <tr id="claim-{{ c.claim_id }}" class="claim" data-claim="{{ c.claim_id }}" data-verification="{{ c.verification }}">
+      <td><code>{{ c.claim_id }}</code><br><span class="muted">{{ c.dimension }}</span></td>
+      <td>{{ c.statement }}<blockquote class="quote">{{ c.quote }}</blockquote></td>
+      <td>{% if c.value is not none %}{{ c.value }}{% if c.unit %} {{ c.unit }}{% endif %}{% else %}-{% endif %}</td>
+      <td><a href="{{ c.source_url }}" rel="noreferrer noopener" target="_blank">{{ c.source_title }}</a><br>
+        <span class="muted">{{ c.source_type }} · retrieved {{ c.retrieved_at.strftime("%Y-%m-%d %H:%M") }}{% if c.published_date %} · published {{ c.published_date }}{% endif %} · confidence {{ c.confidence }}</span></td>
+      <td class="state-{{ c.verification }}">{{ c.verification }}</td>
+      <td>{% for f in c.flags %}<span class="tag">{{ f }}</span> {% endfor %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">No claim matches the filters.</p>
+{% endif %}
+
+<h2>Conflict groups <span class="muted"><code>03_claims/conflicts.json</code></span></h2>
+{% if ledger.conflicts_error %}{{ invalid(ledger.conflicts_error) }}{% endif %}
+{% if ledger.conflicts %}
+<p class="muted">Claims of one dimension with similar statements whose values differ by more than 25 %, the preferred claim first (official &gt; api &gt; industry &gt; news &gt; forum &gt; vendor, then the newest).</p>
+{% for g in ledger.conflicts %}
+<div class="conflict" data-dimension="{{ g.dimension }}">
+  <h3>{{ g.dimension }}</h3>
+  <ol>
+    {% for cid in g.claim_ids %}{% set c = by_id.get(cid) %}
+    <li>{{ claim_link(run.run_id, cid, by_id) }}{% if loop.first %} <span class="tag">preferred</span>{% endif %}
+      {% if c %}: {{ c.statement }}{% if c.value is not none %} ({{ c.value }}{% if c.unit %} {{ c.unit }}{% endif %}){% endif %} <span class="muted">{{ c.source_type }}, {{ c.verification }}</span>{% endif %}</li>
+    {% endfor %}
+  </ol>
+</div>
+{% endfor %}
+{% else %}
+<p class="muted">No conflict groups.</p>
+{% endif %}
+{% endif %}
+{% endblock %}

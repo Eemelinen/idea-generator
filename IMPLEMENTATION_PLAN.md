@@ -104,6 +104,7 @@ ideaforge/
 │   ├── web/                       # local web UI (D-008): `python -m ideaforge.web`, 127.0.0.1 only
 │   │   ├── __init__.py            # create_app(): FastAPI app, routes
 │   │   ├── dashboard.py           # runs dashboard rows, lineages, runs/ ↔ DB mismatch (IF-601)
+│   │   ├── run_detail.py          # run page tabs: stages, idea, claims, scores, economics, report, usage, files (IF-605)
 │   │   ├── templates/             # Jinja2 page templates
 │   │   └── static/                # CSS (and vendored HTMX, plan note 37)
 │   └── fi/                        # free Finnish data tools

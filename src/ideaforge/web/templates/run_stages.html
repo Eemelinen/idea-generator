@@ -1,0 +1,28 @@
+{% extends "run_base.html" %}
+{% block tab %}
+<h2>Stages</h2>
+{% if stages %}
+<table class="grid">
+  <thead><tr><th>Stage</th><th>Status</th><th>Attempts</th><th>Started (UTC)</th><th>Finished (UTC)</th></tr></thead>
+  <tbody>
+    {% for s in stages %}
+    <tr data-stage="{{ s.stage }}"><td><code>{{ s.stage }}</code></td><td class="status-{{ s.status }}">{{ s.status }}</td><td>{{ s.attempts }}</td><td>{{ s.started }}</td><td>{{ s.finished }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">No stage rows in the database.</p>
+{% endif %}
+
+<h2>Markers</h2>
+{% if markers %}
+{% for m in markers %}
+<div class="marker{% if m.name.startswith('VALIDATION_FAILED_') or m.name.startswith('BUDGET_EXCEEDED_') %} warn{% endif %}" data-marker="{{ m.name }}">
+  <strong><code>{{ m.name }}</code></strong>
+  {% if m.lines %}<pre>{{ m.lines|join("\n") }}</pre>{% else %}<p class="muted">(empty)</p>{% endif %}
+</div>
+{% endfor %}
+{% else %}
+<p class="muted">No budget or validation markers.</p>
+{% endif %}
+{% endblock %}

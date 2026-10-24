@@ -127,3 +127,143 @@ tr.lineage-head th {
   color: var(--no-go);
   font-weight: 600;
 }
+
+a {
+  color: var(--accent);
+}
+
+.crumbs {
+  margin: 0 0 0.25rem;
+  color: var(--muted);
+}
+
+nav.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+nav.tabs a {
+  margin: 0;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+}
+
+nav.tabs a.active {
+  background: #fff;
+  border-color: var(--line);
+  border-bottom: 2px solid #fff;
+  margin-bottom: -1px;
+}
+
+table.grid {
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+table.grid th,
+table.grid td {
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+table.grid thead th {
+  background: #f0f0ec;
+}
+
+table.claims td:nth-child(2) {
+  max-width: 40rem;
+}
+
+blockquote.quote {
+  margin: 0.35rem 0 0;
+  padding-left: 0.6rem;
+  border-left: 3px solid var(--line);
+  color: var(--muted);
+  font-style: italic;
+}
+
+tr:target {
+  background: var(--warn-bg);
+}
+
+.state-verified,
+.status-done {
+  color: var(--go);
+}
+
+.state-conflict,
+.state-pending,
+.status-running,
+.status-insufficient_data {
+  color: var(--pivot);
+}
+
+.state-unverified,
+.status-failed {
+  color: var(--no-go);
+}
+
+tr.fired td {
+  background: #fde8e6;
+}
+
+.marker {
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.marker.warn {
+  background: var(--warn-bg);
+  border-color: var(--warn-line);
+}
+
+pre {
+  margin: 0.35rem 0 0;
+  padding: 0.6rem;
+  overflow-x: auto;
+  background: #f4f4f1;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+dl.spec {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+}
+
+dl.spec dt {
+  font-weight: 600;
+}
+
+dl.spec dd {
+  margin: 0;
+}
+
+.report {
+  max-width: 60rem;
+}
+
+.report table {
+  border-collapse: collapse;
+  margin: 0.5rem 0 1rem;
+}
+
+.report th,
+.report td {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}

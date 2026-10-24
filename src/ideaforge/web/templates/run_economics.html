@@ -1,0 +1,45 @@
+{% extends "run_base.html" %}
+{% from "_run_macros.html" import not_run, invalid, claim_link %}
+{% block tab %}
+<h2>Unit economics <span class="muted"><code>04_scores.json</code></span></h2>
+{% set sheet = scores.sheet.value %}
+{% if scores.sheet.error %}{{ invalid(scores.sheet.error) }}
+{% elif scores.sheet.missing %}{{ not_run(stage, stage_status, scores.sheet.path) }}
+{% else %}{% set ue = sheet.unit_economics %}
+<table class="grid economics">
+  <tbody>
+    {% for label, value in scores.economics_rows %}<tr><th>{{ label }}</th><td>{{ value }}</td></tr>{% endfor %}
+  </tbody>
+</table>
+
+<h3>Missing inputs</h3>
+{% if ue.missing_inputs %}<ul class="missing">{% for m in ue.missing_inputs %}<li>{{ m }}</li>{% endfor %}</ul>
+{% else %}<p class="muted">None.</p>{% endif %}
+
+<h3>Sensitivity <span class="muted">(monthly profit, EUR)</span></h3>
+{% if scores.sensitivity %}
+<table class="grid sensitivity">
+  <thead><tr><th>Price \ volume</th>{% for v in scores.sensitivity.volumes %}<th>{{ v }}</th>{% endfor %}</tr></thead>
+  <tbody>
+    {% for price, cells in scores.sensitivity.rows %}<tr><th>{{ price }}</th>{% for c in cells %}<td>{{ c }}</td>{% endfor %}</tr>{% endfor %}
+  </tbody>
+</table>
+{% else %}<p class="muted">No sensitivity table: an input is missing.</p>{% endif %}
+
+<h3>Input claims</h3>
+{% if ue.input_claims %}
+<table class="grid">
+  <tbody>
+    {% for role, ids in ue.input_claims.items() %}<tr data-role="{{ role }}"><th>{{ role }}</th><td>{% for cid in ids %}{{ claim_link(run.run_id, cid, known) }}{% if not loop.last %}, {% endif %}{% else %}-{% endfor %}</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% elif ue.input_claim_ids %}
+<p>{% for cid in ue.input_claim_ids %}{{ claim_link(run.run_id, cid, known) }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+{% else %}<p class="muted">None.</p>{% endif %}
+
+{% if ue.notes %}
+<h3>Notes</h3>
+<ul>{% for n in ue.notes %}<li>{{ link_claims(n, run.run_id, known) }}</li>{% endfor %}</ul>
+{% endif %}
+{% endif %}
+{% endblock %}

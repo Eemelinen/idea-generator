@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{{ run.run_id }} · Ideaforge{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="/">Runs</a> / <code>{{ run.run_id }}</code></p>
+<h1>{{ run.title }}</h1>
+<p class="muted">
+  {% if run.in_db %}created {{ run.created_at[:16]|replace("T", " ") }} UTC · preset {{ run.preset }}{% if run.as_of %} · as of {{ run.as_of }}{% endif %} · status {{ run.run_status }}
+  {% else %}<span class="tag warn">not in the database</span>{% endif %}
+  {% if not run.has_dir %}<span class="tag warn">no run directory</span>{% endif %}
+</p>
+<nav class="tabs" aria-label="Run sections">
+  {% for key, label, suffix in tabs %}
+  <a href="/runs/{{ run.run_id }}{{ suffix }}"{% if key == tab or (tab == "file" and key == "files") %} class="active" aria-current="page"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</nav>
+<section class="tab" id="tab-{{ tab }}">
+{% block tab %}{% endblock %}
+</section>
+{% endblock %}

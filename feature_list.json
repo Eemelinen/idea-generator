@@ -698,7 +698,7 @@
       "area": "ui",
       "title": "Run detail: stages, claims, scores, report, usage",
       "user_visible_behavior": "A run page shows its stages and budget/validation markers, the idea spec and research plan, a claims table filterable by dimension and verification state with conflict groups, the score sheet with caps and fired kill triggers, unit economics and sensitivity, `05_report.md` rendered as HTML, usage per stage and agent, and a read-only browser over the run's files.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-030"],
       "ticket": "IF-605",
       "spec": "docs/TICKETS.md#if-605-run-detail-stages-claims-scores-report-usage",
@@ -706,7 +706,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_web_run.py (every tab on a synthetic finished run and on a run stopped after stage 3; claim filters; artefact browser refuses paths outside runs/<id>/)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-24 pnpm check → pass (working tree on 1466818)",
+        "2026-10-24 uv run pytest tests/test_web_run.py → pass (working tree on 1466818)"
+      ],
       "attempts": 0,
       "notes": ""
     },

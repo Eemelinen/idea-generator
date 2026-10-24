@@ -1,0 +1,13 @@
+{% extends "run_base.html" %}
+{% from "_run_macros.html" import not_run %}
+{% block tab %}
+{% if html is none %}
+<h2>Report</h2>
+{{ not_run(stage, stage_status, report_name) }}
+{% else %}
+<p><a class="download" href="/runs/{{ run.run_id }}/raw/{{ report_name }}" download>Download {{ report_name }}</a></p>
+<article class="report markdown">
+{{ html }}
+</article>
+{% endif %}
+{% endblock %}

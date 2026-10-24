@@ -1,0 +1,17 @@
+{% extends "run_base.html" %}
+{% block tab %}
+<h2>Files <span class="muted">read-only</span></h2>
+{% if files %}
+<table class="grid files">
+  <thead><tr><th>Path</th><th>Size (bytes)</th><th></th></tr></thead>
+  <tbody>
+    {% for f in files %}
+    <tr data-path="{{ f.path }}"><td><a href="/runs/{{ run.run_id }}/files/{{ f.path }}">{{ f.path }}</a></td><td>{{ f.size }}</td><td><a href="/runs/{{ run.run_id }}/raw/{{ f.path }}" download>download</a></td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p class="muted">Symlinks are not listed.</p>
+{% else %}
+<p class="muted">{% if run.has_dir %}The run directory is empty.{% else %}The run has no directory.{% endif %}</p>
+{% endif %}
+{% endblock %}

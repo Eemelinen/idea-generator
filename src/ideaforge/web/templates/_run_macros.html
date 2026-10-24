@@ -1,0 +1,16 @@
+{# Shared pieces of the run tabs. #}
+{% macro not_run(stage, stage_status, path) -%}
+<p class="not-run muted">Stage <code>{{ stage }}</code> has not run yet{% if stage_status %} (status: {{ stage_status }}){% endif %}: <code>{{ path }}</code> does not exist.</p>
+{%- endmacro %}
+
+{% macro invalid(error) -%}
+<div class="banner warn" role="alert"><strong>Invalid file.</strong> {{ error }}</div>
+{%- endmacro %}
+
+{% macro claim_link(run_id, claim_id, known) -%}
+{% if claim_id in known %}<a href="/runs/{{ run_id }}/claims#claim-{{ claim_id }}">{{ claim_id }}</a>{% else %}<span title="not in the claim ledger">{{ claim_id }}?</span>{% endif %}
+{%- endmacro %}
+
+{% macro num(x, digits=2) -%}
+{% if x is none %}-{% else %}{{ ("%." ~ digits ~ "f")|format(x) }}{% endif %}
+{%- endmacro %}
