@@ -46,18 +46,23 @@ _ROLE = "|".join(PERSONAS)
 # (and "customer" is a dimension), so only labelling phrases are replaced: "debate-<role>",
 # "<role> persona / lens / here", "as (the|a|an) <role>", "from the <role>'s perspective",
 # "I am / I'm / I, the <role>", an article-less "as <role>" only before a comma or at the start
-# of a sentence ("such as customer reviews" stays), and the Finnish "minä (olen / oon) <role>" and
-# essive self-labels ("sijoittajana", "kirjanpitäjänä": the ending follows vowel harmony).
+# of a sentence, line, bracket or quote ("such as customer reviews" stays), and the Finnish
+# "minä (olen / oon) <role>", "<role>n näkökulmasta / silmin" and essive self-labels
+# ("sijoittajana", "kirjanpitäjänä": the ending follows vowel harmony).
 # "yrittäjänä" and "asiakkaana" stay: Finnish plans use them for the real founder and customers.
 _A = r"(?:the\s+|an?\s+|my\s+|our\s+|this\s+|your\s+)"
 _FI_ROLE = r"(?:perustaja|sijoittaja|kirjanpitäjä|tilintarkastaja|operaattori)"
+# A pattern with a `keep` group keeps that prefix (the punctuation before a sentence-initial
+# "as <role>") and replaces the rest; Python lookbehinds cannot take variable-width whitespace.
 _SELF_LABEL_RES = (
     re.compile(rf"\bdebate-(?:{_ROLE})\b", re.IGNORECASE),
     re.compile(rf"\b{_A}?(?:{_ROLE})(?:'s)?\s+(?:persona|lens)\b", re.IGNORECASE),
     re.compile(rf"\b(?:I\s+am|I'm|I,|speaking\s+as)\s+{_A}?(?:{_ROLE})\b(?:'s)?", re.IGNORECASE),
     re.compile(rf"\bas\s+{_A}(?:{_ROLE})\b(?:'s)?", re.IGNORECASE),
     re.compile(rf"\bas\s+(?:{_ROLE})\b(?:'s)?(?=\s*,)", re.IGNORECASE),
-    re.compile(rf"(?:^|(?<=[.!?:;]\s))as\s+(?:{_ROLE})\b(?:'s)?", re.IGNORECASE | re.MULTILINE),
+    re.compile(
+        rf"(?P<keep>(?:^|[.!?:;(\"“*•-])\s*)as\s+(?:{_ROLE})\b(?:'s)?", re.IGNORECASE | re.MULTILINE
+    ),
     re.compile(
         rf"\bfrom\s+{_A}?(?:{_ROLE})(?:'s|s')?\s+"
         r"(?:perspective|point\s+of\s+view|view|side|standpoint|angle)\b",
@@ -66,6 +71,7 @@ _SELF_LABEL_RES = (
     re.compile(rf"\b(?:{_ROLE})\s+here\b", re.IGNORECASE),
     re.compile(rf"\b(?:minä|mä)\s+(?:(?:olen|oon)\s+)?(?:{_FI_ROLE}(?:n[aä])?|yrittäjä|asiakas)\b", re.IGNORECASE),
     re.compile(rf"\b{_FI_ROLE}n[aä]\b", re.IGNORECASE),
+    re.compile(rf"\b{_FI_ROLE}n\s+(?:näkökulmasta|silmin)\b", re.IGNORECASE),
 )
 REDACTED = "[persona]"
 
@@ -190,7 +196,7 @@ def load_mapping(run_id: str) -> dict[str, str]:
 
 def scrub(text: str) -> str:
     for pattern in _SELF_LABEL_RES:
-        text = pattern.sub(REDACTED, text)
+        text = pattern.sub(lambda m: (m.groupdict().get("keep") or "") + REDACTED, text)
     return text
 
 
