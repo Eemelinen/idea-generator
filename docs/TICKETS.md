@@ -218,7 +218,7 @@ These came out of reviewing the plan. Phase 1 already applies them; later ticket
 | IF-212        | F-009   | Usage report and basic status                          | IF-213          | F-001                      | unattended |
 | IF-214        | F-010   | Stage state machine and resume                         | IF-507 (Python) | F-001                      | unattended |
 | IF-206        | F-011   | Validate and research skills, stages 0–3               | IF-207, IF-215  | F-006, F-007, F-009, F-010 | unattended |
-| IF-204        | F-012   | Research briefs tuned and claim-extractor agent        | IF-211          | F-004, F-005, F-006, F-007 | human      |
+| IF-204        | F-012   | Research briefs tuned on live runs                     | —               | F-029                      | human      |
 | IF-216        | F-013   | Phase 2 acceptance run                                 | —               | F-002, F-008, F-011, F-012 | human      |
 | IF-302        | F-014   | Scoring                                                | —               | F-001                      | unattended |
 | IF-303        | F-015   | Unit economics                                         | —               | F-001                      | unattended |
@@ -235,6 +235,7 @@ These came out of reviewing the plan. Phase 1 already applies them; later ticket
 | IF-501        | F-026   | Golden set and eval run                                | —               | F-024, F-025               | human      |
 | IF-503        | F-027   | Back-test as-of, preset wiring and usage-limit docs    | IF-506, IF-508  | F-007, F-011, F-025        | unattended |
 | IF-504        | F-028   | Review scores and status diff                          | IF-505          | F-009, F-019               | unattended |
+| IF-211        | F-029   | Production research briefs and claim-extractor agent   | —               | F-004, F-005, F-006, F-007 | unattended |
 | IF-601–IF-604 | —       | Phase 6 backlog (not queued)                           | —               | —                          | —          |
 
 ---
@@ -404,16 +405,26 @@ Absorbs IF-102–IF-107. Kept for reference:
 - **Verification:** `L1: pnpm check` · `L1: uv run pytest tests/test_skills.py`.
 - **Acceptance:** the static test passes. The live run (sauna idea, re-run skips completed dimensions) is IF-216.
 
-### IF-204 Research briefs tuned and claim-extractor agent
+### IF-211 Production research briefs and claim-extractor agent
 
-- **Mode:** human (prompt tuning needs live agent runs). **Depends on:** F-004, F-005, F-006, F-007. **Absorbs:** IF-211.
-- **Goal:** turn the Phase 1 prompts into production briefs (§12) and add the optional extraction pass.
+- **Mode:** unattended (split from IF-204 so the loop can build it). **Depends on:** F-004, F-005, F-006, F-007.
+- **Goal:** turn the Phase 1 prompts into production briefs (§12) and add the optional extraction pass, as a first draft written without live runs; IF-204 tunes both on real runs.
 - **Scope:**
-  - `prompts/*.md` and the per-agent `focus` blocks: concrete search strategies per dimension, which `fi` tool to use when, Finnish search terms (e.g. "toiminimi", "arvonlisävero vähäinen toiminta")
+  - `prompts/*.md` and the per-agent `focus` blocks: concrete search strategies per dimension, which `fi` tool to use when, Finnish search terms (e.g. "toiminimi", "arvonlisävero vähäinen toiminta"). Fold in the open points of plan notes 31–33: `prh search --industry` takes a TOL 2025 code or prefix (not `<TOL>`); cite the `cite:` line `pxweb get` prints and put its exact output figure in `value` (a bare table URL re-queries the whole table and is usually `unfetchable`); show how `Alue=` names resolve to value codes.
   - ~~an `{% if as_of %}` back-test header hook for IF-503~~: not needed, IF-503 puts the header in the research brief (plan note 29)
-  - **IF-211:** an agent template `claim-extractor.md.j2` (role `claim_extractor`), run only when a research file has `[src:]` sentences with no matching candidate claim. Its output goes through the same verification. Register it in `agents.py` (19 agents; update the tests).
-- **Verification:** `L1: pnpm check` · `L1: uv run pytest tests/test_gen_agents.py` (19 agents, briefs name their `fi` tool, the extractor is on its role) · `manual:` one research agent run live produces a file that passes `validate_file --kind research`, and the extractor pass adds a prose claim the parser missed.
-- **Acceptance:** `gen_agents.py --check` is clean; the manual observations are recorded in the evidence.
+  - An agent template `claim-extractor.md.j2` (role `claim_extractor`), run only when a research file has `[src:]` sentences with no matching candidate claim (detected in Python). Its candidate claims go through the same verification as parsed ones. Register it in `agents.py` (19 agents; update the tests) and wire it into the validate skill's stage 3.
+- **Verification:** `L1: pnpm check` · `L1: uv run pytest tests/test_gen_agents.py` (19 agents, briefs name their `fi` tool, the extractor is on its role) · `L1: uv run pytest tests/test_claim_extractor.py` (uncited-sentence detection and extractor candidates verified like parsed claims, on synthetic research files).
+- **Acceptance:** `gen_agents.py --check` is clean; no test needs the network or invented API data.
+
+### IF-204 Research briefs tuned on live runs
+
+- **Mode:** human (prompt tuning needs live agent runs). **Depends on:** F-029. The code half (drafted briefs, claim-extractor agent) moved to IF-211.
+- **Goal:** tune the IF-211 briefs and the extractor pass on real research runs.
+- **Scope:**
+  - Run research agents live on a real idea, read what they searched and cited, and adjust the briefs' strategies, Finnish terms and `fi` tool advice.
+  - Record the live API responses plan notes 31–32 left unrecorded (PxWeb `?query=` search, PRH registration-date and page parameters, Eurostat `untilTimePeriod`) with `scripts/record_fixtures.py`.
+- **Verification:** `L1: pnpm check` · `manual:` one research agent run live produces a file that passes `validate_file --kind research`, and the extractor pass adds a prose claim the parser missed.
+- **Acceptance:** the manual observations are recorded in the evidence.
 
 ### IF-216 Phase 2 acceptance run
 
