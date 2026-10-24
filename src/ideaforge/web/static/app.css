@@ -267,3 +267,35 @@ dl.spec dd {
   text-align: left;
   vertical-align: top;
 }
+
+.banner.ok {
+  background: #e8f3ea;
+  border: 1px solid #9cc7a3;
+}
+
+.banner.conformity {
+  font-size: 1.05em;
+  border-width: 2px;
+}
+
+section.round {
+  margin: 1.5rem 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.position {
+  margin: 0.75rem 0;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--line);
+}
+
+tr.rejected td,
+tr.changed td {
+  background: var(--warn-bg);
+}
+
+form.review input[type='text'] {
+  width: 100%;
+  min-width: 16rem;
+}

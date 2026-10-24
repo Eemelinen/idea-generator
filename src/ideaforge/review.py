@@ -3,6 +3,7 @@
     pending(run_id)                 → the report's sections and the scores already stored
     store(run_id, ["verdict=4", "risks=2:too generic", …])  → `reviews` rows
     trend()                         → the mean score per section for each prompt/model version
+                                      (`trend_data()`: the same as rows, for the web UI)
 
 The user scores each `05_report.md` section 1–5; a section left out keeps its earlier score (or
 none). Scoring a section again replaces its score. The trend groups the reviewed runs by what
@@ -202,24 +203,39 @@ def _mean(values: list[int]) -> str:
     return f"{sum(values) / len(values):.1f}" if values else "-"
 
 
-def trend() -> str:
+@dataclass
+class Trend:
+    """The trend /status --reviews prints and the web UI's reviews page shows (IF-606)."""
+
+    versions: list[Version]
+    section_rows: list[tuple[str, ...]]  # (section, the mean per version …), then all sections and runs
+    run_rows: list[tuple[str, str, int, str]]  # (run, version label, sections scored, mean)
+
+
+def trend_data() -> Trend:
     vs = versions()
-    if not vs:
+    rows: list[tuple[str, ...]] = [(s, *(_mean(v.scores.get(s, [])) for v in vs)) for s in SECTIONS]
+    rows.append(("all sections", *(_mean([x for xs in v.scores.values() for x in xs]) for v in vs)))
+    rows.append(("runs", *(str(len(v.run_ids)) for v in vs)))
+    run_rows = [
+        (run_id, v.label, len(per_run := stored(run_id)), _mean([score for score, _ in per_run.values()]))
+        for v in vs
+        for run_id in v.run_ids
+    ]
+    return Trend(vs, rows, run_rows)
+
+
+def version_line(v: Version) -> str:
+    return f"{v.label}: config {v.config} · models {models_text(v.models)} · {len(v.run_ids)} run(s)"
+
+
+def trend() -> str:
+    t = trend_data()
+    if not t.versions:
         return "no reviews yet; score a report with /status <run_id> --review"
     lines = ["review scores by prompt/config and model version (oldest first; mean of 1–5)"]
-    lines += [f"{v.label}: config {v.config} · models {models_text(v.models)} · {len(v.run_ids)} run(s)" for v in vs]
-    rows = [(s, *(_mean(v.scores.get(s, [])) for v in vs)) for s in SECTIONS]
-    rows.append(("all sections", *(_mean([x for xs in v.scores.values() for x in xs]) for v in vs)))
-    rows.append(("runs", *(len(v.run_ids) for v in vs)))
-    lines += ["", *usage.table(("section", *(v.label for v in vs)), rows)]
+    lines += [version_line(v) for v in t.versions]
+    lines += ["", *usage.table(("section", *(v.label for v in t.versions)), t.section_rows)]
     lines += ["", "reviewed runs"]
-    lines += usage.table(
-        ("run", "version", "sections", "mean"),
-        [
-            (run_id, v.label, len(per_run := stored(run_id)), _mean([score for score, _ in per_run.values()]))
-            for v in vs
-            for run_id in v.run_ids
-        ],
-        align="llrr",
-    )
+    lines += usage.table(("run", "version", "sections", "mean"), t.run_rows, align="llrr")
     return "\n".join(lines)

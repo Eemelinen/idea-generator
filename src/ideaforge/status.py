@@ -1,5 +1,6 @@
 """Text for /status: the recent runs, or one run's stages, claims, kill flags, markers and usage;
-`diff_runs` compares two runs' score sheets (IF-505). Review scores live in `ideaforge.review`.
+`score_diff` compares two runs' score sheets (IF-505) and `diff_runs` prints it; the web UI's
+compare page shows the same `ScoreDiff`. Review scores live in `ideaforge.review`.
 
 Reads only what earlier stages wrote (SQLite and runs/<run_id>/); computes nothing that feeds a
 score. A kill flag "fires" when a verified claim carries it (config/rubric.yaml); triggers the
@@ -11,6 +12,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections import Counter
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from ideaforge import config, db, review, runs, scoring, usage
@@ -207,58 +209,105 @@ def _provenance(run_id: str) -> tuple[str, str, dict[str, str] | None]:
     return (idea, *review.version_key(m))
 
 
-def diff_runs(run_a: str, run_b: str) -> str:
+@dataclass
+class DiffRow:
+    dimension: str
+    a: str  # `_score_cell`: the final score, `n/a`, `-`, with `capped` when the cap applied
+    b: str
+    change: str
+
+
+@dataclass
+class ScoreDiff:
+    """Two runs' 04_scores.json side by side, with their prompt/config and model versions; the
+    lines /status --diff prints and the rows the web UI's compare page shows (IF-606)."""
+
+    run_a: str
+    run_b: str
+    a: ScoreSheet
+    b: ScoreSheet
+    idea_a: str
+    idea_b: str
+    config_a: str
+    config_b: str
+    models_a: dict[str, str] | None
+    models_b: dict[str, str] | None
+    rows: list[DiffRow] = field(default_factory=list)
+    capped: bool = False
+
+    @property
+    def config_line(self) -> str:
+        if self.config_a == self.config_b:
+            return f"config: same ({self.config_a})"
+        return f"config: {self.config_a} → {self.config_b}"
+
+    @property
+    def models_line(self) -> str:
+        if self.models_a is None or self.models_b is None:
+            return "models: unknown (meta.json missing)"
+        ma, mb = self.models_a, self.models_b
+        moved = [
+            f"{role} {ma.get(role, '-')} → {mb.get(role, '-')}"
+            for role in sorted(ma.keys() | mb.keys())
+            if ma.get(role) != mb.get(role)
+        ]
+        return f"models: changed {', '.join(moved)}" if moved else "models: same"
+
+    @property
+    def verdict_line(self) -> str:
+        a, b = self.a.verdict, self.b.verdict
+        return f"verdict: {a} → {b}" if a != b else f"verdict: {a} (same)"
+
+    @property
+    def total_line(self) -> str:
+        a, b = self.a.weighted_total, self.b.weighted_total
+        return f"weighted total: {_num(a)} → {_num(b)} ({_change(a, b)})"
+
+    @property
+    def kill_triggers(self) -> list[tuple[str, list[str]]]:
+        """(label, triggers in rubric order) for `in both`, `only in A`, `only in B`, empty ones left out."""
+        fired_a, fired_b = set(self.a.kill_triggers_fired), set(self.b.kill_triggers_fired)
+        groups = (("in both", fired_a & fired_b), ("only in A", fired_a - fired_b), ("only in B", fired_b - fired_a))
+        return [(label, [t for t in KILL_TRIGGERS if t in triggers]) for label, triggers in groups if triggers]
+
+
+def score_diff(run_a: str, run_b: str) -> ScoreDiff:
     """Compare two runs' 04_scores.json: per-dimension final score, weighted total, verdict and
     kill triggers, with the prompt/config and model versions from meta.json. Raises
     ValueError / LookupError for a bad run id or a missing or invalid score sheet."""
     a, b = _load_sheet(run_a), _load_sheet(run_b)
     (idea_a, cfg_a, models_a), (idea_b, cfg_b, models_b) = _provenance(run_a), _provenance(run_b)
-    lines = [
-        "score sheet diff (04_scores.json, final scores)",
-        f"A: {run_a} · {idea_a} · config {cfg_a} · models {review.models_text(models_a)}",
-        f"B: {run_b} · {idea_b} · config {cfg_b} · models {review.models_text(models_b)}",
-        f"config: same ({cfg_a})" if cfg_a == cfg_b else f"config: {cfg_a} → {cfg_b}",
-    ]
-    if models_a is None or models_b is None:
-        lines.append("models: unknown (meta.json missing)")
-    else:
-        moved = [
-            f"{role} {models_a.get(role, '-')} → {models_b.get(role, '-')}"
-            for role in sorted(models_a.keys() | models_b.keys())
-            if models_a.get(role) != models_b.get(role)
-        ]
-        lines.append(f"models: changed {', '.join(moved)}" if moved else "models: same")
-
-    verdict = f"{a.verdict} → {b.verdict}" if a.verdict != b.verdict else f"{a.verdict} (same)"
-    lines += [
-        "",
-        f"verdict: {verdict}",
-        f"weighted total: {_num(a.weighted_total)} → {_num(b.weighted_total)}"
-        f" ({_change(a.weighted_total, b.weighted_total)})",
-        "",
-    ]
-
+    result = ScoreDiff(run_a, run_b, a, b, idea_a, idea_b, cfg_a, cfg_b, models_a, models_b)
     scores_a = {s.dimension: s for s in a.scores}
     scores_b = {s.dimension: s for s in b.scores}
-    dims = [d for d in RUBRIC_DIMENSIONS if d in scores_a or d in scores_b]
-    rows = []
-    for d in dims:
+    for d in (d for d in RUBRIC_DIMENSIONS if d in scores_a or d in scores_b):
         sa, sb = scores_a.get(d), scores_b.get(d)
         change = _change(sa.final_score if sa else None, sb.final_score if sb else None)
-        rows.append((d, _score_cell(sa), _score_cell(sb), change))
-    lines += usage.table(("dimension", "A", "B", "change"), rows) if rows else ["no dimension scores in either"]
-    if any(s.cap_reason for s in (*a.scores, *b.scores)):
-        lines.append(f"capped: the evidence rules capped the final score at {scoring.CAP:g} (insufficient data)")
+        result.rows.append(DiffRow(d, _score_cell(sa), _score_cell(sb), change))
+    result.capped = any(s.cap_reason for s in (*a.scores, *b.scores))
+    return result
 
-    fired_a, fired_b = set(a.kill_triggers_fired), set(b.kill_triggers_fired)
+
+def diff_runs(run_a: str, run_b: str) -> str:
+    """`score_diff` as the text /status --diff prints."""
+    d = score_diff(run_a, run_b)
+    lines = [
+        "score sheet diff (04_scores.json, final scores)",
+        f"A: {run_a} · {d.idea_a} · config {d.config_a} · models {review.models_text(d.models_a)}",
+        f"B: {run_b} · {d.idea_b} · config {d.config_b} · models {review.models_text(d.models_b)}",
+        d.config_line,
+        d.models_line,
+        "",
+        d.verdict_line,
+        d.total_line,
+        "",
+    ]
+    rows = [(r.dimension, r.a, r.b, r.change) for r in d.rows]
+    lines += usage.table(("dimension", "A", "B", "change"), rows) if rows else ["no dimension scores in either"]
+    if d.capped:
+        lines.append(f"capped: the evidence rules capped the final score at {scoring.CAP:g} (insufficient data)")
     lines += ["", "kill triggers fired"]
-    if not fired_a | fired_b:
+    if not d.kill_triggers:
         lines.append("none in either")
-    for label, triggers in (
-        ("in both", fired_a & fired_b),
-        ("only in A", fired_a - fired_b),
-        ("only in B", fired_b - fired_a),
-    ):
-        if triggers:
-            lines.append(f"{label}: {', '.join(t for t in KILL_TRIGGERS if t in triggers)}")
+    lines += [f"{label}: {', '.join(triggers)}" for label, triggers in d.kill_triggers]
     return "\n".join(lines)

@@ -1,0 +1,31 @@
+{% extends "run_base.html" %}
+{% block tab %}
+<h2>Review <span class="muted">score each section of <code>05_report.md</code> 1 (useless) to 5 (excellent)</span></h2>
+{% if message %}<p class="banner ok" role="status" id="review-stored">{{ message }}</p>{% endif %}
+{% if error %}<div class="banner warn" role="alert" id="review-error"><strong>Not stored.</strong> {{ error }}</div>{% endif %}
+{% if unreviewable %}
+<p class="muted">{{ unreviewable }}</p>
+{% else %}
+<form method="post" action="/runs/{{ run.run_id }}/review" class="review">
+  <table class="grid review">
+    <thead><tr><th>Section</th><th>Report heading</th><th>Score</th><th>Note</th></tr></thead>
+    <tbody>
+      {% for key, heading in sections.items() %}
+      {% set current = stored.get(key) %}
+      <tr data-section="{{ key }}">
+        <td><code>{{ key }}</code></td>
+        <td>{{ heading }}</td>
+        <td><select name="score_{{ key }}" aria-label="{{ heading }} score">
+          <option value="">{% if current %}keep {{ current[0] }}{% else %}-{% endif %}</option>
+          {% for n in range(1, 6) %}<option value="{{ n }}">{{ n }}</option>{% endfor %}
+        </select>{% if current %} <span class="stored" data-score="{{ current[0] }}">stored {{ current[0] }}</span>{% endif %}</td>
+        <td><input type="text" name="note_{{ key }}" value="{{ current[1] or '' if current else '' }}" aria-label="{{ heading }} note"></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted">A section left at "-" or "keep" keeps its earlier score; a note is stored only with a score. The same rows as <code>/status {{ run.run_id }} --review</code>; the trend is on <a href="/reviews">Reviews</a>.</p>
+  <button type="submit">Store scores</button>
+</form>
+{% endif %}
+{% endblock %}

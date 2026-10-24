@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Compare · Ideaforge{% endblock %}
+{% block content %}
+<h1>Compare two runs</h1>
+<form class="filters" method="get" action="/compare">
+  {% for name, current in (("a", a), ("b", b)) %}
+  <label>{{ name|upper }}
+    <select name="{{ name }}">
+      <option value="">choose a run</option>
+      {% for c in choices %}<option value="{{ c.run_id }}"{% if c.run_id == current %} selected{% endif %}>{{ c.run_id }} · {{ c.title }}{% if not c.scored %} (not scored){% endif %}</option>{% endfor %}
+    </select>
+  </label>
+  {% endfor %}
+  <button type="submit">Compare</button>
+  <span class="muted">final scores from each run's <code>04_scores.json</code>, as <code>/status --diff</code></span>
+</form>
+
+{% if error %}<div class="banner warn" role="alert" id="compare-error">{{ error }}</div>{% endif %}
+{% if diff %}
+<ul class="provenance">
+  <li>A: <a href="/runs/{{ diff.run_a }}/scores"><code>{{ diff.run_a }}</code></a> · {{ diff.idea_a }} · config <code>{{ diff.config_a }}</code> · models {{ models_text(diff.models_a) }}</li>
+  <li>B: <a href="/runs/{{ diff.run_b }}/scores"><code>{{ diff.run_b }}</code></a> · {{ diff.idea_b }} · config <code>{{ diff.config_b }}</code> · models {{ models_text(diff.models_b) }}</li>
+  <li id="config-line">{{ diff.config_line }}</li>
+  <li id="models-line">{{ diff.models_line }}</li>
+</ul>
+<p class="verdict-line"><span id="verdict-line">{{ diff.verdict_line }}</span> · <span id="total-line">{{ diff.total_line }}</span></p>
+{% if diff.rows %}
+<table class="grid diff">
+  <thead><tr><th>Dimension</th><th>A</th><th>B</th><th>Change</th></tr></thead>
+  <tbody>{% for r in diff.rows %}<tr data-dimension="{{ r.dimension }}"{% if r.change not in ("0", "-") %} class="changed"{% endif %}><td>{{ r.dimension }}</td><td>{{ r.a }}</td><td>{{ r.b }}</td><td>{{ r.change }}</td></tr>{% endfor %}</tbody>
+</table>
+{% else %}<p class="muted">No dimension scores in either.</p>{% endif %}
+{% if diff.capped %}<p class="muted">capped: the evidence rules capped the final score at {{ cap }} (insufficient data)</p>{% endif %}
+<h2>Kill triggers fired</h2>
+{% if not diff.kill_triggers %}<p class="muted" id="kill-none">none in either</p>{% endif %}
+<ul class="kill-diff">{% for label, triggers in diff.kill_triggers %}<li data-group="{{ label }}">{{ label }}: {% for t in triggers %}<code>{{ t }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</li>{% endfor %}</ul>
+{% endif %}
+{% endblock %}
