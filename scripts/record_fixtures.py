@@ -1,6 +1,6 @@
 """Record real Finnish/EU open-data API responses as test fixtures (IF-200).
 
-    uv run python scripts/record_fixtures.py [--source statfin|luke|prh|eurostat]
+    uv run python scripts/record_fixtures.py [--source statfin|luke|prh|eurostat] [--only <name> …]
 
 Needs the network, so it is run by a person, never by an unattended session. Each recording is
 saved as tests/fixtures/api/<source>/<name>.json (the parsed response, re-indented) next to
@@ -45,6 +45,7 @@ class Recording:
     params: dict[str, str] | None = None
     body: dict[str, Any] | None = None  # POST (PxWeb query) when set
     note: str | None = None
+    untrimmed: bool = False  # keep every PRH company (the client must see the whole page)
 
 
 def _px_query(selections: dict[str, list[str]]) -> dict[str, Any]:
@@ -57,6 +58,13 @@ def _px_query(selections: dict[str, list[str]]) -> dict[str, Any]:
 RECORDINGS: tuple[Recording, ...] = (
     Recording("statfin", "vaerak_listing", f"{STATFIN}/vaerak/", note="Table listing of the population structure database."),
     Recording("statfin", "11ra_metadata", f"{STATFIN}/vaerak/11ra.px", note="Key figures on population by region."),
+    Recording(
+        "statfin",
+        "search_majoitus",
+        f"{STATFIN}/",
+        params={"query": "majoitus"},
+        note="The database search (IF-204): hits are {id, path, title, score, published}; 'majoitus' finds the travel (smat) tables, while inflected or compound words such as 'kesämökki' find nothing.",
+    ),
     Recording(
         "statfin",
         "11ra_raakkyla_population",
@@ -77,6 +85,7 @@ RECORDINGS: tuple[Recording, ...] = (
         note="Population by age, sex and region: 309 × 102 × 3 × 54 × 1 = 5 105 916 cells unfiltered (over the 100 000-cell limit).",
     ),
     Recording("luke", "0100_muuyri_metadata", f"{LUKE}/maa/muuyri/0100_muuyri.px", note="Diversified farms by ELY centre."),
+    Recording("luke", "search_majoitus", f"{LUKE}/", params={"query": "majoitus"}, note="The Luke side of the same search (IF-204)."),
     Recording(
         "luke",
         "0100_muuyri_query",
@@ -101,6 +110,32 @@ RECORDINGS: tuple[Recording, ...] = (
     ),
     Recording("prh", "name_raakkylan", PRH, params={"name": "Rääkkylän"}, note="Name search."),
     Recording(
+        "prh",
+        "industry_55_joensuu_2015_2025",
+        PRH,
+        params={
+            "mainBusinessLine": "55",
+            "location": "Joensuu",
+            "registrationDateStart": "2015-01-01",
+            "registrationDateEnd": "2025-12-31",
+        },
+        note="Registration-date filter (IF-204). PRH matches mainBusinessLine anywhere in the code: of the 45 companies only 12 have a 55xxx line, the rest are 25530, 4755x and 855xx. All 45 are kept so the client's prefix filter is tested on the whole page.",
+        untrimmed=True,
+    ),
+    Recording(
+        "prh",
+        "industry_55_joensuu_2015_2025_page2",
+        PRH,
+        params={
+            "mainBusinessLine": "55",
+            "location": "Joensuu",
+            "registrationDateStart": "2015-01-01",
+            "registrationDateEnd": "2025-12-31",
+            "page": "2",
+        },
+        note="The page after the last one (IF-204): pages are numbered from 1 and hold 100 companies; past the end PRH answers totalResults 0, not the total.",
+    ),
+    Recording(
         "eurostat",
         "tour_occ_ninat_fi",
         f"{EUROSTAT}/tour_occ_ninat",
@@ -114,11 +149,26 @@ RECORDINGS: tuple[Recording, ...] = (
         },
         note="Nights spent at tourist accommodation establishments in Finland, 2019 onwards (JSON-stat 2.0).",
     ),
+    Recording(
+        "eurostat",
+        "tour_occ_ninat_fi_2019_2022",
+        f"{EUROSTAT}/tour_occ_ninat",
+        params={
+            "geo": "FI",
+            "unit": "NR",
+            "c_resid": "TOTAL",
+            "nace_r2": "I551-I553",
+            "sinceTimePeriod": "2019",
+            "untilTimePeriod": "2022",
+            "lang": "EN",
+        },
+        note="The same query ending at untilTimePeriod 2022 (IF-204).",
+    ),
 )
 
 
 def _trim(rec: Recording, data: Any) -> tuple[Any, str | None]:
-    if rec.source == "prh" and len(data.get("companies", [])) > MAX_COMPANIES:
+    if rec.source == "prh" and not rec.untrimmed and len(data.get("companies", [])) > MAX_COMPANIES:
         total = len(data["companies"])
         data = {**data, "companies": data["companies"][:MAX_COMPANIES]}
         return data, f"companies: the first {MAX_COMPANIES} of {total} returned; totalResults is as returned"
@@ -155,6 +205,13 @@ def record(rec: Recording, session: requests.Session) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--source", choices=sorted({r.source for r in RECORDINGS}), help="record only this source")
+    parser.add_argument(
+        "--only",
+        action="append",
+        choices=[r.name for r in RECORDINGS],
+        metavar="NAME",
+        help="record only this recording (repeatable), leaving the others as they are",
+    )
     args = parser.parse_args(argv)
 
     import truststore  # TLS interception on the dev machine (TICKETS.md plan note 9)
@@ -164,7 +221,7 @@ def main(argv: list[str] | None = None) -> int:
     session.headers["User-Agent"] = USER_AGENT
     total = 0
     for rec in RECORDINGS:
-        if args.source and rec.source != args.source:
+        if (args.source and rec.source != args.source) or (args.only and rec.name not in args.only):
             continue
         try:
             total += record(rec, session)

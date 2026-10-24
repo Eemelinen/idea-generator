@@ -1,0 +1,947 @@
+[
+ {
+  "id": "13q8.px",
+  "path": "/smat",
+  "title": "13q8 -- Yöpymisen sisältäneet kotimaanmatkat kuukausittain, 2012M01-2026M08",
+  "score": 0.7653709,
+  "published": "2026-10-13T14:04:00"
+ },
+ {
+  "id": "13fi.px",
+  "path": "/smat",
+  "title": "13fi -- Yöpymisen sisältäneet kotimaan vapaa-ajanmatkat, 2012-2026",
+  "score": 0.6273103,
+  "published": "2026-10-22T11:22:00"
+ },
+ {
+  "id": "13h2.px",
+  "path": "/smat",
+  "title": "13h2 -- Yöpymisen sisältäneet kotimaan vapaa-ajanmatkat kohdekunnittain, 2012-2026",
+  "score": 0.6206085,
+  "published": "2026-10-22T11:22:00"
+ },
+ {
+  "id": "133e.px",
+  "path": "/smat",
+  "title": "133e -- Yöpymisen sisältäneet matkat sukupuolen, ikäryhmän ja asuinalueen mukaan, 2012-2025",
+  "score": 0.536162138,
+  "published": "2026-07-01T18:01:00"
+ },
+ {
+  "id": "13fa.px",
+  "path": "/smat",
+  "title": "13fa -- Yöpymisen sisältäneet matkat keston mukaan, 2012-2026",
+  "score": 0.44501397,
+  "published": "2026-10-22T11:22:00"
+ },
+ {
+  "id": "11n7.px",
+  "path": "/atp",
+  "title": "11n7 -- Avoimet työpaikat toimipaikan toimialan mukaan, 2013-2025",
+  "score": 0.05361417,
+  "published": "2026-07-01T17:44:00"
+ },
+ {
+  "id": "14k9.px",
+  "path": "/plv",
+  "title": "14k9 -- Palvelualojen liikevaihtokuvaaja neljännesvuositasolla (2021=100), 1995Q1-2026Q2",
+  "score": 0.0473886766,
+  "published": "2026-09-29T10:52:00"
+ },
+ {
+  "id": "14ka.px",
+  "path": "/plv",
+  "title": "14ka -- Palvelualojen liikevaihtokuvaaja puolivuositasolla (2021=100), 1995H1-2026H1",
+  "score": 0.0473886766,
+  "published": "2026-09-29T10:52:00"
+ },
+ {
+  "id": "14kb.px",
+  "path": "/plv",
+  "title": "14kb -- Palvelualojen liikevaihtokuvaaja vuositasolla (2021=100), 1995-2025",
+  "score": 0.0473886766,
+  "published": "2026-09-29T10:52:00"
+ },
+ {
+  "id": "15ia.px",
+  "path": "/atp",
+  "title": "15ia -- Avoimet työpaikat toimipaikan toimialan (TOL 2025) mukaan, 2013Q1-2026Q2",
+  "score": 0.0469124,
+  "published": "2026-08-19T10:57:00"
+ },
+ {
+  "id": "14mg.px",
+  "path": "/yrti",
+  "title": "14mg -- Yritysten rakenne- ja tilinpäätöstilasto - tietojen tarkentuminen, 2024",
+  "score": 0.0469124,
+  "published": "2026-07-01T18:36:00"
+ },
+ {
+  "id": "13fp.px",
+  "path": "/kony",
+  "title": "13fp -- Yrityssaneeraukset vuositasolla alueittain vuodesta 2003, 2003-2025",
+  "score": 0.040210627,
+  "published": "2026-07-01T17:45:00"
+ },
+ {
+  "id": "13as.px",
+  "path": "/tyti",
+  "title": "13as -- Työlliset ja palkansaajat työnantajasektorin ja toimialan (TOL 2008) mukaan, 15-74-vuotiaat, 2009-2025",
+  "score": 0.040210627,
+  "published": "2026-07-01T18:34:00"
+ },
+ {
+  "id": "13at.px",
+  "path": "/tyti",
+  "title": "13at -- Tehdyt työtunnit vuodessa työllistä ja palkansaajaa kohti työnantajasektorin ja toimialan (TOL 2008) mukaan, 15-74-vuotiaat, 2009-2025",
+  "score": 0.040210627,
+  "published": "2026-07-01T18:34:00"
+ },
+ {
+  "id": "157l.px",
+  "path": "/bdem",
+  "title": "157l -- Aloittaneiden ja lopettaneiden yritysten lukumäärän estimaatti toimialoittain, 2019Q1-2026Q2",
+  "score": 0.040210627,
+  "published": "2026-09-14T08:44:00"
+ },
+ {
+  "id": "157n.px",
+  "path": "/bdem",
+  "title": "157n -- Kasvuyritykset, 2021-2024",
+  "score": 0.040210627,
+  "published": "2026-07-01T17:44:00"
+ },
+ {
+  "id": "13zn.px",
+  "path": "/yrtt",
+  "title": "13zn -- Maksetut ja myönnetyt suorat tuet, lainat ja takaukset toimialoittain sekä kokoluokittain, miljoonaa euroa, 2022-2025",
+  "score": 0.040210627,
+  "published": "2026-07-01T18:36:00"
+ },
+ {
+  "id": "14k7.px",
+  "path": "/plv",
+  "title": "14k7 -- Palvelualojen liikevaihtokuvaaja kuukausitasolla (2021=100), 1995M01-2026M08*",
+  "score": 0.037910942,
+  "published": "2026-09-29T10:52:00"
+ },
+ {
+  "id": "14kc.px",
+  "path": "/plv",
+  "title": "14kc -- Palvelualojen liikevaihtokuvaajan tarkentuminen kuukausitasolla (2021=100), 2024M01-2026M07",
+  "score": 0.037910942,
+  "published": "2026-09-29T10:52:00"
+ },
+ {
+  "id": "14kd.px",
+  "path": "/plv",
+  "title": "14kd -- Palvelualojen liikevaihtokuvaajan tarkentuminen vuositasolla (2021=100), 2024",
+  "score": 0.037910942,
+  "published": "2026-09-29T10:52:00"
+ },
+ {
+  "id": "117x.px",
+  "path": "/pthi",
+  "title": "117x -- Palvelujen tuottajahintaindeksi (2005=100), neljännesvuosittain, 2000Q1-2026Q2",
+  "score": 0.037910942,
+  "published": "2026-07-27T10:43:00"
+ },
+ {
+  "id": "117y.px",
+  "path": "/pthi",
+  "title": "117y -- Palvelujen tuottajahintaindeksi (2005=100), vuosittain, 2000-2025",
+  "score": 0.037910942,
+  "published": "2026-07-01T17:49:00"
+ },
+ {
+  "id": "11tj.px",
+  "path": "/ntp",
+  "title": "11tj -- QNA Työllisyys ja työtunnit neljännesvuosittain, 1990Q1-2026Q2",
+  "score": 0.0335088558,
+  "published": "2026-09-17T13:47:00"
+ },
+ {
+  "id": "13fl.px",
+  "path": "/kony",
+  "title": "13fl -- Yrityssaneeraukset neljännesvuositasolla alueittain, 2003Q1-2024Q4",
+  "score": 0.0335088558,
+  "published": "2026-07-01T17:45:00"
+ },
+ {
+  "id": "13la.px",
+  "path": "/stu",
+  "title": "13la -- Suomalaiset tytäryhtiöt ulkomailla toimialoittain, 2020-2024",
+  "score": 0.0335088558,
+  "published": "2026-07-01T18:01:00"
+ },
+ {
+  "id": "15id.px",
+  "path": "/tta",
+  "title": "15id -- Työtaistelut toimialoittain (TOL 2025), 2025",
+  "score": 0.0335088558,
+  "published": "2026-07-01T18:04:00"
+ },
+ {
+  "id": "15ie.px",
+  "path": "/tta",
+  "title": "15ie -- Työtaistelut toimialoittain (TOL 2025), 2025Q1-2025Q4",
+  "score": 0.0335088558,
+  "published": "2026-07-01T18:04:00"
+ },
+ {
+  "id": "12zz.px",
+  "path": "/ttap",
+  "title": "12zz -- Palkansaajien työpaikkatapaturmat 100 000 palkansaajaa kohden, 2018-2024",
+  "score": 0.0335088558,
+  "published": "2026-07-01T18:04:00"
+ },
+ {
+  "id": "13ql.px",
+  "path": "/ttap",
+  "title": "13ql -- Palkansaajien työtapaturmataajuus, 2018-2024",
+  "score": 0.0335088558,
+  "published": "2026-07-01T18:04:00"
+ },
+ {
+  "id": "13u6.px",
+  "path": "/tvtutk",
+  "title": "13u6 -- Tehdyt työtunnit, työtunnin kustannus ja työvoimakustannus henkilötyövuotta kohden yksityisellä sektorilla toimialoittain (TOL 2008), 2012-2024",
+  "score": 0.0335088558,
+  "published": "2026-09-28T11:48:00"
+ },
+ {
+  "id": "13ar.px",
+  "path": "/tyti",
+  "title": "13ar -- Työlliset ja palkansaajat sekä työllisten ja palkansaajien tehdyt työtunnit toimialan (TOL 2008) ja sukupuolen mukaan, 15-74-vuotiaat, 2009-2025",
+  "score": 0.0335088558,
+  "published": "2026-07-01T18:34:00"
+ },
+ {
+  "id": "132g.px",
+  "path": "/ntp",
+  "title": "132g -- QNA Tulot ja tuotanto toimialoittain, neljännesvuosittain, 1990Q1-2026Q2",
+  "score": 0.0331720747,
+  "published": "2026-09-17T13:47:00"
+ },
+ {
+  "id": "13wa.px",
+  "path": "/yrti",
+  "title": "13wa -- Voittoa tavoittelemattomat yhteisöt toimialoittain, 2018-2024",
+  "score": 0.0331720747,
+  "published": "2026-07-01T18:36:00"
+ },
+ {
+  "id": "14w1.px",
+  "path": "/ttut",
+  "title": "14w1 -- Työn tuottavuuden (arvonlisäys/työtunti) muutoksen osatekijät, 1976-2025*",
+  "score": 0.0284332074,
+  "published": "2026-07-01T18:04:00"
+ },
+ {
+  "id": "14w3.px",
+  "path": "/ttut",
+  "title": "14w3 -- Arvonlisäyksen muutoksen osatekijät, 1976-2025*",
+  "score": 0.0284332074,
+  "published": "2026-07-01T18:04:00"
+ },
+ {
+  "id": "117v.px",
+  "path": "/pthi",
+  "title": "117v -- Palvelujen tuottajahintaindeksi (2010=100), neljännesvuosittain, 2010Q1-2026Q2",
+  "score": 0.0284332074,
+  "published": "2026-07-27T10:43:00"
+ },
+ {
+  "id": "117w.px",
+  "path": "/pthi",
+  "title": "117w -- Palvelujen tuottajahintaindeksi (2010=100), vuosittain, 2010-2025",
+  "score": 0.0284332074,
+  "published": "2026-07-01T17:49:00"
+ },
+ {
+  "id": "11gh.px",
+  "path": "/alyr",
+  "title": "11gh -- Julkisyhteisöjen toimipaikat maakunnittain ja toimialoittain, 2013-2024",
+  "score": 0.0268070847,
+  "published": "2026-07-01T17:44:00"
+ },
+ {
+  "id": "13wy.px",
+  "path": "/alyr",
+  "title": "13wy -- Yritysten toimipaikat toimialoittain ja liikevaihdon suuruusluokittain, 2018-2024",
+  "score": 0.0268070847,
+  "published": "2026-07-01T17:44:00"
+ },
+ {
+  "id": "13x3.px",
+  "path": "/alyr",
+  "title": "13x3 -- Yritysten toimipaikkojen tuotannon brutto- ja jalostusarvo toimialoittain, maakunnittain ja kokoluokittain, 2018-2024",
+  "score": 0.0268070847,
+  "published": "2026-07-01T17:44:00"
+ },
+ {
+  "id": "14up.px",
+  "path": "/ati",
+  "title": "14up -- Ansiotasoindeksi, säännöllisen ansion indeksi ja sopimuspalkkaindeksi toimialan mukaan, neljännesvuositiedot, 2010Q1-2026Q3*",
+  "score": 0.0268070847,
+  "published": "2026-10-14T12:35:00"
+ },
+ {
+  "id": "14uq.px",
+  "path": "/ati",
+  "title": "14uq -- Ansiotasoindeksi, säännöllisen ansion indeksi ja sopimuspalkkaindeksi toimialan mukaan, vuositiedot, 2010-2025*",
+  "score": 0.0268070847,
+  "published": "2026-10-14T12:35:00"
+ },
+ {
+  "id": "12h4.px",
+  "path": "/cvts",
+  "title": "12h4 -- Koulutusta järjestäneiden yritysten osuus ja määrä, kurssi- tai muuhun koulutukseen osallistuneiden osuus sekä saadut kurssikoulutustunnit toimialan ja päätoimialan mukaan, 2010-2020",
+  "score": 0.0268070847,
+  "published": "2026-07-01T17:44:00"
+ },
+ {
+  "id": "13vm.px",
+  "path": "/cvts",
+  "title": "13vm -- Koulutuskustannukset ja ulkoisen koulutuksen järjestäjä yrityksen toimialan ja päätoimialan mukaan, 2010-2020",
+  "score": 0.0268070847,
+  "published": "2026-07-01T17:44:00"
+ },
+ {
+  "id": "11ss.px",
+  "path": "/tkke",
+  "title": "11ss -- Yritysten tutkimus- ja kehittämistoiminnan menot tuoteryhmittäin, 2010-2024",
+  "score": 0.0268070847,
+  "published": "2026-07-01T18:04:00"
+ },
+ {
+  "id": "115m.px",
+  "path": "/tyokay",
+  "title": "115m -- Työlliset alueen, toimialan (TOL 2008), ammattiaseman, iän, sukupuolen ja vuoden mukaan, 2007-2024",
+  "score": 0.0268070847,
+  "published": "2026-08-26T10:54:00"
+ },
+ {
+  "id": "13u8.px",
+  "path": "/tvtutk",
+  "title": "13u8 -- Työvoimakustannusten rakenne yksityisellä sektorilla toimialoittain (TOL 2008), 2012-2024",
+  "score": 0.0268070847,
+  "published": "2026-09-28T11:48:00"
+ },
+ {
+  "id": "137l.px",
+  "path": "/tyti",
+  "title": "137l -- Työlliset ja palkansaajat sekä työllisten ja palkansaajien tehdyt työtunnit toimialan mukaan (TOL 2008) , 15-74-vuotiaat, neljännesvuositiedot, 2009Q1-2026Q3",
+  "score": 0.0268070847,
+  "published": "2026-10-19T10:47:00"
+ },
+ {
+  "id": "13aq.px",
+  "path": "/tyti",
+  "title": "13aq -- Työlliset ja palkansaajat sekä työllisten ja palkansaajien tehdyt työtunnit toimialan mukaan (TOL 2008), 15-74-vuotiaat, 2009-2025",
+  "score": 0.0268070847,
+  "published": "2026-07-01T18:34:00"
+ },
+ {
+  "id": "15h2.px",
+  "path": "/yrtt",
+  "title": "15h2 -- Maksetut ja myönnetyt suorat tuet, lainat ja takaukset toimialoittain (TOL 2025) sekä kokoluokittain, miljoonaa euroa, 2025",
+  "score": 0.0268070847,
+  "published": "2026-07-01T18:36:00"
+ },
+ {
+  "id": "13wx.px",
+  "path": "/alyr",
+  "title": "13wx -- Yritysten toimipaikat toimialoittain ja henkilöstön suuruusluokittain, 2018-2024",
+  "score": 0.0236943383,
+  "published": "2026-07-01T17:44:00"
+ },
+ {
+  "id": "14yt.px",
+  "path": "/pt",
+  "title": "14yt -- Leontiefin käänteismatriisi, vuosittain, 2021-2022",
+  "score": 0.0236943383,
+  "published": "2026-07-01T17:49:00"
+ },
+ {
+  "id": "14mr.px",
+  "path": "/ktps",
+  "title": "14mr -- Palkkasummakuvaajat toimialoittain kuukausitasolla (2021=100), 1995M01-2026M08",
+  "score": 0.0236943383,
+  "published": "2026-10-02T11:51:00"
+ },
+ {
+  "id": "14mz.px",
+  "path": "/ktps",
+  "title": "14mz -- Palkkasummakuvaajat toimialoittain neljännesvuositasolla (2021=100), 1995Q1-2026Q2",
+  "score": 0.0236943383,
+  "published": "2026-10-02T11:51:00"
+ },
+ {
+  "id": "14n1.px",
+  "path": "/ktps",
+  "title": "14n1 -- Palkkasummakuvaajat toimialoittain puolivuositasolla (2021=100), 1995H1-2026H1",
+  "score": 0.0236943383,
+  "published": "2026-10-02T11:51:00"
+ },
+ {
+  "id": "14n2.px",
+  "path": "/ktps",
+  "title": "14n2 -- Palkkasummakuvaajat toimialoittain vuositasolla (2021=100), 1995-2025",
+  "score": 0.0236943383,
+  "published": "2026-10-02T11:51:00"
+ },
+ {
+  "id": "14n3.px",
+  "path": "/ktps",
+  "title": "14n3 -- Palkkasummakuvaajien tarkentuminen kuukausitasolla (2021=100), 2024M01-2026M07",
+  "score": 0.0236943383,
+  "published": "2026-10-02T11:51:00"
+ },
+ {
+  "id": "14n4.px",
+  "path": "/ktps",
+  "title": "14n4 -- Palkkasummakuvaajien tarkentuminen vuositasolla (2021=100), 2024",
+  "score": 0.0236943383,
+  "published": "2026-10-02T11:51:00"
+ },
+ {
+  "id": "12tw.px",
+  "path": "/tyonv",
+  "title": "12tw -- Avoimet työpaikat kuukauden lopussa toimialan mukaan maakunnittain (2206), 2009M01-2026M09",
+  "score": 0.0236943383,
+  "published": "2026-10-16T09:27:00"
+ },
+ {
+  "id": "129s.px",
+  "path": "/ttap",
+  "title": "129s -- Työtapaturmat, 2008-2024",
+  "score": 0.0236943383,
+  "published": "2026-07-01T18:04:00"
+ },
+ {
+  "id": "12ay.px",
+  "path": "/ttap",
+  "title": "12ay -- Palkansaajien ja yrittäjien (pl. maatalousyrittäjät) työtapaturmat sattumispaikan mukaan, 2008-2024",
+  "score": 0.0236943383,
+  "published": "2026-07-01T18:04:00"
+ },
+ {
+  "id": "15bj.px",
+  "path": "/ylt",
+  "title": "15bj -- Ympäristöliiketoiminta, 2012-2024",
+  "score": 0.0236943383,
+  "published": "2026-07-01T18:36:00"
+ },
+ {
+  "id": "13w1.px",
+  "path": "/yrti",
+  "title": "13w1 -- Yritykset toimialoittain ja henkilöstön suuruusluokittain (yritysyksikkö), 2018-2025",
+  "score": 0.0236943383,
+  "published": "2026-09-30T12:31:00"
+ },
+ {
+  "id": "13w4.px",
+  "path": "/yrti",
+  "title": "13w4 -- Yritykset toimialoittain ja liikevaihdon suuruusluokittain (oikeudellinen yksikkö), 2018-2025",
+  "score": 0.0236943383,
+  "published": "2026-09-30T12:31:00"
+ },
+ {
+  "id": "13w5.px",
+  "path": "/yrti",
+  "title": "13w5 -- Yritykset toimialoittain ja henkilöstön suuruusluokittain (oikeudellinen yksikkö), 2018-2025",
+  "score": 0.0236943383,
+  "published": "2026-09-30T12:31:00"
+ },
+ {
+  "id": "13w6.px",
+  "path": "/yrti",
+  "title": "13w6 -- Yritykset toimialoittain ja oikeudellisen muodon mukaan (oikeudellinen yksikkö), 2018-2024",
+  "score": 0.0236943383,
+  "published": "2026-07-01T18:36:00"
+ },
+ {
+  "id": "13w7.px",
+  "path": "/yrti",
+  "title": "13w7 -- Yritykset toimialoittain ja omistajatyypin mukaan (oikeudellinen yksikko), 2021-2024",
+  "score": 0.0236943383,
+  "published": "2026-07-01T18:36:00"
+ },
+ {
+  "id": "13w8.px",
+  "path": "/yrti",
+  "title": "13w8 -- Yritykset toimialoittain ja sektoriluokan mukaan (oikeudellinen yksikkö), 2018-2024",
+  "score": 0.0236943383,
+  "published": "2026-07-01T18:36:00"
+ },
+ {
+  "id": "13w9.px",
+  "path": "/yrti",
+  "title": "13w9 -- Konserniyritykset (oikeudellinen yksikkö), 2018-2024",
+  "score": 0.0236943383,
+  "published": "2026-07-01T18:36:00"
+ },
+ {
+  "id": "13vz.px",
+  "path": "/yrti",
+  "title": "13vz -- Yritykset toimialoittain ja liikevaihdon suuruusluokittain (yritysyksikkö), 2018-2025",
+  "score": 0.0236943383,
+  "published": "2026-09-30T12:31:00"
+ },
+ {
+  "id": "11g5.px",
+  "path": "/alyr",
+  "title": "11g5 -- Julkisyhteisöjen toimipaikat toimialoittain ja julkisyhteisötyypin mukaan, 2013-2024",
+  "score": 0.0234562,
+  "published": "2026-07-01T17:44:00"
+ },
+ {
+  "id": "14w2.px",
+  "path": "/ttut",
+  "title": "14w2 -- Työn tuottavuuden (tuotos/työtunti) muutoksen osatekijät, 1976-2025*",
+  "score": 0.0234562,
+  "published": "2026-07-01T18:04:00"
+ },
+ {
+  "id": "14yc.px",
+  "path": "/icte",
+  "title": "14yc -- Tietotekniikan käyttö yrityksissä toimialoittain, 2021-2025",
+  "score": 0.0234562,
+  "published": "2026-07-01T17:44:00"
+ },
+ {
+  "id": "15ab.px",
+  "path": "/ntp",
+  "title": "15ab -- ANA Työllisyys ja työtunnit, vuosittain, 1975-2025*",
+  "score": 0.0232156161,
+  "published": "2026-09-17T13:47:00"
+ },
+ {
+  "id": "15ad.px",
+  "path": "/ntp",
+  "title": "15ad -- ANA Tulot ja tuotanto sektoreittain ja toimialoittain, vuosittain, 1975-2025*",
+  "score": 0.0232156161,
+  "published": "2026-09-17T13:47:00"
+ },
+ {
+  "id": "15af.px",
+  "path": "/ntp",
+  "title": "15af -- ANA Investoinnit ja kiinteä pääoma, vuosittain, 1975-2025*",
+  "score": 0.0232156161,
+  "published": "2026-09-17T13:57:00"
+ },
+ {
+  "id": "14yr.px",
+  "path": "/pt",
+  "title": "14yr -- Tuotoksen työpanos ja työpanoskertoimet, vuosittain, 2021-2023",
+  "score": 0.0201053135,
+  "published": "2026-07-01T17:49:00"
+ },
+ {
+  "id": "14ys.px",
+  "path": "/pt",
+  "title": "14ys -- Perushintaisen tuotoksen kustannuskomponentit, vuosittain, 2021-2023",
+  "score": 0.0201053135,
+  "published": "2026-07-01T17:49:00"
+ },
+ {
+  "id": "14w5.px",
+  "path": "/ttut",
+  "title": "14w5 -- Tuotoksen muutoksen osatekijät, 1976-2025*",
+  "score": 0.0201053135,
+  "published": "2026-07-01T18:04:00"
+ },
+ {
+  "id": "14w6.px",
+  "path": "/ttut",
+  "title": "14w6 -- Työpanos, pääomapanos ja niiden kontribuutiopainot, 1975-2025*",
+  "score": 0.0201053135,
+  "published": "2026-07-01T18:04:00"
+ },
+ {
+  "id": "13fe.px",
+  "path": "/kony",
+  "title": "13fe -- Konkurssit kuukausittain alueittain ja toimialoittain, 2003M01-2026M09",
+  "score": 0.0201053135,
+  "published": "2026-10-19T09:19:00"
+ },
+ {
+  "id": "13ff.px",
+  "path": "/kony",
+  "title": "13ff -- Konkurssit vuositasolla alueittain, 2003-2025",
+  "score": 0.0201053135,
+  "published": "2026-07-01T17:45:00"
+ },
+ {
+  "id": "13x2.px",
+  "path": "/alyr",
+  "title": "13x2 -- Yritysten toimipaikkojen tuotannon brutto- ja jalostusarvo toimialoittain ja maakunnittain, 2018-2024",
+  "score": 0.018955471,
+  "published": "2026-07-01T17:44:00"
+ },
+ {
+  "id": "14yg.px",
+  "path": "/pt",
+  "title": "14yg -- Käyttötaulukko ostajanhintaan, vuosittain, 2021-2023",
+  "score": 0.018955471,
+  "published": "2026-07-01T17:49:00"
+ },
+ {
+  "id": "14yh.px",
+  "path": "/pt",
+  "title": "14yh -- Tarjontataulukko perushintaan, vuosittain, 2021-2023",
+  "score": 0.018955471,
+  "published": "2026-07-01T17:49:00"
+ },
+ {
+  "id": "14ym.px",
+  "path": "/pt",
+  "title": "14ym -- Käyttötaulukko perushintaan, vuosittain, 2021-2023",
+  "score": 0.018955471,
+  "published": "2026-07-01T17:49:00"
+ },
+ {
+  "id": "14yn.px",
+  "path": "/pt",
+  "title": "14yn -- Panos-tuotostaulukko perushintaan, vuosittain, 2021-2023",
+  "score": 0.018955471,
+  "published": "2026-07-01T17:49:00"
+ },
+ {
+  "id": "14yp.px",
+  "path": "/pt",
+  "title": "14yp -- Tuonnin käyttötaulukko perushintaan, vuosittain, 2021-2023",
+  "score": 0.018955471,
+  "published": "2026-07-01T17:49:00"
+ },
+ {
+  "id": "14yq.px",
+  "path": "/pt",
+  "title": "14yq -- Tuotoksen panoskertoimet, vuosittain, 2021-2023",
+  "score": 0.018955471,
+  "published": "2026-07-01T17:49:00"
+ },
+ {
+  "id": "13k9.px",
+  "path": "/opiskt",
+  "title": "13k9 -- Ammattikorkeakoulujen opiskelijat ja tutkinnot (koulutuskoodi), 2002-2025",
+  "score": 0.018955471,
+  "published": "2026-07-01T17:49:00"
+ },
+ {
+  "id": "13w2.px",
+  "path": "/yrti",
+  "title": "13w2 -- Yritysten tilinpäätöstiedot (oikeudellinen yksikkö), 2018-2025",
+  "score": 0.018955471,
+  "published": "2026-09-30T12:31:00"
+ },
+ {
+  "id": "13vx.px",
+  "path": "/yrti",
+  "title": "13vx -- Yritysten tilinpäätöstiedot (yritysyksikkö), 2018-2025",
+  "score": 0.018955471,
+  "published": "2026-09-30T12:31:00"
+ },
+ {
+  "id": "11wx.px",
+  "path": "/entp",
+  "title": "11wx -- Energiatilinpito, 2011-2024",
+  "score": 0.0167544279,
+  "published": "2026-08-25T15:36:00"
+ },
+ {
+  "id": "11ig.px",
+  "path": "/tilma",
+  "title": "11ig -- Ilmapäästöt toimialoittain, 2008-2024",
+  "score": 0.0167544279,
+  "published": "2026-09-25T09:19:00"
+ },
+ {
+  "id": "12bd.px",
+  "path": "/altp",
+  "title": "12bd -- Tulot ja tuotanto alueittain, vuosittain, 2000-2024*",
+  "score": 0.0167544279,
+  "published": "2026-07-01T17:43:00"
+ },
+ {
+  "id": "12be.px",
+  "path": "/altp",
+  "title": "12be -- Investoinnit ja kiinteä pääoma alueittain, vuosittain, 2000-2023",
+  "score": 0.0167544279,
+  "published": "2026-07-01T17:43:00"
+ },
+ {
+  "id": "12bg.px",
+  "path": "/altp",
+  "title": "12bg -- Työllisyys ja työtunnit alueittain, vuosittain, 2000-2024*",
+  "score": 0.0167544279,
+  "published": "2026-07-01T17:43:00"
+ },
+ {
+  "id": "13fd.px",
+  "path": "/kony",
+  "title": "13fd -- Konkurssit kuukausittain oikeudellisen muodon mukaan toimialoittain, 2003M01-2026M09",
+  "score": 0.0167544279,
+  "published": "2026-10-19T09:19:00"
+ },
+ {
+  "id": "13fg.px",
+  "path": "/kony",
+  "title": "13fg -- Konkurssit vuositasolla toimialoittain, 2003-2025",
+  "score": 0.0167544279,
+  "published": "2026-07-01T17:45:00"
+ },
+ {
+  "id": "13fk.px",
+  "path": "/kony",
+  "title": "13fk -- Loppuun käsitellyt konkurssit vuositasolla käräjäoikeuksittain ja toimialoittain, 2009-2025",
+  "score": 0.0167544279,
+  "published": "2026-07-01T17:45:00"
+ },
+ {
+  "id": "15b1.px",
+  "path": "/pra",
+  "title": "15b1 -- Kokoaikaisten palkansaajien ansiot kuukaudessa toimialan (TOL2008), palkkausmuodon ja sukupuolen mukaan, 2024",
+  "score": 0.0167544279,
+  "published": "2026-07-01T17:49:00"
+ },
+ {
+  "id": "15b3.px",
+  "path": "/pra",
+  "title": "15b3 -- Palkansaajien ansiot palkattua tuntia kohden toimialan (TOL2008), palkkausmuodon ja sukupuolen mukaan, 2024",
+  "score": 0.0167544279,
+  "published": "2026-07-01T17:49:00"
+ },
+ {
+  "id": "117f.px",
+  "path": "/pthi",
+  "title": "117f -- Palvelujen tuottajahintaindeksi (2015=100), vuosittain, 2015-2025",
+  "score": 0.0167544279,
+  "published": "2026-07-01T17:49:00"
+ },
+ {
+  "id": "139b.px",
+  "path": "/yev",
+  "title": "139b -- Ympäristöverot toimialoittain, 2008-2024",
+  "score": 0.0167544279,
+  "published": "2026-07-01T18:36:00"
+ },
+ {
+  "id": "15jq.px",
+  "path": "/yrti",
+  "title": "15jq -- Yritykset toimialoittain ja henkilöstön suuruusluokittain, TOL 2025 (yritysyksikkö), 2024-2025",
+  "score": 0.0167544279,
+  "published": "2026-09-30T12:31:00"
+ },
+ {
+  "id": "15jr.px",
+  "path": "/yrti",
+  "title": "15jr -- Yritykset toimialoittain ja liikevaihdon suuruusluokittain, TOL 2025 (yritysyksikkö), 2024-2025",
+  "score": 0.0167544279,
+  "published": "2026-09-30T12:31:00"
+ },
+ {
+  "id": "15ju.px",
+  "path": "/yrti",
+  "title": "15ju -- Yritykset toimialoittain ja henkilöstön suuruusluokittain, TOL 2025 (oikeudellinen yksikkö), 2024-2025",
+  "score": 0.0167544279,
+  "published": "2026-09-30T12:31:00"
+ },
+ {
+  "id": "15jv.px",
+  "path": "/yrti",
+  "title": "15jv -- Yritykset toimialoittain ja liikevaihdon suuruusluokittain, TOL 2025 (oikeudellinen yksikkö), 2024-2025",
+  "score": 0.0167544279,
+  "published": "2026-09-30T12:31:00"
+ },
+ {
+  "id": "12ty.px",
+  "path": "/tyonv",
+  "title": "12ty -- Avoimien työpaikkojen tapahtumat toimialan mukaan kuukauden aikana (2311), 2009M01-2026M09",
+  "score": 0.0165860374,
+  "published": "2026-10-16T09:27:00"
+ },
+ {
+  "id": "115h.px",
+  "path": "/tyokay",
+  "title": "115h -- Alueella työssäkäyvät (työpaikat) alueen, toimialan (TOL 2008), sukupuolen ja vuoden mukaan, 2007-2024",
+  "score": 0.0165860374,
+  "published": "2026-08-26T10:54:00"
+ },
+ {
+  "id": "115i.px",
+  "path": "/tyokay",
+  "title": "115i -- Työlliset alueen, toimialan (TOL 2008), sukupuolen ja vuoden mukaan, 2007-2024",
+  "score": 0.0165860374,
+  "published": "2026-08-26T10:54:00"
+ },
+ {
+  "id": "117d.px",
+  "path": "/pthi",
+  "title": "117d -- Palvelujen tuottajahintaindeksi (2015=100), neljännesvuosittain, 2015Q1-2026Q2",
+  "score": 0.0134035423,
+  "published": "2026-07-27T10:43:00"
+ },
+ {
+  "id": "11wg.px",
+  "path": "/pthi",
+  "title": "11wg -- Palvelujen tuottajahintaindeksi (2015=100), kuukausittain, 2017M01-2026M06",
+  "score": 0.0134035423,
+  "published": "2026-07-27T10:43:00"
+ },
+ {
+  "id": "14gg.px",
+  "path": "/pthi",
+  "title": "14gg -- Palvelujen tuottajahintaindeksit (2021=100), neljännesvuosittain, 2015Q1-2026Q2",
+  "score": 0.0134035423,
+  "published": "2026-07-27T10:43:00"
+ },
+ {
+  "id": "14jz.px",
+  "path": "/pthi",
+  "title": "14jz -- Palvelujen tuottajahintaindeksit (2021=100), vuosittain, 2015-2025",
+  "score": 0.0134035423,
+  "published": "2026-07-01T17:49:00"
+ },
+ {
+  "id": "14k1.px",
+  "path": "/pthi",
+  "title": "14k1 -- Palvelujen tuottajahintaindeksit (2021=100), kuukausittain, 2017M01-2026M06",
+  "score": 0.0134035423,
+  "published": "2026-07-27T10:43:00"
+ },
+ {
+  "id": "12gu.px",
+  "path": "/ssij",
+  "title": "12gu -- Ulkomaiset suorat sijoitukset välittömän kohde- ja sijoittajamaan mukaan, vuosittain, 2013-2025",
+  "score": 0.0134035423,
+  "published": "2026-09-17T11:16:00"
+ },
+ {
+  "id": "15jp.px",
+  "path": "/yrti",
+  "title": "15jp -- Yritysten tilinpäätöstiedot, TOL 2025 (yritysyksikkö), 2024-2025",
+  "score": 0.0134035423,
+  "published": "2026-09-30T12:31:00"
+ },
+ {
+  "id": "15jt.px",
+  "path": "/yrti",
+  "title": "15jt -- Yritysten tilinpäätöstiedot, TOL 2025 (oikeudellinen yksikkö), 2024-2025",
+  "score": 0.0134035423,
+  "published": "2026-09-30T12:31:00"
+ },
+ {
+  "id": "11c3.px",
+  "path": "/opiskt",
+  "title": "11c3 -- Tutkintotavoitteisen koulutuksen opiskelijat ja tutkinnot (koulutuskoodi), 2004-2025",
+  "score": 0.01231194,
+  "published": "2026-10-06T10:35:00"
+ },
+ {
+  "id": "13jz.px",
+  "path": "/rpk",
+  "title": "13jz -- Rikosten asianomistajat toimialan (TOL2008) ja hyvinvointialueen mukaan, oikeushenkilöt, 2016-2025",
+  "score": 0.0118471691,
+  "published": "2026-09-03T08:03:00"
+ },
+ {
+  "id": "13ww.px",
+  "path": "/alyr",
+  "title": "13ww -- Yritysten toimipaikat toimialoittain ja maakunnittain, 2018-2024",
+  "score": 0.0110820122,
+  "published": "2026-07-01T17:44:00"
+ },
+ {
+  "id": "13wv.px",
+  "path": "/alyr",
+  "title": "13wv -- Yritysten toimipaikat toimialoittain, 2018-2024",
+  "score": 0.0110820122,
+  "published": "2026-07-01T17:44:00"
+ },
+ {
+  "id": "13w3.px",
+  "path": "/yrti",
+  "title": "13w3 -- Yritykset toimialoittain (oikeudellinen yksikkö), 2018-2025",
+  "score": 0.0110820122,
+  "published": "2026-09-30T12:31:00"
+ },
+ {
+  "id": "13vy.px",
+  "path": "/yrti",
+  "title": "13vy -- Yritykset toimialoittain (yritysyksikkö), 2018-2025",
+  "score": 0.0110820122,
+  "published": "2026-09-30T12:31:00"
+ },
+ {
+  "id": "12tc.px",
+  "path": "/tyonv",
+  "title": "12tc -- Ulkomaalaiset työnhakijat koulutuksen mukaan maakunnittain kk:n lopussa (1209), 2009M01-2026M09",
+  "score": 0.008377214,
+  "published": "2026-10-16T09:22:00"
+ },
+ {
+  "id": "15jn.px",
+  "path": "/yrti",
+  "title": "15jn -- Yritykset toimialoittain, TOL 2025 (yritysyksikkö), 2024-2025",
+  "score": 0.00725488,
+  "published": "2026-09-30T12:31:00"
+ },
+ {
+  "id": "15js.px",
+  "path": "/yrti",
+  "title": "15js -- Yritykset toimialoittain, TOL 2025 (oikeudellinen yksikkö), 2024-2025",
+  "score": 0.00725488,
+  "published": "2026-09-30T12:31:00"
+ },
+ {
+  "id": "12td.px",
+  "path": "/tyonv",
+  "title": "12td -- Työnhakijat koulutuksen mukaan maakunnittain kk:n lopussa (1220), 2009M01-2026M09",
+  "score": 0.00592358457,
+  "published": "2026-10-16T09:22:00"
+ },
+ {
+  "id": "13gw.px",
+  "path": "/rpk",
+  "title": "13gw -- Tietoon tulleet rikokset ja niiden selvittäminen rikosnimikkeittäin tutkivan viranomaisen mukaan, 2006-2025",
+  "score": 0.00502632838,
+  "published": "2026-09-03T08:01:00"
+ },
+ {
+  "id": "13j2.px",
+  "path": "/rpk",
+  "title": "13j2 -- Tietoon tulleet rikokset rikosnimikkeittäin ilmoituskuukauden mukaan, ennakko, 2006M01-2026M09*",
+  "score": 0.00502632838,
+  "published": "2026-10-19T10:46:00"
+ },
+ {
+  "id": "15df.px",
+  "path": "/syyttr",
+  "title": "15df -- Rangaistusten lukumäärä sukupuolen, iän ja rikoksen mukaan (käräjäoikeudet ja hovioikeus ensimmäisenä oikeusasteena, rangaistus- ja sakkomääräykset ja rikesakot), 2015-2024",
+  "score": 0.00502632838,
+  "published": "2026-08-19T15:27:00"
+ },
+ {
+  "id": "15dg.px",
+  "path": "/syyttr",
+  "title": "15dg -- Rangaistusten tunnuslukuja sukupuolen, iän ja rikoksen mukaan (käräjäoikeudet ja hovioikeus ensimmäisenä oikeusasteena, rangaistus- ja sakkomääräykset ja rikesakot), 2015-2024",
+  "score": 0.00502632838,
+  "published": "2026-08-19T15:27:00"
+ },
+ {
+  "id": "15dh.px",
+  "path": "/syyttr",
+  "title": "15dh -- Rangaistusten lukumäärä käräjäoikeuksittain ja rikoksittain (käräjäoikeudet ja hovioikeus ensimmäisenä oikeusasteena), 2015-2024",
+  "score": 0.00502632838,
+  "published": "2026-08-19T15:24:00"
+ },
+ {
+  "id": "15di.px",
+  "path": "/syyttr",
+  "title": "15di -- Rangaistusten tunnuslukuja käräjäoikeuksittain ja rikoksittain (käräjäoikeudet ja hovioikeus ensimmäisenä oikeusasteena), 2015-2024",
+  "score": 0.00502632838,
+  "published": "2026-08-19T15:25:00"
+ }
+]

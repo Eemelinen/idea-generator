@@ -151,15 +151,25 @@ def test_research_base_explains_the_fi_tools():
     # Plan notes 31–33: cite the `cite:` line, TOL 2025 prefixes, how Alue names resolve.
     assert "**Cite the `cite:` line `get` prints**" in text and "`unfetchable`" in text
     assert "TOL 2025" in text and "2- or 3-digit prefix" in text
-    assert "Rääkkylä `KU707`" in text and "North Karelia `MK12`" in text and "first in table order" in text
+    assert "`KU707` (Rääkkylä)" in text and "`MK12` (North Karelia)" in text and "first in table order" in text
+    # IF-204, from the first live run: area codes differ per table, the search misses folders,
+    # PRH matches codes anywhere, PDFs never verify, the shell allow-list and the self-check.
+    assert "Area variables differ between tables" in text and "Take the variable name and the codes from `meta`" in text
+    assert "search --path statfin/<folder>/" in text and "`matk` accommodation" in text
+    assert "the tool keeps only the codes that start with them" in text
+    assert "Prefer HTML pages to PDFs" in text
+    assert "## Shell" in text and "no pipes" in text and "no `cd`" in text
+    assert "uv run python -m ideaforge.validate_file --kind research runs/<run_id>/02_research/<dimension>.md" in text
+    assert "**A sentence with a number ends its paragraph**" in text and "Don't calculate in the findings" in text
 
 
 def test_fi_commands_in_the_briefs_pass_the_research_guard():
     from ideaforge import guard
 
     text = {p.stem: t for p, t in gen_agents.render_all().items()}["research-location"]
-    commands = set(re.findall(r"`(uv run python -m ideaforge\.fi\.[^`]+)`", text))
-    assert len(commands) >= 6
+    commands = set(re.findall(r"`(uv run python -m ideaforge\.(?:fi\.|validate_file )[^`]+)`", text))
+    assert len(commands) >= 7
+    assert any("validate_file" in c for c in commands)
     for command in commands:
         filled = command.replace("<table_path>", "statfin/vaerak/11ra.px").replace("<dataset>", "tour_occ_ninat")
         filled = re.sub(r"<[^>]+>", "55", filled).replace("[", "").replace("]", "")

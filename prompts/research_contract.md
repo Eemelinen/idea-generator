@@ -10,6 +10,9 @@ Write `runs/<run_id>/02_research/{{ agent.dimension }}.md` with exactly these pa
      The municipality had 1 900 residents in 2024 [src: https://pxdata.stat.fi/...].
      > Rääkkylä väkiluku 31.12.2024: 1 900
      ```
+   - **A sentence with a number ends its paragraph**, and its `>` quote follows on the next line. Two numbers from two sources are two paragraphs; a second figure sentence in the same paragraph fails the check even when the paragraph ends with a quote.
+   - "Number" means any digit except dates and years (`in 2024`, `2019–2024`, `31.12.2024`): counts, prices, percentages, ranges, industry codes (`55203`) and figures from the spec (hours, capital) all count. Refer to the spec's constraints in words ("the planned part-time hours", "the founder's capital").
+   - Don't calculate in the findings (price × occupancy × nights, break-even): give each input as a sourced, quoted claim and leave the arithmetic to Python. Your own estimate goes under Gaps as an open question, without digits.
 3. `## Candidate claims`: one or more ```json fenced blocks, each holding a JSON list of claim objects:
    ```json
    [

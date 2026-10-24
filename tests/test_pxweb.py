@@ -80,6 +80,17 @@ def test_search_needs_every_word_and_says_when_nothing_matches(capsys, recorded)
     assert (code, out) == (0, "no tables match 'porokanta'\n")
 
 
+def test_search_path_without_a_keyword_lists_the_whole_folder(capsys, recorded):
+    # IF-204: agents passed a dummy word ("x") to list a folder; it matched only because paths end in .px.
+    code, out, _ = run(capsys, recorded, "search", "--path", "statfin/vaerak/")
+    assert code == 0
+    listed = {line.split("\t")[0] for line in out.splitlines()}
+    assert {"statfin/vaerak/11ra.px", "statfin/vaerak/11re.px"} <= listed
+    code, out, err = run(capsys, recorded, "search")
+    assert (code, out) == (1, "")
+    assert "give a keyword, or --path" in err
+
+
 def test_search_json_carries_the_request(capsys, recorded):
     code, out, _ = run(capsys, recorded, "search", "11ra", "--path", "statfin/vaerak/", "--json")
     assert code == 0
@@ -106,9 +117,9 @@ def test_search_without_path_uses_the_api_search_of_each_database(project):
     assert all(r.url.startswith(API_URL_PREFIXES) for r in responses)
 
 
-# Synthetic (TICKETS.md plan note 14): no live `?query=` response is recorded yet (IF-204). These
-# hits only follow the documented PxWeb v1 search shape (`id`, `path`, `title`, `published`); the
-# titles and dates are invented and never cited.
+# Synthetic (TICKETS.md plan note 14): these hits follow the PxWeb v1 search shape (`id`, `path`,
+# `title`, `published`) that the live recording below confirmed; the titles and dates are invented
+# and never cited.
 SYNTHETIC_SEARCH_HITS = {
     "statfin": [
         {"id": "11ra.px", "path": "/vaerak", "title": "Synthetic title A", "score": 2.5,
@@ -142,6 +153,23 @@ def test_search_hits_become_table_paths(capsys, project):
         {"path": "luke/maa/muuyri/0100_muuyri.px", "text": "Synthetic title C", "updated": None, "is_folder": False}
     ]
     assert [r["url"] for r in data["requests"]] == ["https://statdb.luke.fi/PXWeb/api/v1/fi/LUKE/?query=v%C3%A4kiluku"]
+
+
+def test_search_on_the_recorded_live_answer(capsys, recorded):
+    # IF-204: the live `?query=majoitus` answers of StatFin and Luke.
+    code, out, err = run(capsys, recorded, "search", "majoitus")
+    assert code == 0, err
+    lines = out.splitlines()
+    assert lines[0] == (
+        "statfin/smat/13q8.px\t13q8 -- Yöpymisen sisältäneet kotimaanmatkat kuukausittain, 2012M01-2026M08"
+        "  (updated 2026-10-13T14:04:00)"
+    )
+    # It matches table contents, not titles: none of the hits is an accommodation table (statfin/matk/),
+    # which is why the research brief names the folders to list with --path.
+    assert "statfin/matk/" not in out
+    luke = [line for line in lines if line.startswith("luke/")]
+    assert luke and luke[0].startswith("luke/08 Indikaattorit/")  # Luke paths carry spaces: quote them
+    assert len(lines) == len(json.loads((FIXTURES / "statfin" / "search_majoitus.json").read_text(encoding="utf-8"))) + len(luke)
 
 
 @pytest.mark.parametrize(

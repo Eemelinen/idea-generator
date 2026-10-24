@@ -25,7 +25,8 @@ Policy (exit 2 = deny, reason on stderr):
 - Shell commands in strict mode must match an allow-list (uv run python -m
   ideaforge…, uv run python scripts/…, uv run pytest, git, ls, cat) and may not
   fetch from the network, substitute commands or redirect output to files.
-  Research agents may only run the ideaforge.fi data tools (plus ls/cat); the
+  Research agents may only run the ideaforge.fi data tools (plus ls/cat) and the
+  read-only research check `validate_file --kind research <file>`; the
   harness evaluator may also run the read-only harness checks, pnpm test:py and
   grep/head/tail/wc. Text inside quotes is not read as `>` or `|`.
 """
@@ -71,6 +72,9 @@ HARNESS_ALLOW = GENERAL_ALLOW + (
 RESEARCH_ALLOW = (
     re.compile(r"^uv\s+run\s+(--quiet\s+|-q\s+)?python\s+-m\s+ideaforge\.fi\.\w+(\s|$)"),
     re.compile(r"^python\s+-m\s+ideaforge\.fi\.\w+(\s|$)"),
+    # The output-contract check without --auto only reads (IF-204: the SubagentStop hook does not
+    # stop an agent that hands back with SubagentHandback, so agents check their file themselves).
+    re.compile(r"^uv\s+run\s+(--quiet\s+|-q\s+)?python\s+-m\s+ideaforge\.validate_file\s+--kind\s+research\s+\S+$"),
     re.compile(r"^(ls|cat)(\s|$)"),
 )
 

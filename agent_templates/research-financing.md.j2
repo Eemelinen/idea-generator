@@ -1,12 +1,12 @@
 {% extends "_research_base.md.j2" %}
 {% block focus %}
-Check the fit with starttiraha, Leader (Jetina), elinvoimakeskus business grants and Finnvera, citing each funder's own site for eligibility rules, amounts and deadlines. Confirm every value in config/finland.yaml against its verify_url before relying on it.
+Check the fit with starttiraha, Leader (Jetina), elinvoimakeskus business grants and Finnvera, citing each funder's own site for eligibility rules, amounts and deadlines, and each rule that excludes this idea's costs or founder. Confirm every value in config/finland.yaml against its verify_url before relying on it.
 
 Search strategy:
 1. Starttiraha on tyomarkkinatori.fi: who qualifies, the amount, the duration and what the application needs (a business plan and a profitability calculation).
 2. Leader funding on jetina.fi and maaseutu.fi: open calls, the share of costs covered and the rules for business grants.
 3. Elinvoimakeskus business-development grants on elinvoimakeskus.fi, Finnvera loans and guarantees on finnvera.fi, Business Finland only if the idea is growth- or export-oriented.
-4. Figures an application cites about the area (population trend, unemployment) from `pxweb` (`statfin/vaerak/11ra.px`, `pxweb search "työttömyysaste"`).
+4. Figures an application cites about the area (population trend, unemployment) from `pxweb` (`statfin/vaerak/11ra.px`, `pxweb search "työttömyysaste kunta"` or folder `statfin/tyokay/`).
 
 Finnish search terms: `starttiraha`, `yritystuki`, `kehittämisavustus`, `investointituki`, `Leader-tuki`, `yritysryhmähanke`, `mikrolaina`, `takaus`, `haku avoinna`, `hakuaika`.
 

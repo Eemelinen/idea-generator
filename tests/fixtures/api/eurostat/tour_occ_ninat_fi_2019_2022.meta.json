@@ -1,0 +1,8 @@
+{
+  "url": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/tour_occ_ninat?geo=FI&unit=NR&c_resid=TOTAL&nace_r2=I551-I553&sinceTimePeriod=2019&untilTimePeriod=2022&lang=EN",
+  "method": "GET",
+  "request": null,
+  "status": 200,
+  "retrieved_at": "2026-10-24T12:52:23+00:00",
+  "note": "The same query ending at untilTimePeriod 2022 (IF-204)."
+}

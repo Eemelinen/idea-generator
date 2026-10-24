@@ -1,0 +1,8 @@
+{
+  "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?mainBusinessLine=55&location=Joensuu&registrationDateStart=2015-01-01&registrationDateEnd=2025-12-31",
+  "method": "GET",
+  "request": null,
+  "status": 200,
+  "retrieved_at": "2026-10-24T12:52:21+00:00",
+  "note": "Registration-date filter (IF-204). PRH matches mainBusinessLine anywhere in the code: of the 45 companies only 12 have a 55xxx line, the rest are 25530, 4755x and 855xx. All 45 are kept so the client's prefix filter is tested on the whole page."
+}

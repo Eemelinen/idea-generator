@@ -115,6 +115,17 @@ def test_missing_cells_and_status_flags(project):
     assert list(result.frame["status"]) == ["", "", "p"]
 
 
+def test_until_ends_the_series_on_the_recorded_live_answer(capsys, project):
+    # IF-204: the live answer with untilTimePeriod, recorded next to the open-ended one.
+    meta = json.loads((FIXTURES / "tour_occ_ninat_fi_2019_2022.meta.json").read_text(encoding="utf-8"))
+    data = json.loads((FIXTURES / "tour_occ_ninat_fi_2019_2022.json").read_text(encoding="utf-8"))
+    transport = Recorded({(meta["method"], meta["url"]): data})
+    code, out, err = run(capsys, transport, *ARGV, "--until", "2022", "--json")
+    assert code == 0, err
+    assert transport.calls == [meta["url"]]
+    assert [row["value"] for row in json.loads(out)["rows"]] == NIGHTS[:4]
+
+
 def test_url_repeats_a_dimension_per_code_and_is_citable():
     url = eurostat.data_url("demo_r_pjangrp3", {"geo": ["FI", "FI1D"], "sex": ["T"]}, until="2024")
     assert url == (

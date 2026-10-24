@@ -1,6 +1,7 @@
 """Statistics Finland (StatFin) and Luke PxWeb client (IF-201).
 
-    python -m ideaforge.fi.pxweb search "<keyword>" [--db statfin|luke] [--path vaerak/] [--json]
+    python -m ideaforge.fi.pxweb search "<keyword>" [--db statfin|luke] [--json]
+    python -m ideaforge.fi.pxweb search [<keyword>] --path statfin/matk/ [--json]
     python -m ideaforge.fi.pxweb meta <table_path> [--json]
     python -m ideaforge.fi.pxweb get <table_path> --filter Alue=Rääkkylä,MK12 [--filter …] [--json]
 
@@ -458,6 +459,8 @@ def _cmd_search(args: argparse.Namespace, client: Client) -> int:
     path = args.path
     if path is not None and path.strip("/").split("/", 1)[0].lower() not in DATABASES:
         path = f"{dbs[0]}/{path}"  # a folder of --db (default statfin)
+    if path is None and not args.keyword.strip():
+        raise PxWebError("give a keyword, or --path <db>/<folder>/ to list a folder's tables")
     refs, responses = search(args.keyword, dbs, path, client)
     if args.json:
         out = {
@@ -471,7 +474,7 @@ def _cmd_search(args: argparse.Namespace, client: Client) -> int:
         for line in _request_lines(resp):
             print(line, file=sys.stderr)
     if not refs:
-        print(f"no tables match {args.keyword!r}")
+        print(f"no tables match {args.keyword!r}" if args.keyword.strip() else f"no tables in {path}")
     for r in refs:
         updated = f"  (updated {r.updated})" if r.updated else ""
         print(f"{r.path}\t{r.text}{updated}")
@@ -535,9 +538,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--lang", choices=LANGS, default="fi", help="API language (default fi)")
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("search", help="list candidate tables for a keyword")
-    s.add_argument("keyword")
+    s.add_argument("keyword", nargs="?", default="", help="optional with --path (then every table is listed)")
     s.add_argument("--db", choices=list(DATABASES), help="one database only (default: all)")
-    s.add_argument("--path", help="filter this folder's listing instead, e.g. statfin/vaerak/")
+    s.add_argument("--path", help="list or filter this folder's tables instead, e.g. statfin/vaerak/")
     s.add_argument("--json", action="store_true")
     m = sub.add_parser("meta", help="variables and values of a table")
     m.add_argument("table_path")

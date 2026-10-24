@@ -3,12 +3,12 @@
 Build a bottom-up beachhead: count of reachable customers (official statistics or PxWeb tables) × realistic annual spend × reachable share, at each step of the geography ladder. Report the trend, not just the level. Top-down 'the market is worth €X billion' figures don't count.
 
 Search strategy:
-1. Customer counts from `pxweb`: population (`statfin/vaerak/11ra.px`, `11re.px` by age), households, summer cottages or overnight stays (`pxweb search "majoitus"`) for `KU707`, `MK12` and `SSS`, over at least five years for the trend.
+1. Customer counts from `pxweb`: population (`statfin/vaerak/11ra.px`, `11re.px` by age), households, holiday homes (`statfin/raku/`) or overnight stays and room prices (`statfin/matk/`; Rääkkylä's own accommodation figures may be suppressed) for `KU707`, `MK12` and `SSS`, over at least five years for the trend.
 2. Business customers from `prh`: `search --industry <prefix> --municipality <municipality>` per municipality of the beachhead.
-3. Spend per customer from published prices or the household consumption survey; the Finland/EU step from `eurostat` (e.g. `tour_occ_ninat` for tourism).
+3. Spend per customer from published prices or the household consumption survey; the Finland/EU step from `eurostat` (e.g. `tour_occ_ninat` for tourism, `tour_ce_oan3` with `--geo FI1D3` for nights booked through online platforms in North Karelia).
 4. Show each multiplication's inputs as claims; Python does the arithmetic.
 
-Finnish search terms: `väkiluku`, `väestöennuste`, `asuntokunnat`, `kesämökit`, `yöpymiset`, `toimiala`, `markkinan koko`, `kysyntä`.
+Finnish search terms: `väkiluku`, `väestöennuste`, `asuntokunnat`, `kesämökit` (web searches; for `pxweb` use `vapaa-ajan asuinrakennukset`), `yöpymiset`, `toimiala`, `markkinan koko`, `kysyntä`.
 
 Finnish data tools for this dimension: `pxweb` (customer counts and trends), `prh` (business customers), `eurostat` (Finland and EU comparisons).
 {% endblock %}

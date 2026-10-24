@@ -102,7 +102,12 @@ def claim(claim_id, url, quote, *, value=None, unit=None, dimension="pricing", s
 
 
 SAUNA = claim("pricing-101", "https://example.fi/mokki-123", "Saunamökki 90 € / yö.", value=90, unit="EUR/night")
-LINEN = claim("pricing-102", "https://example.fi/mokki-456", "Liinavaatteet ja loppusiivous sisältyvät hintaan.")
+LINEN = claim(
+    "pricing-102",
+    "https://example.fi/mokki-456",
+    "Liinavaatteet ja loppusiivous sisältyvät hintaan.",
+    statement="Cabin hosts in the area include linen and final cleaning in the price.",
+)
 
 
 class FakeWeb:
@@ -182,6 +187,18 @@ def test_a_sentence_is_covered_by_a_claim_with_its_url_and_quote():
     # The right URL with another quote does not cover a figure sentence.
     wrong_quote = verify.CandidateClaim.model_validate(SAUNA | {"quote": "Hinta 650 € / viikko."})
     assert len(extract.uncovered(PRICING_MD, [wrong_quote, extra[1]])) == 1
+
+
+def test_a_sentence_without_a_quote_needs_a_claim_that_states_it():
+    # IF-204: a claim on the same page about another fact of it does not cover the sentence.
+    other_fact = verify.CandidateClaim.model_validate(LINEN | {"statement": "The host accepts card payments on arrival."})
+    sauna = verify.CandidateClaim.model_validate(SAUNA)
+    assert [s.urls for s in extract.uncovered(PRICING_MD, [sauna, other_fact])] == [("https://example.fi/mokki-456",)]
+    # A restatement in other words still covers it, and so does a quote the sentence repeats.
+    reworded = LINEN | {"statement": "Linen and final cleaning are included in the price by cabin hosts in the area."}
+    assert extract.uncovered(PRICING_MD, [sauna, verify.CandidateClaim.model_validate(reworded)]) == []
+    md = PRICING_MD.replace("include linen and final cleaning in the price", 'say "Liinavaatteet ja loppusiivous sisältyvät hintaan."')
+    assert extract.uncovered(md, [sauna, other_fact]) == []
 
 
 def test_files_without_uncovered_sentences_need_no_extractor():

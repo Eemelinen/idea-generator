@@ -313,7 +313,7 @@ SQLite tables mirror these: `runs`, `idea_versions`, `stages` (run_id, stage, st
   - Never invent a URL. Only cite URLs that appeared in a search result or were fetched.
 - Finland data tools exposed to subagents (free):
   - `python -m ideaforge.fi.pxweb search "<keyword>"` → candidate StatFin/Luke tables; `... get <table_path> --filter Alue=Rääkkylä,Pohjois-Karjala` → CSV. Output includes the `cite:` URL (the table URL with the selection in its query string) to cite as `source_type: api`.
-  - `python -m ideaforge.fi.prh search --name "<text>" | --industry <TOL 2025 code or prefix> --municipality Rääkkylä` → companies in that industry/area (count, names, registration dates, status). Use for competition density and "has this been tried here".
+  - `python -m ideaforge.fi.prh search --name "<text>" | --industry <TOL 2025 code or prefix> --municipality Rääkkylä` → companies in that industry/area (count, names, registration dates, status; an industry search keeps only codes that start with the digits, because PRH matches them anywhere). Use for competition density and "has this been tried here".
   - `python -m ideaforge.fi.eurostat get <dataset> --geo FI`.
 - `SubagentStop` hook: runs `validate_file.py --kind research runs/<run_id>/02_research/<dimension>.md` (checks the JSON block parses as `list[Claim]`, word limit, no bare numbers without a quote, every cited URL in the agent's `.seen_urls.txt` or an `ideaforge.fi` API URL; sentences without `[src: …]` are warnings). On failure the orchestrator re-launches that subagent once with the validator's error message appended; second failure → `INSUFFICIENT_DATA` for that dimension.
 

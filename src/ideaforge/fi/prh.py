@@ -11,8 +11,12 @@ and the exact request (method, URL, retrieval time) on stderr; `--json` prints a
 object. Cite the URL as `source_url` with `source_type: api`.
 
 Industry codes are TOL 2025 since 2026-01-01 (`typeCodeSet` TOIMI4): a 5-digit TOL 2008 code such
-as 55201 may find nothing, while a shorter prefix (55) matches every code under it. The count is
-the whole match; the rows are one page of it (`--page` for the next).
+as 55201 may find nothing, so a shorter prefix (55) is the safer start. PRH matches
+`mainBusinessLine` anywhere in the code (55 also returns 25530, 47554 and 85520), so an industry
+search reads every result page (at most MAX_PAGES) and keeps only the codes that start with the
+digits: the count is those companies, and `--page` pages through them. Any other search prints
+PRH's own `totalResults` and one page of rows; a page past the last one is an error, because PRH
+then answers a total of 0.
 
 Limitations of the open data: no sole traders (toiminimi) and no contact details, so a count is a
 lower bound on the businesses in an industry. Responses are cached in cache/prh/ for 24 h
@@ -25,7 +29,7 @@ import argparse
 import json
 import sys
 from collections.abc import Callable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import date, datetime
 from typing import Any
 from urllib.parse import quote, urlencode
@@ -39,6 +43,8 @@ USER_AGENT = "ideaforge/0.1 (local business-idea validator; PRH company search c
 BASE_URL = "https://avoindata.prh.fi/opendata-ytj-api/v3/companies"
 LANG_CODES = {"fi": "1", "sv": "2", "en": "3"}  # `languageCode` of the descriptions
 TRADE_REGISTER = "1"  # `register` of the trade-register entries in `registeredEntries`
+PAGE_SIZE = 100  # companies per PRH result page (IF-204 recordings)
+MAX_PAGES = 10  # result pages an industry search reads before it asks for narrower criteria
 COLUMNS = [
     "name",
     "business_id",
@@ -177,27 +183,67 @@ class SearchResult:
     criteria: Criteria
     count: int
     companies: list[Company]
-    response: Response
+    response: Response  # the first (or only) request, the one to cite
+    api_count: int | None = None  # PRH's totalResults when an industry search filtered it
+    pages_read: int = 1
 
     def frame(self) -> pd.DataFrame:
         return pd.DataFrame([asdict(c) for c in self.companies], columns=COLUMNS)
 
 
-def search(criteria: Criteria, client: Client | None = None) -> SearchResult:
-    client = client or Client()
+def _page(criteria: Criteria, client: Client) -> tuple[Response, list[Company], int]:
     resp = client.request("GET", search_url(criteria))
     data = resp.data
     if not isinstance(data, dict) or not isinstance(data.get("companies"), list):
         raise FiDataError(f"{resp.url} did not return a company list")
     companies = [parse_company(c, client.lang) for c in data["companies"] if isinstance(c, dict)]
     total = data.get("totalResults")
-    count = total if isinstance(total, int) else len(companies)
-    return SearchResult(criteria, count, companies, resp)
+    return resp, companies, total if isinstance(total, int) else len(companies)
+
+
+def _industry_code(criteria: Criteria) -> str:
+    return (criteria.industry or "").strip().replace(".", "")
+
+
+def search(criteria: Criteria, client: Client | None = None) -> SearchResult:
+    client = client or Client()
+    code = _industry_code(criteria)
+    if not code:
+        resp, companies, total = _page(criteria, client)
+        if (criteria.page or 1) > 1 and not companies:
+            raise FiDataError(
+                f"{resp.url}: page {criteria.page} is past the last page of results "
+                "(PRH then reports 0 companies); run without --page for the count"
+            )
+        return SearchResult(criteria, total, companies, resp)
+
+    # PRH matches the digits anywhere in the code, so read every page and keep the true prefix matches.
+    first = replace(criteria, page=None)
+    resp, rows, total = _page(first, client)
+    if total > MAX_PAGES * PAGE_SIZE:
+        raise FiDataError(
+            f"{resp.url}: {total} companies have {code} somewhere in their industry code, more than the "
+            f"{MAX_PAGES * PAGE_SIZE} an industry search reads; narrow it with --municipality, "
+            "--registered-from/--registered-to or a longer code"
+        )
+    found, pages = list(rows), 1
+    while rows and len(found) < total:
+        pages += 1
+        _, rows, _ = _page(replace(first, page=pages), client)
+        found += rows
+    matches = [c for c in found if (c.industry_code or "").startswith(code)]
+    start = ((criteria.page or 1) - 1) * PAGE_SIZE
+    return SearchResult(criteria, len(matches), matches[start : start + PAGE_SIZE], resp, total, pages)
 
 
 def hints(result: SearchResult) -> list[str]:
     out = []
-    code = (result.criteria.industry or "").strip().replace(".", "")
+    code = _industry_code(result.criteria)
+    if result.api_count is not None and result.api_count != result.count:
+        out.append(
+            f"PRH returned {result.api_count} companies with {code} somewhere in their industry code "
+            f"({result.pages_read} page(s) read); count is the {result.count} whose code starts with {code}"
+        )
     if result.count == 0 and len(code) > 2:
         out.append(
             f"no match for industry {code}: PRH uses TOL 2025 codes since 2026-01-01, so a TOL 2008 code "

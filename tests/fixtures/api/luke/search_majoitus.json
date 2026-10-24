@@ -1,0 +1,72 @@
+[
+ {
+  "id": "01_Maaseutuyrit_toimialajakauma.px",
+  "path": "/08 Indikaattorit/08 Maaseudun yritystoiminta ja elämänlaatu/06 Maaseutuyritysten toimialajakauma",
+  "title": "Yritysten toimialajakauma kaupunki-maaseutuluokituksella",
+  "score": 0.229941323,
+  "published": "2025-05-20T08:45:00"
+ },
+ {
+  "id": "01_Maaseutuyrit_toimialajakauma.px",
+  "path": "/08a CAP-indikaattorit/09 Maaseudun työllisyys kasvu ja paikallinen osallisuus/06 Maaseutuyritysten toimialajakauma",
+  "title": "Yritysten toimialajakauma kaupunki-maaseutuluokituksella",
+  "score": 0.229941323,
+  "published": "2025-05-20T08:45:00"
+ },
+ {
+  "id": "01_Pienet_kasvuyritykset.px",
+  "path": "/08 Indikaattorit/08 Maaseudun yritystoiminta ja elämänlaatu/04 Kasvavien maaseutuyritysten osuus",
+  "title": "Pienet kasvuyritykset ja niiden henkilöstön määrä toimialoittain kaupunki-maaseutuluokituksella",
+  "score": 0.211279109,
+  "published": "2025-05-28T09:03:00"
+ },
+ {
+  "id": "01_Pienet_kasvuyritykset.px",
+  "path": "/08a CAP-indikaattorit/09 Maaseudun työllisyys kasvu ja paikallinen osallisuus/11 Kasvavien maaseutuyritysten osuus",
+  "title": "Pienet kasvuyritykset ja niiden henkilöstön määrä toimialoittain kaupunki-maaseutuluokituksella",
+  "score": 0.211279109,
+  "published": "2025-06-05T11:34:00"
+ },
+ {
+  "id": "02_Kasvuyritykset.px",
+  "path": "/08 Indikaattorit/08 Maaseudun yritystoiminta ja elämänlaatu/04 Kasvavien maaseutuyritysten osuus",
+  "title": "Kasvuyritykset ja niiden henkilöstön määrä toimialoittain ja kokoluokittain kaupunki-maaseutuluokituksella",
+  "score": 0.176065922,
+  "published": "2025-05-26T08:34:00"
+ },
+ {
+  "id": "02_Kasvuyritykset.px",
+  "path": "/08a CAP-indikaattorit/09 Maaseudun työllisyys kasvu ja paikallinen osallisuus/11 Kasvavien maaseutuyritysten osuus",
+  "title": "Kasvuyritykset ja niiden henkilöstön määrä toimialoittain ja kokoluokittain kaupunki-maaseutuluokituksella",
+  "score": 0.176065922,
+  "published": "2025-06-05T11:34:00"
+ },
+ {
+  "id": "07_Monialaisten_tilojen_lkm_toimiala.px",
+  "path": "/maa/muuyri/zz_arkisto",
+  "title": "Toimialaluokitus 2000-2016: Monialaisten maatalous- ja puutarhayritysten lukumäärä toimialoittain",
+  "score": 0.140852749,
+  "published": "2021-10-12T10:00:00"
+ },
+ {
+  "id": "0100_muuyri.px",
+  "path": "/maa/muuyri",
+  "title": "Monialaisten maatalous- ja puutarhayritysten lukumäärä ELY-keskuksittain",
+  "score": 0.115856811,
+  "published": "2025-08-11T13:36:00"
+ },
+ {
+  "id": "0200_muuyri.px",
+  "path": "/maa/muuyri",
+  "title": "Monialaisten maatalous- ja puutarhayritysten lukumäärä tuotantosuunnittain",
+  "score": 0.115856811,
+  "published": "2025-08-11T13:37:00"
+ },
+ {
+  "id": "01a_Monialaisten_maatalous_puutarhayrit_lkm_ELY.px",
+  "path": "/08a CAP-indikaattorit/08 Maaseudun yritystoiminnan kehittäminen/02 Monialaiset maatilat",
+  "title": "Monialaisten maatalous- ja puutarhayritysten lukumäärä ELY-keskuksittain",
+  "score": 0.09930584,
+  "published": "2025-05-13T09:44:00"
+ }
+]

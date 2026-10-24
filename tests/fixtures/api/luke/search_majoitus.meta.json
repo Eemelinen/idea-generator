@@ -1,0 +1,8 @@
+{
+  "url": "https://statdb.luke.fi/PXWeb/api/v1/fi/LUKE/?query=majoitus",
+  "method": "GET",
+  "request": null,
+  "status": 200,
+  "retrieved_at": "2026-10-24T12:52:18+00:00",
+  "note": "The Luke side of the same search (IF-204)."
+}

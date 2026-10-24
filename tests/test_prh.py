@@ -10,7 +10,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from ideaforge import config
-from ideaforge.fi import API_URL_PREFIXES, prh
+from ideaforge.fi import API_URL_PREFIXES, prh, requery
 
 FIXTURES = config.ROOT / "tests" / "fixtures" / "api" / "prh"
 T0 = datetime(2026, 10, 24, 12, 0, tzinfo=UTC)
@@ -164,3 +164,98 @@ def test_second_search_within_24_hours_is_a_cache_hit(capsys, recorded, project)
     assert f"retrieved_at: {T0.isoformat()} (from cache)" in err
     run(capsys, recorded, *argv, now=T0 + timedelta(hours=24))
     assert len(recorded.calls) == 2
+
+
+# ---------------------------------------------------------------- industry prefix (IF-204)
+
+JOENSUU_URL = (
+    "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?mainBusinessLine=55&location=Joensuu"
+    "&registrationDateStart=2015-01-01&registrationDateEnd=2025-12-31"
+)
+JOENSUU_ARGV = (
+    "search", "--industry", "55", "--municipality", "Joensuu",
+    "--registered-from", "2015-01-01", "--registered-to", "2025-12-31",
+)  # fmt: skip
+
+
+def test_an_industry_search_counts_only_codes_that_start_with_the_prefix(capsys, recorded):
+    # The live answer: PRH matched 45 companies with "55" anywhere in the code, 12 of them 55xxx.
+    code, out, err = run(capsys, recorded, *JOENSUU_ARGV)
+    assert code == 0, err
+    assert recorded.calls == [JOENSUU_URL]  # 45 fit on one page
+    lines = out.splitlines()
+    assert lines[0] == "count: 12"
+    assert len(lines) == 2 + 12
+    assert all(row.split(",")[5].startswith("55") for row in lines[2:])
+    assert "note: PRH returned 45 companies with 55 somewhere in their industry code" in err
+    assert f"request: GET {JOENSUU_URL}" in err
+
+
+def test_requery_of_an_industry_url_gives_the_prefix_count(recorded):
+    answer = requery.requery(JOENSUU_URL, recorded, now=lambda: T0)
+    assert answer.values == [12]
+
+
+def test_the_recorded_page_after_the_last_reports_zero_companies():
+    # Why the client never trusts a later page's total: PRH answers 0 past the end (IF-204 recording).
+    page1 = json.loads((FIXTURES / "industry_55_joensuu_2015_2025.json").read_text(encoding="utf-8"))
+    page2 = json.loads((FIXTURES / "industry_55_joensuu_2015_2025_page2.json").read_text(encoding="utf-8"))
+    assert (page1["totalResults"], len(page1["companies"])) == (45, 45)
+    assert page2 == {"totalResults": 0, "companies": []}
+
+
+def _synthetic_company(n: int, code: str) -> dict:
+    # Synthetic (TICKETS.md plan note 14): the recorded record shape with invented names and ids.
+    return {
+        "businessId": {"value": f"0000{n:03d}-0", "registrationDate": "2020-01-01"},
+        "names": [{"name": f"Synthetic {n} Oy", "type": "1"}],
+        "mainBusinessLine": {"type": code, "descriptions": [{"languageCode": "1", "description": "synthetic"}]},
+        "companyForms": [],
+        "registeredEntries": [],
+        "tradeRegisterStatus": None,
+    }
+
+
+def _synthetic_pages(total: int, code_of) -> dict:
+    url = "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?mainBusinessLine=55"
+    pages = {}
+    for page in range(1, (total - 1) // prh.PAGE_SIZE + 2):
+        numbers = range((page - 1) * prh.PAGE_SIZE, min(total, page * prh.PAGE_SIZE))
+        companies = [_synthetic_company(n, code_of(n)) for n in numbers]
+        pages[("GET", url if page == 1 else f"{url}&page={page}")] = {"totalResults": total, "companies": companies}
+    return pages
+
+
+def test_an_industry_search_reads_every_page_and_pages_through_the_matches(capsys, project):
+    # Synthetic: 250 companies over 3 pages, every second one a 55xxx line.
+    transport = Recorded(_synthetic_pages(250, lambda n: "55203" if n % 2 == 0 else "85520"))
+    code, out, err = run(capsys, transport, "search", "--industry", "55")
+    assert code == 0, err
+    assert len(transport.calls) == 3
+    assert out.splitlines()[0] == "count: 125"
+    assert len(out.splitlines()) == 2 + 100
+    assert "(3 page(s) read)" in err
+    assert "note: 100 of 125 companies shown (page 1); --page 2 for more" in err
+
+    code, out, _ = run(capsys, transport, "search", "--industry", "55", "--page", "2")
+    assert code == 0
+    assert out.splitlines()[0] == "count: 125"
+    assert len(out.splitlines()) == 2 + 25
+
+
+def test_an_industry_search_over_the_page_limit_asks_for_narrower_criteria(capsys, project):
+    total = prh.MAX_PAGES * prh.PAGE_SIZE + 1
+    transport = Recorded({key: value for key, value in _synthetic_pages(total, lambda n: "55100").items() if "page=" not in key[1]})
+    code, out, err = run(capsys, transport, "search", "--industry", "55")
+    assert (code, out) == (1, "")
+    assert len(transport.calls) == 1
+    assert "narrow it with --municipality" in err
+
+
+def test_a_page_past_the_last_is_an_error_not_a_zero_count(capsys, project):
+    # Synthetic: the past-the-end answer recorded above, for a name search.
+    url = f"{NAME_URL}&page=7"
+    transport = Recorded({("GET", url): {"totalResults": 0, "companies": []}})
+    code, out, err = run(capsys, transport, "search", "--name", "Rääkkylän", "--page", "7")
+    assert (code, out) == (1, "")
+    assert "page 7 is past the last page" in err

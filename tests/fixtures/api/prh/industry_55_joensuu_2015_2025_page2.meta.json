@@ -1,0 +1,8 @@
+{
+  "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?mainBusinessLine=55&location=Joensuu&registrationDateStart=2015-01-01&registrationDateEnd=2025-12-31&page=2",
+  "method": "GET",
+  "request": null,
+  "status": 200,
+  "retrieved_at": "2026-10-24T12:52:23+00:00",
+  "note": "The page after the last one (IF-204): pages are numbered from 1 and hold 100 companies; past the end PRH answers totalResults 0, not the total."
+}

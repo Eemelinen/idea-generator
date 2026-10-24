@@ -280,7 +280,7 @@
       "area": "research",
       "title": "Research briefs tuned on live runs",
       "user_visible_behavior": "Live research-agent runs on a real idea produce files that pass `validate_file --kind research`; the briefs' search strategies, Finnish search terms and `fi` tool advice are adjusted from what the agents actually did, and the claim-extractor pass adds a prose claim the parser missed.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-029"],
       "ticket": "IF-204",
       "spec": "docs/TICKETS.md#if-204-research-briefs-tuned-on-live-runs",
@@ -288,7 +288,10 @@
         "L1: pnpm check",
         "manual: one research agent run live passes validate_file --kind research, and the extractor adds a missed prose claim"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-24 pnpm check → pass (working tree on 4884a15)",
+        "2026-10-24 manual: one research agent run live passes validate_file --kind research, and the extractor adds a missed prose claim → observed by eemeli: the sauna run 20261024-090047-sauna-and-lake-cabin-rentals (stages 0-3, F-029 briefs): all 11 research files pass validate_file --kind research (location on the first launch, the other 10 after the skill's re-launch); the claim-extractor pass added market-102 (basic cottage 300-500 EUR/week, Taloustaito), a prose claim the parser missed, which verified, plus market-101 and killcause-101; tuning from that run is in TICKETS.md plan note 36; the tuned briefs have not run live yet (F-013) (working tree on 4884a15)"
+      ],
       "attempts": 0,
       "notes": "Human-only: prompt tuning needs live agent runs. The code half of the original F-012 (drafted briefs, claim-extractor agent) is F-029. Also record the live API responses plan notes 31–32 left unrecorded (PxWeb `?query=` search, PRH registration-date and page parameters, Eurostat `untilTimePeriod`)."
     },

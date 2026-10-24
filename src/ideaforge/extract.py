@@ -3,7 +3,10 @@
 A `[src: …]` sentence of a research file (the sections the prose rules check) is *covered* when
 one of the file's candidate claims cites one of the sentence's URLs and, for a sentence followed
 by a `> quote` block (every figure sentence is), quotes that block (`verify.quote_matches`, either
-way round). `write_request` lists the uncovered sentences of every 02_research/*.md in
+way round). A sentence without a quote block is covered only when such a claim also states it:
+the claim's statement and the sentence (without its tags) reach rapidfuzz `token_set_ratio` ≥
+COVER_RATIO, or the claim's quote appears in the sentence (IF-204: on the first live run, a claim
+on the same page often stated another fact of it). `write_request` lists the uncovered sentences of every 02_research/*.md in
 03_claims/extracted/request.json (scripts/extract_claims.py); only when it lists a file does the
 orchestrator launch the `claim-extractor` agent, which writes one JSON list of candidate claims
 per listed file to 03_claims/extracted/<stem>.json. `verify.parse_run` adds the claims that pass
@@ -24,6 +27,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from pydantic import TypeAdapter, ValidationError
+from rapidfuzz import fuzz
 
 from ideaforge import agents, runs
 from ideaforge.schemas import (
@@ -38,11 +42,16 @@ from ideaforge.validate_file import (
     _format_errors,
     candidate_claims,
     claim_ids_elsewhere,
+    SRC_TAG_RE,
     normalize_url,
     sourced_sentences,
 )
 
 _CANDIDATES = TypeAdapter(list[CandidateClaim])
+# A quote-less sentence and a claim's statement that score this (token_set_ratio) state one fact.
+# On the first live run (IF-204) other facts of the same page scored 29-58 and restatements 56-99;
+# a restatement below the line only reaches the extractor, which skips a sentence a claim repeats.
+COVER_RATIO = 70
 
 
 def research_files(run_dir: Path) -> list[Path]:
@@ -74,7 +83,11 @@ def covers(claim: CandidateClaim, sentence: SourcedSentence) -> bool:
     if normalize_url(claim.source_url) not in sentence.urls:
         return False
     if sentence.quote is None:
-        return True
+        text = SRC_TAG_RE.sub("", sentence.sentence)
+        return (
+            fuzz.token_set_ratio(verify.normalize(claim.statement), verify.normalize(text)) >= COVER_RATIO
+            or verify.quote_matches(claim.quote, text)
+        )
     return verify.quote_matches(claim.quote, sentence.quote) or verify.quote_matches(sentence.quote, claim.quote)
 
 

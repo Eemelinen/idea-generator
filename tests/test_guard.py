@@ -229,6 +229,10 @@ def test_research_agent_limited_to_fi_tools(active_run, project):
     ok = "uv run python -m ideaforge.fi.prh search --municipality Rääkkylä"
     assert guard.check_bash(bash(ok, **RESEARCH)) is None
     assert guard.check_bash(bash("uv run python -m ideaforge.validate_file x", **RESEARCH)) is not None
+    check = "uv run python -m ideaforge.validate_file --kind research runs/r/02_research/pricing.md"
+    assert guard.check_bash(bash(check, **RESEARCH)) is None
+    for not_ok in (f"{check} --auto", "uv run python -m ideaforge.validate_file --auto", f"{check} x"):
+        assert guard.check_bash(bash(not_ok, **RESEARCH)) is not None, not_ok
     assert guard.check_bash(bash("git status", **RESEARCH)) is not None
     assert guard.check_bash(bash("curl https://x", **RESEARCH)) is not None
 

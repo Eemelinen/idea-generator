@@ -1,0 +1,8 @@
+{
+  "url": "https://pxdata.stat.fi/PXWeb/api/v1/fi/StatFin/?query=majoitus",
+  "method": "GET",
+  "request": null,
+  "status": 200,
+  "retrieved_at": "2026-10-24T12:52:18+00:00",
+  "note": "The database search (IF-204): hits are {id, path, title, score, published}; 'majoitus' finds the travel (smat) tables, while inflected or compound words such as 'kesämökki' find nothing."
+}
