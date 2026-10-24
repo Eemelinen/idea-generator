@@ -100,9 +100,10 @@ ideaforge/
 │   ├── golden.py                  # eval golden set: load + validate, find each idea's run, the three checks
 │   ├── validate_file.py           # CLI: validate a JSON file against a schema (used by hooks)
 │   └── fi/                        # free Finnish data tools
+│       ├── http.py                # shared transport, 24 h cache and request printing
 │       ├── pxweb.py               # Statistics Finland + Luke PxWeb client
 │       ├── prh.py                 # PRH open data (YTJ) client
-│       └── eurostat.py
+│       └── eurostat.py            # Eurostat JSON-stat client
 ├── scripts/
 │   ├── gen_agents.py              # render agent_templates/* with config/models.yaml → .claude/agents/
 │   ├── new_run.py                 # create run dir + db row + meta.json, print run_id; --from = next version
@@ -390,8 +391,9 @@ The development harness (§14) adds its own hooks through its Claude Code plugin
 All free, no keys. Thin wrappers with on-disk caching (24 h) and a `--json` flag.
 
 - `pxweb.py`: base URLs for StatFin (`https://pxdata.stat.fi/PXWeb/api/v1/{lang}/StatFin/`) and Luke (`https://statdb.luke.fi/PXWeb/api/v1/{lang}/LUKE/`). Functions: `list_tables(path)`, `metadata(table)`, `query(table, filters) -> DataFrame`. Handle the 100 000-cell limit by refusing with a helpful message. Wrap the base URL so the newer API can be swapped in. CLI: `search`, `meta` (variables and value codes) and `get` (CSV on stdout, the request on stderr); details in TICKETS.md plan note 31.
-- `prh.py`: `https://avoindata.prh.fi/opendata-ytj-api/v3/companies` — search by name, TOL industry code, municipality, registration date; return count + rows. Note in docstring: no sole traders, no contact details.
-- `eurostat.py`: JSON-stat endpoint; `get(dataset, filters)`.
+- `prh.py`: `https://avoindata.prh.fi/opendata-ytj-api/v3/companies` — search by name, TOL industry code, municipality, registration date; return count + rows. Note in docstring: no sole traders, no contact details. CLI `search` (the count and CSV rows on stdout, the request on stderr); industry codes are TOL 2025 since 2026-01-01, details in TICKETS.md plan note 32.
+- `eurostat.py`: JSON-stat endpoint; `get(dataset, filters)`. CLI `get <dataset> --geo FI [--filter dim=code] [--since …]` (CSV on stdout, the request on stderr).
+- `http.py`: the transport (`requests` + `truststore`), the 24 h cache under `cache/<tool>/` and the request lines every tool prints.
 - Each tool prints the exact request URL so the subagent can cite it as `source_url` with `source_type: api`.
 
 `config/finland.yaml` holds _hints_ (VAT small-activity threshold, starttiraha daily amount and max months, Leader group name and contact, employment-area contact, elinvoimakeskus grant URL, municipality facts) each with `verify_at_runtime: true` and `verify_url`. The regulation/financing subagents are instructed to confirm every hint against its `verify_url` before citing it.

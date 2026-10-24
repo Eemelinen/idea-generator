@@ -21,42 +21,36 @@ Base URLs (one `Api` per API version, so the newer PxWeb API can be swapped in):
     Luke:    https://statdb.luke.fi/PXWeb/api/v1/{lang}/LUKE/
 
 Queries over 100 000 cells are refused before any data is requested, with the size of every
-variable and a hint which to filter. Responses are cached in cache/pxweb/ for 24 h. The HTTP
-layer is a plain callable (`Transport`) so tests replay the IF-200 recordings and never touch the
-network. Search without `--path` uses the API's own search (`?query=`); with `--path` it filters
-that folder's listing.
+variable and a hint which to filter. Responses are cached in cache/pxweb/ for 24 h and the HTTP
+layer is a plain callable (`Transport`, both in `ideaforge.fi.http`), so tests replay the IF-200
+recordings and never touch the network. Search without `--path` uses the API's own search
+(`?query=`); with `--path` it filters that folder's listing.
 """
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
-import os
 import sys
 from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime, timedelta
-from pathlib import Path
+from datetime import datetime
 from typing import Any
 from urllib.parse import quote
 
 import pandas as pd
 
-from ideaforge import config
+from ideaforge.fi import http
+from ideaforge.fi.http import Response, Transport
+from ideaforge.fi.http import now_utc as _now
 
 USER_AGENT = "ideaforge/0.1 (local business-idea validator; PxWeb statistics client)"
-TIMEOUT_S = 10
 CELL_LIMIT = 100_000
-CACHE_TTL = timedelta(hours=24)
 LANGS = ("fi", "en", "sv")
 
-# method, url, JSON body (None for GET) → parsed JSON response
-Transport = Callable[[str, str, dict[str, Any] | None], Any]
 
-
-class PxWebError(Exception):
+class PxWebError(http.FiDataError):
     """A request, lookup or filter that cannot be answered; the message is meant for the user."""
 
 
@@ -119,43 +113,10 @@ def split_table_path(table_path: str) -> tuple[str, str]:
 
 # ---------------------------------------------------------------- transport and cache
 
-
-def requests_transport(method: str, url: str, body: dict[str, Any] | None) -> Any:
-    import requests
-    import truststore
-
-    truststore.inject_into_ssl()
-    headers = {"User-Agent": USER_AGENT}
-    try:
-        if method == "GET":
-            r = requests.get(url, headers=headers, timeout=TIMEOUT_S)
-        else:
-            r = requests.post(url, json=body, headers=headers, timeout=TIMEOUT_S)
-    except requests.RequestException as e:
-        raise PxWebError(f"{method} {url} failed: {type(e).__name__}: {e}") from e
-    if r.status_code >= 400:
-        raise PxWebError(f"{method} {url} → HTTP {r.status_code}: {r.text.strip()[:300]}")
-    try:
-        return r.json()
-    except ValueError as e:
-        raise PxWebError(f"{method} {url} did not return JSON") from e
+requests_transport = http.requests_transport(USER_AGENT)
 
 
-@dataclass(frozen=True)
-class Response:
-    method: str
-    url: str
-    body: dict[str, Any] | None
-    data: Any
-    retrieved_at: datetime
-    from_cache: bool
-
-
-def _now() -> datetime:
-    return datetime.now(UTC).replace(microsecond=0)
-
-
-class Client:
+class Client(http.CachedClient):
     """Requests through the 24 h cache in cache/pxweb/ (keyed by method, URL and body)."""
 
     def __init__(
@@ -166,42 +127,8 @@ class Client:
     ) -> None:
         if lang not in LANGS:
             raise PxWebError(f"language must be one of {', '.join(LANGS)}")
-        self.transport = transport or requests_transport
+        super().__init__(transport or requests_transport, "pxweb", now)
         self.lang = lang
-        self.now = now
-
-    def request(self, method: str, url: str, body: dict[str, Any] | None = None) -> Response:
-        key = json.dumps([method, url, body], ensure_ascii=False, sort_keys=True)
-        path = config.CACHE_DIR / "pxweb" / f"{hashlib.sha256(key.encode('utf-8')).hexdigest()}.json"
-        now = self.now()
-        if path.is_file():
-            cached = _read_cache_entry(path)  # None if unreadable: fetch again and overwrite it
-            if cached is not None and now - cached[1] < CACHE_TTL:
-                return Response(method, url, body, cached[0], cached[1], from_cache=True)
-        data = self.transport(method, url, body)
-        entry = {"method": method, "url": url, "body": body, "retrieved_at": now.isoformat(), "data": data}
-        # Write then rename, so a killed process never leaves a truncated entry that counts as cached.
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
-        try:
-            tmp.write_text(json.dumps(entry, ensure_ascii=False), encoding="utf-8")
-            os.replace(tmp, path)
-        finally:
-            tmp.unlink(missing_ok=True)
-        return Response(method, url, body, data, now, from_cache=False)
-
-
-def _read_cache_entry(path: Path) -> tuple[Any, datetime] | None:
-    """(data, retrieved_at) of a cache file, or None if it is not a JSON object with `data` and an
-    aware ISO `retrieved_at` (the shape `Client.request` writes)."""
-    try:
-        entry = json.loads(path.read_text(encoding="utf-8"))
-        if not isinstance(entry, dict) or "data" not in entry:
-            return None
-        retrieved_at = datetime.fromisoformat(entry["retrieved_at"])
-    except (ValueError, KeyError, TypeError):
-        return None
-    return (entry["data"], retrieved_at) if retrieved_at.tzinfo is not None else None
 
 
 # ---------------------------------------------------------------- listing and search
@@ -510,23 +437,8 @@ def query(
 # ---------------------------------------------------------------- CLI
 
 
-def _request_lines(resp: Response) -> list[str]:
-    lines = [f"request: {resp.method} {resp.url}"]
-    if resp.body is not None:
-        lines.append("query: " + json.dumps(resp.body, ensure_ascii=False, separators=(",", ":")))
-    cached = " (from cache)" if resp.from_cache else ""
-    lines.append(f"retrieved_at: {resp.retrieved_at.isoformat()}{cached}")
-    return lines
-
-
-def _request_json(resp: Response) -> dict[str, Any]:
-    return {
-        "method": resp.method,
-        "url": resp.url,
-        "query": resp.body,
-        "retrieved_at": resp.retrieved_at.isoformat(),
-        "from_cache": resp.from_cache,
-    }
+_request_lines = http.request_lines
+_request_json = http.request_json
 
 
 def _cmd_search(args: argparse.Namespace, client: Client) -> int:
@@ -632,7 +544,7 @@ def main(
     try:
         client = Client(transport, args.lang, now)
         return {"search": _cmd_search, "meta": _cmd_meta, "get": _cmd_get}[args.cmd](args, client)
-    except PxWebError as e:
+    except http.FiDataError as e:
         print(str(e), file=sys.stderr)
         return 2 if isinstance(e, CellLimitError) else 1
 
