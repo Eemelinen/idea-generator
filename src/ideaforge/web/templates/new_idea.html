@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% from "_idea_form.html" import idea_form %}
+{% block title %}New idea · Ideaforge{% endblock %}
+{% block content %}
+<h1>New idea</h1>
+<p class="muted">Creates the run with these answers (<code>intake.json</code>) and queues its jobs; the worker runs them headless, one at a time.</p>
+{{ idea_form(form, "/new", "Create the run and queue it", errors, goals, presets, kill_triggers, run_to, founder) }}
+{% endblock %}

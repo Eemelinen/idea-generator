@@ -16,6 +16,11 @@
     </nav>
   </header>
   <main>
+    {% if dev_marker %}
+    <div class="banner warn" role="alert" id="dev-marker">
+      <strong>The job worker is blocked.</strong> {{ dev_marker }} Queued jobs wait until then.
+    </div>
+    {% endif %}
     {% block content %}{% endblock %}
   </main>
 </body>

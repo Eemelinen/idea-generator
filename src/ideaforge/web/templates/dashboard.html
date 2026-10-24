@@ -2,6 +2,7 @@
 {% block title %}Runs · Ideaforge{% endblock %}
 {% block content %}
 <h1>Runs</h1>
+<p><a class="button" href="/new">New idea</a></p>
 
 {% if mismatch %}
 <div class="banner warn" role="alert" id="mismatch">
@@ -33,7 +34,7 @@
 </form>
 
 {% if not lineages %}
-<p class="muted">{% if total %}No run matches the filters.{% else %}No runs yet; start one with <code>/validate &lt;idea&gt;</code>.{% endif %}</p>
+<p class="muted">{% if total %}No run matches the filters.{% else %}No runs yet; start one from <a href="/new">New idea</a> or with <code>/validate &lt;idea&gt;</code>.{% endif %}</p>
 {% else %}
 <table class="runs">
   <thead>
@@ -63,5 +64,18 @@
   </tbody>
   {% endfor %}
 </table>
+{% endif %}
+
+<h2>Golden-set eval</h2>
+{% if eval_error %}<div class="banner warn" role="alert" id="eval-error">{{ eval_error }}</div>{% endif %}
+{% if eval_refusal %}
+<p class="muted" id="eval-busy">{{ eval_refusal }}; a second eval is not offered until it ends.</p>
+{% else %}
+<form class="filters" method="post" action="/eval" id="eval-form">
+  <label>Limit (optional) <input type="number" name="limit" min="1" step="1"></label>
+  <label class="check"><input type="checkbox" name="fresh" value="1"> fresh (do not reuse earlier eval runs)</label>
+  <button type="submit">Run eval</button>
+  <span class="muted">Runs <code>/eval</code> over <code>tests/golden/</code>, one idea at a time.</span>
+</form>
 {% endif %}
 {% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Job {{ job.job_id }} · Ideaforge{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="/jobs">Jobs</a> / job {{ job.job_id }}</p>
+<h1>Job {{ job.job_id }}: {{ job.kind }}</h1>
+{% if error %}<div class="banner warn" role="alert" id="action-error">{{ error }}</div>{% endif %}
+<p class="worker worker-{{ worker[0] }}" id="worker">{{ worker[1] }}</p>
+<dl class="spec">
+  <dt>Status</dt><dd class="status-{{ job.status }}" id="job-status">{{ job.status }}{% if job.reason %} ({{ job.reason }}){% endif %}</dd>
+  <dt>Run</dt><dd>{% if job.run_id %}<a href="/runs/{{ job.run_id }}"><code>{{ job.run_id }}</code></a>{% else %}-{% endif %}</dd>
+  <dt>Command</dt><dd><code>{{ job.command }}</code></dd>
+  <dt>Created</dt><dd>{{ job.created_at[:19]|replace("T", " ") }}</dd>
+  <dt>Started</dt><dd>{{ (started_at or "-")[:19]|replace("T", " ") }}</dd>
+  <dt>Finished</dt><dd>{{ (finished_at or "-")[:19]|replace("T", " ") }}</dd>
+  <dt>Duration</dt><dd>{{ job.duration }}</dd>
+  <dt>Exit code</dt><dd>{{ exit_code if exit_code is not none else "-" }}</dd>
+</dl>
+{% if finished %}
+<form method="post" action="/jobs/{{ job.job_id }}/retry"><button type="submit">Retry</button></form>
+{% else %}
+<form method="post" action="/jobs/{{ job.job_id }}/cancel"><button type="submit">Cancel</button></form>
+{% endif %}
+
+{% if chain|length > 1 %}
+<h2>Chain</h2>
+<ol class="chain">
+  {% for j in chain %}
+  <li{% if j.job_id == job.job_id %} aria-current="true"{% endif %}><a href="/jobs/{{ j.job_id }}">job {{ j.job_id }}</a>: {{ j.kind }} · <span class="status-{{ j.status }}">{{ j.status }}</span>{% if j.reason %} ({{ j.reason }}){% endif %}</li>
+  {% endfor %}
+</ol>
+{% endif %}
+
+<h2>Log</h2>
+<p class="muted">{% if log_path %}<code>{{ log_path }}</code> · the last lines{% else %}no log yet{% endif %}{% if not log.done %} · updates every few seconds{% endif %}</p>
+<pre class="log" id="log" data-url="/jobs/{{ job.job_id }}/log" data-offset="{{ log.offset }}" data-done="{{ 'true' if log.done else 'false' }}">{{ log.text }}</pre>
+<script src="{{ url_for('static', path='logtail.js') }}"></script>
+{% endblock %}

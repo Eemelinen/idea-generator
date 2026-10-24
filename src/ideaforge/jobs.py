@@ -152,18 +152,31 @@ def enqueue(kind: str, run_id: str | None = None, args: dict | None = None, then
     return _insert_chain(chain)
 
 
+_NEW_RUN_LOCK = threading.Lock()  # redirect_stdout is process-wide: one new run at a time
+
+
 def _new_run(argv: list[str]) -> str:
-    """Run scripts/new_run.py in this process (so it sees this root and database); the run id."""
+    """Run scripts/new_run.py in this process (so it sees this root and database); the run id.
+    Its stdout and stderr are captured; stderr (argparse's reason) also goes into the error."""
     spec = importlib.util.spec_from_file_location("ideaforge_new_run", NEW_RUN_SCRIPT)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    out = io.StringIO()
-    try:
-        with contextlib.redirect_stdout(out):
-            module.main(argv)
-    except SystemExit as e:  # argparse: the reason is already on stderr
-        raise JobError(f"new_run.py refused the idea (exit {e.code})") from None
-    return out.getvalue().strip()
+    out, err = io.StringIO(), io.StringIO()
+    with _NEW_RUN_LOCK:
+        try:
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                module.main(argv)
+        except SystemExit as e:
+            text = err.getvalue()
+            sys.stderr.write(text)
+            reason = text.split(": error: ", 1)[-1].strip()
+            raise JobError(f"new_run.py refused the idea (exit {e.code})" + (f": {reason}" if reason else "")) from None
+    sys.stderr.write(err.getvalue())
+    # A worker thread in the same process (the web server's) may print meanwhile: take the id line.
+    ids = [line.strip() for line in out.getvalue().splitlines() if runs.RUN_ID_RE.match(line.strip())]
+    if not ids:
+        raise JobError(f"new_run.py printed no run id: {out.getvalue().strip()!r}")
+    return ids[-1]
 
 
 def enqueue_idea(
@@ -173,17 +186,21 @@ def enqueue_idea(
     preset: str | None = None,
     as_of: date | None = None,
     then: list[str] = (),
+    parent: str | None = None,
 ) -> tuple[str, list[int]]:
-    """Create the run with `new_run.py --intake`, then queue `validate` on it and the `then` chain."""
+    """Create the run with `new_run.py --intake` (with `parent`: its next version, `--from`),
+    then queue `validate` on it and the `then` chain."""
     for k in then:
         if k not in KINDS:
             raise JobError(f"unknown job kind {k!r}; choose from {', '.join(KINDS)}")
-    argv = [idea, "--intake", intake]
+    argv = ["--intake", intake]
+    if parent:
+        argv += ["--from", parent]
     if preset:
         argv += ["--preset", preset]
     if as_of:
         argv += ["--as-of", as_of.isoformat()]
-    run_id = _new_run(argv)
+    run_id = _new_run([*argv, "--", idea])  # "--": an idea text may start with a dash
     return run_id, enqueue("validate", run_id, then=list(then))
 
 
@@ -272,6 +289,24 @@ def cancel(job_id: int, grace: float = GRACE_SECONDS) -> list[int]:
     if row["status"] == "running" and row["pid"]:
         terminate(row["pid"], grace)
     return cancelled
+
+
+def interrupt(job_id: int, grace: float = GRACE_SECONDS) -> bool:
+    """Stop a running job because its worker is stopping (the web server shuts down): `failed`
+    / `interrupted`, as a Ctrl+C on the CLI worker, and its chained jobs are cancelled. False
+    when the job is not running (any more)."""
+    row = get(job_id)
+    with db.session() as conn:
+        cur = conn.execute(
+            "UPDATE jobs SET status='failed', reason='interrupted', finished_at=? WHERE job_id=? AND status='running'",
+            (db.now(), job_id),
+        )
+        if not cur.rowcount:
+            return False
+        _cancel_followers(conn, job_id, f"job {job_id} failed")
+    if row["pid"]:  # without a pid yet, run_job sees the status and stops the process it starts
+        terminate(row["pid"], grace)
+    return True
 
 
 def retry(job_id: int) -> list[int]:

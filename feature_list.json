@@ -763,7 +763,7 @@
       "area": "ui",
       "title": "Pipeline control from the UI",
       "user_visible_behavior": "From the UI the user submits a new idea (text, goal, capital, hours, geography, preset, as-of date and how far to run: validate, + synthesize, + debate), resumes a run, starts synthesis or a debate, creates a new version from a run, starts the golden-set eval, and on the jobs page follows the live log, cancels and retries jobs.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-031", "F-033"],
       "ticket": "IF-607",
       "spec": "docs/TICKETS.md#if-607-pipeline-control-from-the-ui",
@@ -771,7 +771,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_web_control.py (each form and action enqueues the right job chain; invalid input is rejected with a message; log tail; dev-marker banner; fake claude binary)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-24 pnpm check → pass (working tree on b5be9d5)",
+        "2026-10-24 uv run pytest tests/test_web_control.py → pass (working tree on b5be9d5)"
+      ],
       "attempts": 0,
       "notes": ""
     },

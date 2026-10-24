@@ -20,13 +20,14 @@ from ideaforge import debate, mini_research, review, revised_plan, status
 from ideaforge.schemas import PERSONAS, Verdict
 from ideaforge.web import create_app
 
+LOCAL = "http://127.0.0.1:8765"
 ROLE_RE = re.compile(rf"(?<![\w-])({'|'.join(PERSONAS)})(?![\w-])")
 AGREEING = ("investor", "customer", "accountant")  # with the founder: 4 of 5 behind one change
 
 
 @pytest.fixture
 def client(project):
-    return TestClient(create_app(project))
+    return TestClient(create_app(project), base_url=LOCAL)  # POSTs need a loopback Host (IF-607)
 
 
 def attrs(html, attr):

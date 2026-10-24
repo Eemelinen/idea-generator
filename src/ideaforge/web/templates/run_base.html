@@ -8,6 +8,19 @@
   {% else %}<span class="tag warn">not in the database</span>{% endif %}
   {% if not run.has_dir %}<span class="tag warn">no run directory</span>{% endif %}
 </p>
+{% if action_error %}<div class="banner warn" role="alert" id="action-error">{{ action_error }}</div>{% endif %}
+<div class="actions" id="run-actions">
+  {% for key, label in run_actions if actions[key] is none %}
+  {% if key == "version" %}
+  <a class="button" href="/runs/{{ run.run_id }}/version">{{ label }}</a>
+  {% else %}
+  <form method="post" action="/runs/{{ run.run_id }}/actions/{{ key }}"><button type="submit" name="action" value="{{ key }}">{{ label }}</button></form>
+  {% endif %}
+  {% endfor %}
+  {% for j in run_jobs %}
+  <span class="tag">job <a href="/jobs/{{ j.job_id }}">{{ j.job_id }}</a> {{ j.kind }} {{ j.status }}</span>
+  {% endfor %}
+</div>
 <nav class="tabs" aria-label="Run sections">
   {% for key, label, suffix in tabs %}
   <a href="/runs/{{ run.run_id }}{{ suffix }}"{% if key == tab or (tab == "file" and key == "files") %} class="active" aria-current="page"{% endif %}>{{ label }}</a>

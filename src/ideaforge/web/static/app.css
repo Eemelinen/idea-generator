@@ -299,3 +299,72 @@ form.review input[type='text'] {
   width: 100%;
   min-width: 16rem;
 }
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+
+.actions form,
+table.jobs form {
+  margin: 0;
+}
+
+a.button {
+  display: inline-block;
+  padding: 0.2rem 0.7rem;
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  text-decoration: none;
+}
+
+form.idea {
+  max-width: 52rem;
+}
+
+form.idea fieldset {
+  margin: 0 0 1rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+form.idea label {
+  display: inline-block;
+  margin: 0.25rem 1rem 0.25rem 0;
+}
+
+form.idea label.wide {
+  display: block;
+}
+
+form.idea label.wide textarea {
+  display: block;
+  width: 100%;
+}
+
+form.idea label.check {
+  display: block;
+}
+
+form.idea .answer input {
+  width: 22rem;
+  max-width: 100%;
+}
+
+.worker-running {
+  color: var(--go);
+}
+
+.worker-stopped {
+  color: var(--no-go);
+}
+
+pre.log {
+  max-height: 32rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

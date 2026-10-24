@@ -108,8 +108,9 @@ ideaforge/
 │   │   ├── run_detail.py          # run page tabs: stages, idea, claims, scores, economics, report, usage, files (IF-605)
 │   │   ├── debate_view.py         # run page debate tab: next step, rounds, verdict, revised plan (IF-606)
 │   │   ├── reviews.py             # review form entries, compare choices; trend and diff from review/status (IF-606)
+│   │   ├── control.py             # new-idea/version forms, run actions by state, eval, log tail, server worker (IF-607)
 │   │   ├── templates/             # Jinja2 page templates
-│   │   └── static/                # CSS (and vendored HTMX, plan note 37)
+│   │   └── static/                # CSS, the job log-tail poller (HTMX not vendored yet, plan notes 37 and 41)
 │   └── fi/                        # free Finnish data tools
 │       ├── http.py                # shared transport, 24 h cache and request printing
 │       ├── pxweb.py               # Statistics Finland + Luke PxWeb client

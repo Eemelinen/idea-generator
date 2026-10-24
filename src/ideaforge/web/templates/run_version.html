@@ -1,0 +1,7 @@
+{% extends "run_base.html" %}
+{% from "_idea_form.html" import idea_form %}
+{% block tab %}
+<h2>New version</h2>
+<p class="muted">A new run, the next version of <code>{{ run.run_id }}</code> (<code>new_run.py --from</code>). This run is only read; every stage runs again for the new version. The fields start from this run's spec.</p>
+{{ idea_form(form, "/runs/" ~ run.run_id ~ "/version", "Create the version and queue it", errors, goals, presets, kill_triggers, run_to, founder) }}
+{% endblock %}

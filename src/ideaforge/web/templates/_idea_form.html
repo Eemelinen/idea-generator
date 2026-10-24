@@ -1,0 +1,63 @@
+{# The new-idea / new-version form (IF-607). `action` is where it posts. #}
+{% macro idea_form(form, action, submit, errors, goals, presets, kill_triggers, run_to, founder) %}
+{% if errors %}
+<div class="banner warn" role="alert" id="form-errors">
+  <strong>Nothing was queued.</strong>
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+<form class="idea" method="post" action="{{ action }}">
+  <label class="wide">Idea
+    <textarea name="idea" rows="4" required>{{ form.idea }}</textarea>
+  </label>
+  <fieldset>
+    <legend>Founder constraints{% if not founder.confirmed %} <span class="tag warn">config/founder.yaml is not confirmed: placeholders</span>{% endif %}</legend>
+    <label>Goal
+      <select name="goal">
+        {% for g in goals %}<option value="{{ g }}"{% if g == form.goal %} selected{% endif %}>{{ g }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Capital (EUR) <input name="capital_eur" value="{{ form.capital_eur }}" inputmode="decimal" required></label>
+    <label>Hours per week <input name="hours_per_week" value="{{ form.hours_per_week }}" inputmode="decimal" required></label>
+    <label class="wide">Skills, one per line (unchanged = <code>config/founder.yaml</code>'s)
+      <textarea name="skills" rows="4">{{ form.skills }}</textarea>
+    </label>
+  </fieldset>
+  <fieldset>
+    <legend>Scope</legend>
+    <label class="wide">Geography, one per line, nearest first
+      <textarea name="geography" rows="4" required>{{ form.geography }}</textarea>
+    </label>
+    <label>Budget preset
+      <select name="preset">
+        {% for p in presets %}<option value="{{ p }}"{% if p == form.preset %} selected{% endif %}>{{ p }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>As-of date (back-test, optional) <input type="date" name="as_of" value="{{ form.as_of }}"></label>
+  </fieldset>
+  <fieldset>
+    <legend>Clarifying answers (optional, at most {{ form.answers|length }})</legend>
+    <p class="muted">A headless run asks no questions: answer here what the research should know.</p>
+    {% for q, a in form.answers %}
+    <div class="answer">
+      <label>Question {{ loop.index }} <input name="question_{{ loop.index }}" value="{{ q }}"></label>
+      <label>Answer {{ loop.index }} <input name="answer_{{ loop.index }}" value="{{ a }}"></label>
+    </div>
+    {% endfor %}
+  </fieldset>
+  <fieldset>
+    <legend>Kill-trigger overrides (optional)</legend>
+    <p class="muted">Tick only a risk you explicitly accept: scoring then does not force NO_GO for it.</p>
+    {% for k in kill_triggers %}
+    <label class="check"><input type="checkbox" name="kill_trigger_overrides" value="{{ k }}"{% if k in form.kill_trigger_overrides %} checked{% endif %}> <code>{{ k }}</code></label>
+    {% endfor %}
+  </fieldset>
+  <fieldset>
+    <legend>How far to run</legend>
+    {% for key, label, _ in run_to %}
+    <label class="check"><input type="radio" name="run_to" value="{{ key }}"{% if key == form.run_to %} checked{% endif %}> {{ label }}</label>
+    {% endfor %}
+  </fieldset>
+  <button type="submit">{{ submit }}</button>
+</form>
+{% endmacro %}
