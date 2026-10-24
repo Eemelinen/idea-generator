@@ -361,7 +361,8 @@ class Verdict(Strict):
     assumption_register: list[Assumption]
     experiments: Annotated[list[Experiment], Field(min_length=MIN_EXPERIMENTS)]
     projected_scores: dict[RubricDimension, Score]
-    # The judge's value; `debate.finalize_verdict` overwrites it with the one Python computes.
+    # The judge's value; `debate.finalize_verdict` computes the real one and `debate.write_verdict`
+    # stores it here once the revised plan is committed.
     conformity_flag: bool = False
 
     @model_validator(mode="after")

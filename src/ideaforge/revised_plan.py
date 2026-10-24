@@ -4,7 +4,8 @@
                        `experiments` tables and the finished `debates` row
 
 `debate.finalize_verdict` first checks debate/verdict.json (every accepted change cites verified
-claim ids) and overwrites its `conformity_flag` with the one Python computes. The plan then shows,
+claim ids) and computes `conformity_flag`; `debate.write_verdict` stores the computed flag in
+verdict.json only after the plan and its rows are committed. The plan then shows,
 diff-style against 05_report.md, the dimension scores the report gave and the judge's projection,
 the weighted total of that projection (computed here, labelled a projection: only a new version's
 run scores it) and the accepted changes; then the rejected changes, the assumption register and

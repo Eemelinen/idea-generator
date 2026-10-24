@@ -761,7 +761,8 @@ def finalize_verdict(run_id: str) -> FinalVerdict:
 def write_verdict(run_id: str, final: FinalVerdict) -> None:
     """Store the computed `conformity_flag` in `debate/verdict.json` (no write when the judge's
     value was right). Called only once the revised plan is committed, so a failed render leaves
-    the judge's file, and the judge's disagreement, as they were."""
+    the judge's file, and the judge's disagreement, as they were. If this write itself fails, the
+    plan and the `debates` row already hold the computed flag and only verdict.json keeps the judge's."""
     if final.verdict.conformity_flag != final.judge_flag:
         _write_json(debate_dir(run_id) / VERDICT_NAME, final.verdict.model_dump(mode="json"))
 
