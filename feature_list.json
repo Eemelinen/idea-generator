@@ -102,7 +102,7 @@
       "area": "fi-data",
       "title": "PxWeb client (StatFin + Luke)",
       "user_visible_behavior": "`uv run python -m ideaforge.fi.pxweb search \"<keyword>\"` lists candidate tables and `get <table_path> --filter Alue=…` prints CSV (or `--json`) plus the exact request URL; queries over 100 000 cells are refused with a helpful message; responses are cached for 24 h.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-003"],
       "ticket": "IF-201",
       "spec": "docs/TICKETS.md#if-201-pxweb-client",
@@ -110,9 +110,14 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_pxweb.py (search, get CSV plus URL, cell-limit refusal, cache hit on recorded fixtures)"
       ],
-      "evidence": [],
-      "attempts": 0,
-      "notes": ""
+      "evidence": [
+        "2026-10-24 pnpm check → pass (working tree on 9327346)",
+        "2026-10-24 uv run pytest tests/test_pxweb.py → pass (working tree on 9327346)",
+        "2026-10-24 pnpm check → pass (working tree on 0475c24)",
+        "2026-10-24 uv run pytest tests/test_pxweb.py → pass (working tree on 0475c24)"
+      ],
+      "attempts": 1,
+      "notes": "Attempt 1 failed 2026-10-24: evaluator: Revise"
     },
     {
       "id": "F-005",
