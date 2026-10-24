@@ -6,6 +6,7 @@ You type an idea. Ideaforge researches it across ten feasibility dimensions with
 
 - Design: [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)
 - Work breakdown: [docs/TICKETS.md](docs/TICKETS.md)
+- Similar projects and what was borrowed from them: [docs/similar-projects.md](docs/similar-projects.md)
 - Instructions for Claude Code: [CLAUDE.md](CLAUDE.md)
 
 ## Setup
