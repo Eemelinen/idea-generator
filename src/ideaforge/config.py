@@ -32,6 +32,7 @@ AGENTS_DIR = ROOT / ".claude" / "agents"
 DEV_MARKER = ROOT / ".ideaforge-dev"
 
 ModelAlias = Literal["opus", "sonnet", "haiku"]
+ReportLanguage = Literal["en", "fi"]
 
 
 class _Cfg(BaseModel):
@@ -146,6 +147,11 @@ class FounderConfig(_Cfg):
     goal: Goal
 
 
+class ReportConfig(_Cfg):
+    language: ReportLanguage
+    business_plan_language: ReportLanguage
+
+
 def load_yaml(name: str) -> Any:
     with open(CONFIG_DIR / name, encoding="utf-8") as f:
         return yaml.safe_load(f)
@@ -177,6 +183,11 @@ def founder() -> FounderConfig:
 
 
 @cache
+def report() -> ReportConfig:
+    return ReportConfig.model_validate(load_yaml("report.yaml"))
+
+
+@cache
 def finland() -> dict[str, Any]:
     # Free-form hints; only the verify flags are enforced (see tests/test_config.py).
     return load_yaml("finland.yaml")
@@ -184,4 +195,4 @@ def finland() -> dict[str, Any]:
 
 def load_all() -> None:
     """Validate every config file; raises on the first invalid one."""
-    models(), budget(), rubric(), domains(), founder(), finland()
+    models(), budget(), rubric(), domains(), founder(), report(), finland()

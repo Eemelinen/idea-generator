@@ -56,7 +56,7 @@
       "area": "decisions",
       "title": "Resolve open decisions (§13)",
       "user_visible_behavior": "The geography ladder, the founder constraints (`config/founder.yaml` with `confirmed: true`), the verdict thresholds and weights, and the report language are the user’s answers, recorded under IF-150 and enforced by `tests/test_config.py`.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-001"],
       "ticket": "IF-150",
       "spec": "docs/TICKETS.md#if-150-resolve-open-decisions",
@@ -65,7 +65,11 @@
         "L1: uv run pytest tests/test_config.py (founder.yaml confirmed, report language set)",
         "manual: the user answered the four §13 questions and the answers are recorded under IF-150"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-24 pnpm check → pass (working tree on fc8c1cb)",
+        "2026-10-24 uv run pytest tests/test_config.py → pass (working tree on fc8c1cb)",
+        "2026-10-24 manual: the user answered the four §13 questions and the answers are recorded under IF-150 → observed by eemeli: user answered the four §13 questions in an interactive session on 2026-10-24; answers recorded under IF-150 (working tree on fc8c1cb)"
+      ],
       "attempts": 0,
       "notes": "Human-only: only the user can answer. Blocks the Phase 2 run (F-013) and the starttiraha draft language (F-018)."
     },

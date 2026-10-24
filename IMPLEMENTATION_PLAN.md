@@ -44,6 +44,8 @@ ideaforge/
 │   ├── rubric.yaml                # dimensions, weights, evidence requirements, kill triggers
 │   ├── finland.yaml               # thresholds, grants, URLs — with "verify_at_runtime: true" flags
 │   ├── domains.yaml               # official-source allow-lists per dimension
+│   ├── founder.yaml               # founder constraints applied to every idea (IF-150)
+│   ├── report.yaml                # report and business-plan draft language (IF-150)
 │   └── budget.yaml                # max searches/fetches per subagent, max rounds, etc.
 ├── .claude/
 │   ├── settings.json              # hooks, permissions (pipeline + harness, §7)

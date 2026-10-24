@@ -1,0 +1,5 @@
+# Report language (open decision IF-150): en | fi.
+# language: the report itself (05_report.md); its templates are English.
+# business_plan_language: the starttiraha business-plan draft (IF-307), Finnish for TE-palvelut.
+language: en
+business_plan_language: fi
