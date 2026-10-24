@@ -83,7 +83,7 @@ ideaforge/
 ├── src/ideaforge/
 │   ├── __init__.py
 │   ├── schemas.py                 # Pydantic models (IdeaSpec, ResearchPlan, Claim, Scores, Position, Rebuttal, Verdict…)
-│   ├── db.py                      # SQLite schema + helpers
+│   ├── db.py                      # SQLite schema + helpers, schema_version migrations, `backup` CLI
 │   ├── runs.py                    # run lifecycle, stage state machine, resume, child run ids
 │   ├── meta.py                    # meta.json: git/config commit, models snapshot, Claude Code version, timestamps
 │   ├── verify.py                  # quote verification, conflict detection, source typing
@@ -101,6 +101,11 @@ ideaforge/
 │   ├── review.py                  # /status --review / --reviews: report-section scores 1–5, trend by prompt/model version
 │   ├── golden.py                  # eval golden set: load + validate, find each idea's run, the three checks
 │   ├── validate_file.py           # CLI: validate a JSON file against a schema (used by hooks)
+│   ├── web/                       # local web UI (D-008): `python -m ideaforge.web`, 127.0.0.1 only
+│   │   ├── __init__.py            # create_app(): FastAPI app, routes
+│   │   ├── dashboard.py           # runs dashboard rows, lineages, runs/ ↔ DB mismatch (IF-601)
+│   │   ├── templates/             # Jinja2 page templates
+│   │   └── static/                # CSS (and vendored HTMX, plan note 37)
 │   └── fi/                        # free Finnish data tools
 │       ├── http.py                # shared transport, 24 h cache and request printing
 │       ├── pxweb.py               # Statistics Finland + Luke PxWeb client
@@ -162,6 +167,7 @@ ideaforge/
 │   ├── fixtures/eval/             # synthetic golden ideas for the eval_check.py tests
 │   └── golden/                    # 10–20 test ideas with expected verdict ranges (schema GoldenIdea)
 ├── ideaforge.db                   # SQLite (gitignored)
+├── backups/                       # `python -m ideaforge.db backup` copies (gitignored)
 ├── pyproject.toml                 # managed with uv
 └── .gitignore
 ```
@@ -171,8 +177,8 @@ ideaforge/
 ## 2. Stack
 
 - Python 3.12, `uv` for env/deps.
-- Deps: `pydantic>=2`, `pyyaml`, `requests`, `rapidfuzz` (quote matching), `trafilatura` (HTML → text for verification), `pandas` (PxWeb tables), `pytest`, `jinja2` (report + agent templates).
-- SQLite with WAL mode; FTS5 virtual table over `claims.statement` and `claims.quote`.
+- Deps: `pydantic>=2`, `pyyaml`, `requests`, `rapidfuzz` (quote matching), `trafilatura` (HTML → text for verification), `pandas` (PxWeb tables), `pytest`, `jinja2` (report + agent templates and the web UI pages). Web UI (Phase 6, D-008): `fastapi`, `uvicorn`, `python-multipart`, `markdown-it-py`, `ruamel.yaml`; dev group `httpx` for FastAPI's `TestClient`.
+- SQLite with WAL mode; FTS5 virtual table over `claims.statement` and `claims.quote`. The schema is versioned: `db.init()` applies the ordered, idempotent migrations a database has not seen and records them in `schema_version` (IF-601).
 - No web framework for v1. Output is Markdown in `runs/<id>/` plus a `/status` skill. Phase 6 adds a local web UI (FastAPI + Jinja2 + HTMX, `ideaforge.web`) that controls the pipeline through headless `claude -p` jobs and edits the settings (D-008, TICKETS.md IF-601, IF-604–IF-609).
 - Development-only tooling (§14): Node ≥ 22 with pnpm 10 for the shared harness (`@eemelinen/harness`, §14), Prettier, and husky + lint-staged + commitlint for the commit gates. The pipeline never calls Node.
 

@@ -102,3 +102,4 @@ Format: **Context** (what forced a choice) · **Decision** · **Consequences**.
   - Non-negotiable 1 is unaffected: everything is local and free.
   - Settings changed in the UI make `config/` differ from git, which `meta.json` already records as `config_dirty`.
   - The live headless path is first exercised by the human acceptance ticket IF-609.
+  - IF-601 (F-030) built the app shell, the `schema_version` migrations, `python -m ideaforge.db backup` and the runs dashboard. HTMX is not vendored yet (TICKETS.md plan note 37): the unattended session could not download it, and the dashboard needs no partial updates.

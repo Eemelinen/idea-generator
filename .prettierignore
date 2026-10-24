@@ -18,3 +18,5 @@ prompts
 config
 tests/fixtures
 tests/golden
+# Jinja2 templates: Prettier's HTML parser does not understand {% %} blocks.
+src/ideaforge/web/templates
