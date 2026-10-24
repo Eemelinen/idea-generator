@@ -409,6 +409,66 @@ class RunMeta(Strict):
         return self
 
 
+# ---------------------------------------------------------------- evaluation
+
+
+# What the validate skill leaves out of an idea text it passes to `new_run.py '<idea text>'`
+# (quotes, backticks, dollar signs, `#`, backslashes), plus line breaks. `golden.load` also
+# runs that command through the guard, which refuses more (`<<`, `<(`, `curl`, …).
+UNQUOTABLE_RE = re.compile(r"['\"`$#\\\n\r]")
+
+
+class MustFindFact(Strict):
+    """A fact the pipeline must find for a golden idea (eval_check.py, IF-502).
+
+    A verified claim finds it when its source URL is one of `source_urls` (scheme, `www.`,
+    trailing slash and fragment ignored) or its statement or quote contains every keyword
+    (case-insensitive substrings, so a Finnish stem matches its inflections). `dimensions`, when
+    given, limits the claims that count.
+    """
+
+    fact: Annotated[str, Field(pattern=r"\S")]
+    source_urls: Annotated[list[str], Field(min_length=1)]
+    keywords: list[Annotated[str, Field(pattern=r"\S")]] = []
+    dimensions: list[Dimension] = []
+
+    @field_validator("source_urls")
+    @classmethod
+    def _url_schemes(cls, v: list[str]) -> list[str]:
+        for url in v:
+            if not url.startswith(("http://", "https://")):
+                raise ValueError(f"source url {url!r} must be an http(s) URL")
+        return v
+
+
+class GoldenIdea(Strict):
+    """`tests/golden/<golden_id>.yaml`: one idea of the eval golden set (plan §9)."""
+
+    idea: str
+    expected_verdicts: Annotated[list[VerdictLabel], Field(min_length=1)]
+    must_find: Annotated[list[MustFindFact], Field(min_length=2, max_length=3)]
+    notes: str | None = None
+
+    @field_validator("idea")
+    @classmethod
+    def _idea_is_one_quotable_line(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("idea must not be empty")
+        if v != v.strip():
+            raise ValueError("idea must not start or end with whitespace")
+        bad = sorted(set(UNQUOTABLE_RE.findall(v)))
+        if bad:
+            raise ValueError(f"idea is passed to new_run.py in single quotes and may not contain {bad!r}")
+        return v
+
+    @field_validator("expected_verdicts")
+    @classmethod
+    def _unique_verdicts(cls, v: list[str]) -> list[str]:
+        if len(v) != len(set(v)):
+            raise ValueError("expected_verdicts must not repeat a verdict")
+        return v
+
+
 # Kind name → model, used by validate_file.py and tests.
 SCHEMAS: dict[str, type[BaseModel]] = {
     "spec": IdeaSpec,

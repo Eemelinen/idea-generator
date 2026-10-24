@@ -178,7 +178,13 @@ def check_bash(data: dict[str, Any]) -> str | None:
     subagent = hookio.is_subagent(data)
     if not subagent and dev_mode():
         return None
+    spec = agents.get(hookio.agent_name(data)) if subagent else None
+    kind = spec.kind if spec is not None else None
+    return command_denial(command, {"research": RESEARCH_ALLOW, "harness": HARNESS_ALLOW}.get(kind, GENERAL_ALLOW))
 
+
+def command_denial(command: str, allow: tuple[re.Pattern[str], ...] = GENERAL_ALLOW) -> str | None:
+    """The strict-mode reason to deny `command` against the `allow` list, or None (no dev mode)."""
     if NETWORK_RE.search(command):
         return "command denied: fetch pages with WebFetch or the ideaforge.fi tools so they are logged and cached"
     if any(token in command for token in ("$(", "`", "<(", ">(")):
@@ -194,9 +200,6 @@ def check_bash(data: dict[str, Any]) -> str | None:
     if ">" in unquoted:
         return "command denied: redirecting output to files is not allowed; write files with the Write tool"
 
-    spec = agents.get(hookio.agent_name(data)) if subagent else None
-    kind = spec.kind if spec is not None else None
-    allow = {"research": RESEARCH_ALLOW, "harness": HARNESS_ALLOW}.get(kind, GENERAL_ALLOW)
     for segment in SEGMENT_SPLIT_RE.split(unquoted):
         seg = segment.strip().replace("\\", "/")
         if seg and not any(p.match(seg) for p in allow):

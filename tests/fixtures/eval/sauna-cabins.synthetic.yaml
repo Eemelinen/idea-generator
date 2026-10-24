@@ -1,0 +1,14 @@
+# SYNTHETIC golden idea for the eval_check.py logic tests (TICKETS.md plan note 14): the idea,
+# the facts and the URLs are invented and are not research. The real golden set is IF-501.
+idea: Synthetic sauna cabins by the lake for remote workers
+expected_verdicts: [GO]
+must_find:
+  - fact: A synthetic cabin price per night
+    source_urls: [https://example.invalid/synthetic/price]
+    keywords: [cabin, per night]
+  - fact: A synthetic count of holiday homes
+    source_urls: [https://example.invalid/synthetic/count]
+  - fact: A synthetic shoreline building permit
+    source_urls: [https://example.invalid/synthetic/permit]
+    keywords: [ranta]
+notes: synthetic

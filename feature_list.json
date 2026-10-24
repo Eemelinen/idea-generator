@@ -547,7 +547,7 @@
       "area": "eval",
       "title": "Eval checker and eval skill",
       "user_visible_behavior": "Golden ideas in `tests/golden/*.yaml` are validated by a schema; `scripts/eval_check.py` reports per idea whether the verdict is in range, the must-find facts are among the verified claims and no unverified claim is cited, as a summary table; `/eval [--limit N]` runs the golden ideas sequentially.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-016"],
       "ticket": "IF-502",
       "spec": "docs/TICKETS.md#if-502-eval-checker-and-eval-skill",
@@ -555,7 +555,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_eval_check.py tests/test_skills.py (synthetic golden and run fixtures)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-24 pnpm check → pass (working tree on 3cf2e6f)",
+        "2026-10-24 uv run pytest tests/test_eval_check.py tests/test_skills.py → pass (working tree on 3cf2e6f)"
+      ],
       "attempts": 0,
       "notes": ""
     },
