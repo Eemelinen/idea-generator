@@ -21,7 +21,8 @@ import score_run
 import yaml
 from conftest import FIXTURES, REPO
 
-from ideaforge import config, db, report, runs
+from ideaforge import business_plan, config, db, report, runs
+from ideaforge.schemas import UnitEconomics
 
 RUN = "20261023-130000-sauna-cabins"
 NOW = datetime(2026, 10, 23, 14, 0, tzinfo=UTC)
@@ -97,7 +98,8 @@ def test_report_has_every_section_in_order(scored):
     headings = re.findall(r"^## (.+)$", text, re.M)
     assert [h.split(":")[0] for h in headings] == [
         "Verdict", "Score table", "Kill triggers", "Unit economics", "Dimensions",
-        "Finland funding fit", "Rääkkylä location notes", "Risk register", "Sources", "Usage summary",
+        "Finland funding fit", "Rääkkylä location notes", "Risk register", "Starttiraha business-plan draft",
+        "Sources", "Usage summary",
     ]  # fmt: skip
     dims = re.findall(r"^### .*\(`(\w+)`\)$", section(text, "Dimensions"), re.M)
     assert dims == [*(d.id for d in config.rubric().dimensions), "killcause"]
@@ -232,10 +234,13 @@ def test_funding_gap_never_shows_a_finland_yaml_value(scored):
 
 
 def test_report_never_reads_finland_yaml():
-    source = (REPO / "src" / "ideaforge" / "report.py").read_text(encoding="utf-8")
+    for module in ("report.py", "business_plan.py"):
+        source = (REPO / "src" / "ideaforge" / module).read_text(encoding="utf-8")
+        assert "finland()" not in source and "finland.yaml\"" not in source
     template = (REPO / "src" / "ideaforge" / "templates" / "report.md.j2").read_text(encoding="utf-8")
-    assert "finland()" not in source and "finland.yaml\"" not in source
     assert "finland" not in template.lower().replace("finland funding fit", "")
+    draft = (REPO / "src" / "ideaforge" / "templates" / "business_plan.md.j2").read_text(encoding="utf-8")
+    assert "finland" not in draft.lower()
 
 
 # ---------------------------------------------------------------- Rääkkylä, kill triggers, sources
@@ -411,3 +416,149 @@ def test_multi_line_quote_stays_in_its_block_quote(scored):
     edit_json(scored / "03_claims" / "verified.json", lambda data: next(
         c for c in data if c["claim_id"] == "financing-004").__setitem__("quote", "first line\nsecond line"))  # fmt: skip
     assert "  > first line second line\n" in section(render(scored), "Finland funding fit")
+
+
+# ---------------------------------------------------------------- starttiraha business-plan draft (IF-307)
+
+CLAIM_ID_RE = re.compile(r"`([a-z_]+-\d{3})`")
+
+
+def draft(text):
+    return section(text, "Starttiraha business-plan draft")
+
+
+def heading4(text, heading):
+    m = re.search(rf"^#### {re.escape(heading)}\n(.*?)(?=^##+ |\Z)", text, re.M | re.S)
+    assert m, f"no heading {heading!r}"
+    return m.group(1)
+
+
+def calculation_rows(body):
+    """The kannattavuuslaskelma table rows as (label, month, year, source)."""
+    rows = [line for line in body.splitlines() if line.startswith("| ")][2:]  # minus the header and rule
+    return [tuple(c.strip() for c in row.strip().strip("|").split(" | ")) for row in rows]
+
+
+def with_language(monkeypatch, language):
+    monkeypatch.setattr(
+        config, "report", lambda: config.ReportConfig(language="en", business_plan_language=language)
+    )
+
+
+def test_draft_renders_in_the_configured_language(scored, monkeypatch):
+    assert config.report().business_plan_language == "fi"  # IF-150: the draft in Finnish
+    fi = draft(render(scored))
+    for heading in business_plan.TEXT["fi"]["sections"].values():
+        assert f"#### {heading}\n" in fi
+    assert "### Liiketoimintasuunnitelma (luonnos starttirahahakemusta varten)" in fi
+    assert "| Erä | € tai kpl / kk | / vuosi (oletus: 12 × kk) | Lähde |" in fi
+    assert "| Liikevaihto, € | 1 195,22 | 14 342,63 |" in fi  # Finnish decimal comma
+    assert "Business plan" not in fi and "Profitability calculation" not in fi
+
+    # the same run rendered again (render_text writes nothing), now with the draft in English
+    with_language(monkeypatch, "en")
+    en = draft(report.render_text(RUN, now=NOW))
+    for heading in business_plan.TEXT["en"]["sections"].values():
+        assert f"#### {heading}\n" in en
+    assert "| Revenue, EUR | 1 195.22 | 14 342.63 |" in en
+    assert "Liiketoimintasuunnitelma" not in en and "Kannattavuuslaskelma" not in en
+    # the rest of the report keeps its own language (config/report.yaml: language)
+    assert "## Verdict: " in report.render_text(RUN, now=NOW)
+
+
+def test_every_calculation_figure_traces_to_a_claim_or_is_an_assumption(scored):
+    text = render(scored)
+    sheet = json.loads((scored / "04_scores.json").read_text(encoding="utf-8"))
+    claims = {c["claim_id"]: c for c in json.loads((scored / "03_claims" / "verified.json").read_text(encoding="utf-8"))}
+    inputs = set(sheet["unit_economics"]["input_claim_ids"])
+    body = heading4(draft(text), business_plan.TEXT["fi"]["sections"]["calculation"])
+    rows = calculation_rows(body)
+    assert len(rows) == len(business_plan.TEXT["fi"]["rows"])
+    figures = 0
+    for label, month, year, source in rows:
+        if month == "–":
+            assert year == ""
+            assert source.startswith(("puuttuu (`", "ei laskettavissa")), (label, source)
+            continue
+        figures += 1
+        ids = CLAIM_ID_RE.findall(source)
+        assert ids or "oletus" in source, f"{label}: {source!r} neither traces nor is an assumption"
+        for cid in ids:
+            assert claims[cid]["verification"] == "verified" and cid in inputs, (label, cid)
+    assert figures == 11
+    # the per-year column is marked as an assumption in its header and the assumption list
+    assert "/ vuosi (oletus: 12 × kk)" in body
+    assert "- **oletus**: Vuosiluvut ovat 12 × kuukausiluku" in body
+    # each role traces to its own claims, not to every input
+    by_label = {r[0]: r for r in rows}
+    assert by_label["Myyntimäärä, kpl"][3] == "väitteet `unit_economics-005`"
+    assert by_label["Kiinteät kulut, €"][3] == "väitteet `unit_economics-002`, `regulation-004`"
+    assert by_label["Asiakashankintakustannus, € / asiakas"][3].startswith("puuttuu (`cac`)")
+    todo = heading4(draft(text), business_plan.TEXT["fi"]["sections"]["todo"])
+    assert "- `cac` (asiakashankintakustannus)" in todo
+    assert "- `purchases_per_customer` (ostokerrat / asiakas / kk)" in todo
+
+
+def test_founder_figures_are_marked_as_assumptions(scored):
+    plan = draft(render(scored))
+    assert "- Työaika yritykselle: 20 h / viikko (**oletus**: perustajan ilmoitus, 00_spec.json)" in plan
+    assert "- Oma pääoma: 15 000 € (**oletus**: perustajan ilmoitus, 00_spec.json)" in plan
+    assert "- **oletus**: Arvonlisäverovelvollisuus: rekisteröity (perustajan valinta, 00_spec.json)." in plan
+
+
+def test_draft_sections_list_only_verified_claims(scored):
+    plan = draft(render(scored))
+    market = heading4(plan, "4. Asiakkaat ja markkinat")
+    listed = set(CLAIM_ID_RE.findall(market))
+    claims = json.loads((scored / "03_claims" / "verified.json").read_text(encoding="utf-8"))
+    expected = {c["claim_id"] for c in claims if c["dimension"] in ("customer", "market") and c["verification"] == "verified"}
+    assert listed == expected
+    risks = heading4(plan, "10. Riskit")
+    assert "market-404 (tuntematon)" in risks
+
+
+def test_draft_funding_is_backed_or_unverified_and_shows_no_finland_yaml_value(scored):
+    edit_json(scored / "03_claims" / "verified.json", lambda data: data.__setitem__(
+        slice(None), [c for c in data if c["claim_id"] not in ("financing-004", "financing-005", "financing-006")]))  # fmt: skip
+    financing = heading4(draft(render(scored)), "11. Rahoitussuunnitelma")
+    for p in report.PROGRAMMES:
+        assert f"  - {p.name}: **vahvistamaton – katso puutteet**" in financing
+    for value in finland_values() - {"Jetina", "Rääkkylä", "Pohjois-Karjala", "Keski-Karjala"}:
+        assert value not in financing, f"draft financing shows the finland.yaml hint {value!r}"
+
+
+def test_calculation_without_inputs_lists_every_role_to_fill_in():
+    ue = UnitEconomics(missing_inputs=["price", "variable_cost", "fixed_costs", "cac", "volume", "purchases_per_customer"])
+    rows = business_plan.calculation(ue, "fi")
+    assert all(r["month"] == "–" and r["source"].startswith("puuttuu (`") for r in rows)
+    assert rows[0]["source"] == "puuttuu (`price`): täydennä oma arvio ja merkitse se oletukseksi"
+
+
+def test_figure_without_a_value_but_all_inputs_is_not_computable():
+    ue = UnitEconomics(
+        price_eur=10, variable_cost_eur=12, contribution_margin_eur=-2, contribution_margin_pct=-20,
+        fixed_costs_month_eur=100, volume_month=10, monthly_profit_eur=-120, missing_inputs=["cac", "purchases_per_customer"],
+        input_claim_ids=["p-001", "v-001", "f-001", "n-001"],
+        input_claims={"price": ["p-001"], "variable_cost": ["v-001"], "fixed_costs": ["f-001"], "volume": ["n-001"]},
+    )  # fmt: skip
+    rows = {r["label"]: r for r in business_plan.calculation(ue, "en")}
+    assert rows["Break-even, units"]["source"] == "not computable: see the calculation notes"
+    assert rows["Operating profit before the founder's salary, YEL and taxes, EUR"]["month"] == "-120.00"
+
+
+def test_sheet_without_role_claims_falls_back_to_every_input_claim():
+    # 04_scores.json written before `input_claims` existed
+    ue = UnitEconomics(price_eur=10, input_claim_ids=["p-001", "v-001"], missing_inputs=["volume"])
+    rows = {r["label"]: r for r in business_plan.calculation(ue, "en")}
+    assert rows["Price, EUR / unit sold"]["source"] == "claims `p-001`, `v-001`"
+
+
+def test_subscription_frequency_traces_to_the_price():
+    ue = UnitEconomics(
+        price_eur=20, purchases_per_customer_month=1, input_claim_ids=["p-001"], input_claims={"price": ["p-001"]},
+        missing_inputs=["variable_cost", "fixed_costs", "cac", "volume"],
+    )  # fmt: skip
+    rows = {r["label"]: r for r in business_plan.calculation(ue, "fi")}
+    assert rows["Ostokertoja / asiakas"]["source"] == (
+        "laskettu: tilaus: yksi kuukausi on myyty yksikkö (väitteet `p-001`)"
+    )

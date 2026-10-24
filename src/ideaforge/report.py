@@ -14,6 +14,9 @@ it, or shown as "unverified – see gaps". `config/finland.yaml` is never read h
 hints to verify, never facts. The Rääkkylä notes are the location claims plus the claims that name
 Rääkkylä, Keski-Karjala or North Karelia.
 
+The starttiraha business-plan draft (IF-307, `ideaforge.business_plan`) is a section of the
+report, in `config/report.yaml: business_plan_language`.
+
 Reports are immutable: an existing 05_report.md or `reports` row is never overwritten; a new
 version is a new run (IF-308). Rules chosen unattended are TICKETS.md plan note 23.
 """
@@ -31,7 +34,7 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
-from ideaforge import config, db, runs, scoring, usage, verify
+from ideaforge import business_plan, config, db, runs, scoring, usage, verify
 from ideaforge.schemas import KILL_TRIGGERS, RUBRIC_DIMENSIONS, Claim, IdeaSpec, RiskItem, ScoreSheet
 from ideaforge.synthesis import InputError, load_claims, load_risks, load_scores, load_spec
 
@@ -358,6 +361,7 @@ def context(run_id: str, now: datetime) -> dict[str, Any]:
     rubric = config.rubric()
     weights = {d.id: d.weight for d in rubric.dimensions}
     local_verified, local_other = location_notes(claims)
+    funding = funding_fit(claims)
     return {
         "run_id": run_id,
         "generated_at": now.isoformat(timespec="seconds"),
@@ -371,7 +375,7 @@ def context(run_id: str, now: datetime) -> dict[str, Any]:
         "economics": economics_rows(sheet),
         "sensitivity": sensitivity_grid(sheet),
         "dimensions": dimension_sections(run_dir, sheet, claims, rubric),
-        "funding": funding_fit(claims),
+        "funding": funding,
         "funding_gaps": research_gaps(run_dir, "financing"),
         "unverified_gap": UNVERIFIED_GAP,
         "location_score": next((s for s in sheet.scores if s.dimension == "location"), None),
@@ -380,6 +384,7 @@ def context(run_id: str, now: datetime) -> dict[str, Any]:
         "location_gaps": research_gaps(run_dir, "location"),
         "risks": risk_rows(risks, {c.claim_id for c in claims}),
         "sources": source_rows(claims),
+        "bp": business_plan.context(spec, sheet, claims, risks, funding, config.report().business_plan_language),
         "usage": usage.render_summary(usage.summarize(run_id, run_dir, db.stages(run_id))),
     }
 

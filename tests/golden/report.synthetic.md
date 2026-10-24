@@ -302,6 +302,157 @@ Location gaps:
 | 1 | Synthetic: a similar business closed nearby. | `killcause` | 3 | 4 | 12 | Synthetic mitigation. | killcause-001 |
 | 2 | Synthetic: cites an id that does not exist. | `market` | 2 | 2 | 4 | Synthetic mitigation. | market-404 (unknown) |
 
+## Starttiraha business-plan draft
+
+### Liiketoimintasuunnitelma (luonnos starttirahahakemusta varten)
+
+Luonnos on koottu tämän raportin tiedoista. Luvut ovat vahvistettuja väitteitä (tunnus `claim_id`) tai niistä laskettuja; perustajan omat luvut ja muut oletukset on merkitty **oletukseksi**. Täydennä kohdat, joissa lukee TÄYDENNÄ, ja tarkista luvut ennen hakemusta.
+
+#### 1. Yhteenveto ja liikeidea
+
+- Liikeidea: Sauna-and-lake cabins for remote workers: Week-long cabin rentals with sauna, fibre and a desk on Lake Orivesi for remote workers.
+- Asiakas: Remote-working professionals in Helsinki and abroad who want a quiet working retreat.
+- Markkina-alue: Rääkkylä → North Karelia → Finland → online
+- Ideaforge-arvio: GO (painotettu kokonaispistemäärä 3,80 / 5)
+- **TÄYDENNÄ**: yrityksen nimi, yritysmuoto, aloituspäivä
+
+#### 2. Yrittäjä ja osaaminen
+
+- Osaaminen (perustajan ilmoitus): carpentry, hospitality
+- Työaika yritykselle: 20 h / viikko (**oletus**: perustajan ilmoitus, 00_spec.json)
+- Tavoite (perustajan ilmoitus): sivutulo
+- Ideaforge-pisteet (`founder_risk`): 0 / 5
+- Vahvistetut väitteet:
+  - `founder_risk-001`: The price of one sauna evening is 25 EUR (25 EUR).
+  - `founder_risk-002`: Rent costs 400 EUR per month (400 EUR/month).
+  - `founder_risk-003`: 1900 residents live in the area (1900 persons).
+- **TÄYDENNÄ**: koulutus, työkokemus, aiempi yrittäjyys, verkostot
+
+#### 3. Tuote tai palvelu
+
+- Asiakkaan ongelma: Holiday cottages rarely have reliable internet, a proper desk or availability outside summer.
+- Ratkaisu: Two renovated lakeside cabins with fibre, ergonomic desks, wood-fired sauna and weekly rates.
+- **TÄYDENNÄ**: palvelun sisältö, toimitustapa, aloitusaikataulu
+
+#### 4. Asiakkaat ja markkinat
+
+- Asiakas: Remote-working professionals in Helsinki and abroad who want a quiet working retreat.
+- Ideaforge-pisteet (`customer`): 4 / 5
+- Ideaforge-pisteet (`market`): 4 / 5
+- Vahvistetut väitteet:
+  - `customer-001`: The price of one sauna evening is 25 EUR (25 EUR).
+  - `customer-002`: Rent costs 400 EUR per month (400 EUR/month).
+  - `customer-003`: 1900 residents live in the area (1900 persons).
+  - `market-001`: The price of one sauna evening is 25 EUR (25 EUR).
+  - `market-002`: Rent costs 400 EUR per month (400 EUR/month).
+  - `market-003`: 1900 residents live in the area (1900 persons).
+- **TÄYDENNÄ**: kohderyhmän koko ja tavoitettavuus omin sanoin
+
+#### 5. Kilpailutilanne
+
+- Ideaforge-pisteet (`competition`): 4 / 5
+- Vahvistetut väitteet:
+  - `competition-001`: The price of one sauna evening is 25 EUR (25 EUR).
+  - `competition-002`: Rent costs 400 EUR per month (400 EUR/month).
+  - `competition-003`: 1900 residents live in the area (1900 persons).
+- **TÄYDENNÄ**: tärkeimmät kilpailijat ja oma erottautuminen
+
+#### 6. Hinnoittelu ja ansaintamalli
+
+- Ansaintamalli: Weekly rental fee; optional add-ons (meals, guided nature trips).
+- Ideaforge-pisteet (`pricing`): 4 / 5
+- Vahvistetut väitteet:
+  - `pricing-001`: The price of one sauna evening is 25 EUR (25 EUR).
+  - `pricing-002`: Rent costs 400 EUR per month (400 EUR/month).
+  - `pricing-003`: 1900 residents live in the area (1900 persons).
+- **TÄYDENNÄ**: hinnaston perusteet, alennukset ja lisäpalvelut
+
+#### 7. Markkinointi ja myynti
+
+- Ideaforge-pisteet (`gtm`): 4 / 5
+- Vahvistetut väitteet:
+  - `gtm-001`: The price of one sauna evening is 25 EUR (25 EUR).
+  - `gtm-002`: Rent costs 400 EUR per month (400 EUR/month).
+  - `gtm-003`: 1900 residents live in the area (1900 persons).
+- **TÄYDENNÄ**: kanavat, budjetti ja ensimmäiset asiakkaat
+
+#### 8. Sijainti ja toimintaympäristö
+
+- Markkina-alue: Rääkkylä → North Karelia → Finland → online
+- Ideaforge-pisteet (`location`): 4 / 5
+- Vahvistetut väitteet:
+  - `location-001`: The price of one sauna evening is 25 EUR (25 EUR).
+  - `location-002`: Rent costs 400 EUR per month (400 EUR/month).
+  - `location-003`: 1900 residents live in the area (1900 persons).
+  - `location-004`: Rääkkylä has a synthetic number of summer residents (3000 persons).
+- **TÄYDENNÄ**: toimitilat ja niiden kustannukset
+
+#### 9. Luvat, vakuutukset ja verotus
+
+- Ideaforge-pisteet (`regulation`): 4 / 5
+- Vahvistetut väitteet:
+  - `regulation-001`: The price of one sauna evening is 25 EUR (25 EUR).
+  - `regulation-002`: Rent costs 400 EUR per month (400 EUR/month).
+  - `regulation-003`: 1900 residents live in the area (1900 persons).
+  - `regulation-004`: The general VAT rate is 25.5 % (25.5 %).
+- **TÄYDENNÄ**: yritysmuoto, vakuutukset, YEL-työtulo
+
+#### 10. Riskit
+
+| Riski | Todennäköisyys | Vaikutus | Varautuminen | Väitteet |
+| --- | ---: | ---: | --- | --- |
+| Synthetic: a similar business closed nearby. | 3 | 4 | Synthetic mitigation. | killcause-001 |
+| Synthetic: cites an id that does not exist. | 2 | 2 | Synthetic mitigation. | market-404 (tuntematon) |
+
+#### 11. Rahoitussuunnitelma
+
+- Oma pääoma: 15 000 € (**oletus**: perustajan ilmoitus, 00_spec.json)
+- Julkiset rahoitusmuodot (vain vahvistettu, virallisen lähteen väite kelpaa):
+  - Starttiraha (start-up grant): `financing-004`
+  - Leader (Jetina): **vahvistamaton – katso puutteet**
+  - Elinvoimakeskus business development grants: **vahvistamaton – katso puutteet**
+  - Finnvera loans and guarantees: **vahvistamaton – katso puutteet**
+- **TÄYDENNÄ**: investoinnit, lainat, starttirahan määrä ja kesto viralliselta sivulta
+
+#### 12. Kannattavuuslaskelma
+
+Rahamäärät: alv 0 %.
+
+| Erä | € tai kpl / kk | / vuosi (oletus: 12 × kk) | Lähde |
+| --- | ---: | ---: | --- |
+| Myyntihinta, € / myyty yksikkö | 19,92 |  | väitteet `pricing-001`, `regulation-004` |
+| Myyntimäärä, kpl | 60,0 | 720,0 | väitteet `unit_economics-005` |
+| Liikevaihto, € | 1 195,22 | 14 342,63 | laskettu: hinta × määrä (väitteet `pricing-001`, `regulation-004`, `unit_economics-005`) |
+| Muuttuvat kulut, € / yksikkö | 8,00 |  | väitteet `unit_economics-004`, `regulation-004` |
+| Muuttuvat kulut yhteensä, € | 480,00 | 5 760,00 | laskettu: muuttuvat kulut / yksikkö × määrä (väitteet `unit_economics-004`, `regulation-004`, `unit_economics-005`) |
+| Myyntikate, € | 715,22 | 8 582,63 | laskettu: liikevaihto − muuttuvat kulut (väitteet `pricing-001`, `regulation-004`, `unit_economics-004`, `unit_economics-005`) |
+| Myyntikate, % liikevaihdosta | 59,8 |  | laskettu: myyntikate ÷ liikevaihto (väitteet `pricing-001`, `regulation-004`, `unit_economics-004`) |
+| Kiinteät kulut, € | 400,00 | 4 800,00 | väitteet `unit_economics-002`, `regulation-004` |
+| Liiketulos ennen yrittäjän palkkaa, YEL-maksuja ja veroja, € | 315,22 | 3 782,63 | laskettu: myyntikate − kiinteät kulut (väitteet `pricing-001`, `regulation-004`, `unit_economics-004`, `unit_economics-005`, `unit_economics-002`) |
+| Kannattavuusraja, kpl | 33,6 |  | laskettu: kiinteät kulut ÷ myyntikate / yksikkö (väitteet `pricing-001`, `regulation-004`, `unit_economics-004`, `unit_economics-002`) |
+| Kannattavuusraja, liikevaihto € | 668,45 |  | laskettu: kannattavuusraja × hinta (väitteet `pricing-001`, `regulation-004`, `unit_economics-004`, `unit_economics-002`) |
+| Asiakashankintakustannus, € / asiakas | – |  | puuttuu (`cac`): täydennä oma arvio ja merkitse se oletukseksi |
+| Ostokertoja / asiakas | – |  | puuttuu (`purchases_per_customer`): täydennä oma arvio ja merkitse se oletukseksi |
+| Asiakashankinnan takaisinmaksuaika, kk | – |  | puuttuu (`cac`, `purchases_per_customer`): täydennä oma arvio ja merkitse se oletukseksi |
+
+Oletukset:
+
+- **oletus**: Vuosiluvut ovat 12 × kuukausiluku: kausivaihtelua ei ole mallinnettu.
+- **oletus**: Arvonlisäverovelvollisuus: rekisteröity (perustajan valinta, 00_spec.json).
+- Yrittäjän oma palkka, YEL-maksut, verot ja lainojen lyhennykset eivät ole laskelmassa: TÄYDENNÄ.
+
+Laskennan huomiot (economics.py, englanniksi):
+
+- price: pricing-001 states no VAT basis; read as incl. VAT (the pessimistic reading)
+- fixed_costs: unit_economics-002 states no VAT basis; read as excl. VAT (the pessimistic reading)
+
+#### 13. Täydennettävät kohdat
+
+Puuttuvat laskelman syötteet:
+
+- `cac` (asiakashankintakustannus): täydennä oma arvio ja merkitse se oletukseksi
+- `purchases_per_customer` (ostokerrat / asiakas / kk): täydennä oma arvio ja merkitse se oletukseksi
+
 ## Sources
 
 | Source | Retrieved | Verification | Official | Claims |

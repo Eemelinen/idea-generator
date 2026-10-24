@@ -409,7 +409,7 @@
       "area": "report",
       "title": "Starttiraha business-plan draft",
       "user_visible_behavior": "The report includes a liiketoimintasuunnitelma skeleton and a kannattavuuslaskelma table from the unit economics, in the language chosen in IF-150, where every figure traces to a claim id or is marked as an assumption.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-002", "F-017"],
       "ticket": "IF-307",
       "spec": "docs/TICKETS.md#if-307-starttiraha-business-plan-draft",
@@ -417,7 +417,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_report.py (draft in the configured language; every calculation figure traced or marked as an assumption)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-24 pnpm check → pass (working tree on 57f0f01)",
+        "2026-10-24 uv run pytest tests/test_report.py → pass (working tree on 57f0f01)"
+      ],
       "attempts": 0,
       "notes": "Rendering on the real run moved to F-020."
     },

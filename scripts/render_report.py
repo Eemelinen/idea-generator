@@ -7,7 +7,8 @@ debate's revised plan into runs/<run_id>/debate/revised_plan.md.
 Reads runs/<run_id>/00_spec.json, 03_claims/verified.json, 04_scores.json, 04_risks.json, the
 research files' Gaps sections and usage.jsonl, writes 05_report.md (verdict, score table with cap
 labels, kill triggers, unit economics and sensitivity, dimension sections, Finland funding fit,
-Rääkkylä notes, risk register, sources, usage summary) and stores its `reports` row. Reports are
+Rääkkylä notes, risk register, starttiraha business-plan draft, sources, usage summary) and stores
+its `reports` row. Reports are
 immutable: an existing report is never overwritten. Exit 0 once written, 1 when the run is
 unknown, an input file is missing or invalid, or the run already has a report.
 
