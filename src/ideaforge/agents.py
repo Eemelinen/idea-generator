@@ -74,17 +74,20 @@ def synthesizer_outputs(run_dir: Path) -> list[Path]:
 
 
 def latest_debate_output(run_dir: Path, spec: AgentSpec) -> Path | None:
-    """The persona's file in the highest-numbered round directory that has one."""
+    """The persona's file in the highest-numbered round directory that has one. The judge's is
+    debate/verdict.json once written, before that its latest round<N>/interim_scores.json."""
     if spec.kind == "judge":
         p = run_dir / "debate" / "verdict.json"
-        return p if p.exists() else None
+        if p.exists():
+            return p
     rounds = sorted(
         (d for d in (run_dir / "debate").glob("round*") if d.name[5:].isdigit()),
         key=lambda d: int(d.name[5:]),
         reverse=True,
     )
+    name = "interim_scores.json" if spec.kind == "judge" else f"{spec.persona}.json"
     for d in rounds:
-        p = d / f"{spec.persona}.json"
+        p = d / name
         if p.exists():
             return p
     return None

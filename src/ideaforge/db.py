@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from ideaforge.config import ROOT
-from ideaforge.schemas import Claim, DimensionScore
+from ideaforge.schemas import Assumption, Claim, DimensionScore, Experiment
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (
@@ -325,6 +325,46 @@ def add_report(
         conn.execute(
             "INSERT INTO reports(run_id, kind, path, weighted_total, verdict, created_at) VALUES (?,?,?,?,?,?)",
             (run_id, kind, path, weighted_total, verdict, created_at),
+        )
+        then()
+
+
+def add_revised_plan(
+    run_id: str,
+    path: str,
+    *,
+    assumptions: Iterable[Assumption],
+    experiments: Iterable[Experiment],
+    conformity_flag: bool,
+    rounds: int,
+    created_at: str,
+    then: Callable[[], None] = lambda: None,
+) -> None:
+    """Store a debate's outcome in one transaction: the `reports` row (kind `revised_plan`; raises
+    sqlite3.IntegrityError if it exists), the `assumptions` and `experiments` tables (experiments
+    in the given order, idx 1…) and the finished `debates` row. `then` writes the file."""
+    with session() as conn:
+        conn.execute(
+            "INSERT INTO reports(run_id, kind, path, weighted_total, verdict, created_at) VALUES (?,?,?,?,?,?)",
+            (run_id, "revised_plan", path, None, None, created_at),
+        )
+        conn.execute("DELETE FROM assumptions WHERE run_id=?", (run_id,))
+        conn.executemany(
+            "INSERT INTO assumptions(run_id, idx, assumption, evidence_state, risk_if_wrong) VALUES (?,?,?,?,?)",
+            [(run_id, i, a.assumption, a.evidence_state, a.risk_if_wrong) for i, a in enumerate(assumptions, start=1)],
+        )
+        conn.execute("DELETE FROM experiments WHERE run_id=?", (run_id,))
+        conn.executemany(
+            "INSERT INTO experiments(run_id, idx, name, cost_eur, days, success_threshold, info_value)"
+            " VALUES (?,?,?,?,?,?,?)",
+            [
+                (run_id, i, e.name, e.cost_eur, e.days, e.success_threshold, e.info_value)
+                for i, e in enumerate(experiments, start=1)
+            ],
+        )
+        conn.execute(
+            "UPDATE debates SET rounds=?, conformity_flag=?, status='done', finished_at=? WHERE run_id=?",
+            (rounds, int(conformity_flag), created_at, run_id),
         )
         then()
 

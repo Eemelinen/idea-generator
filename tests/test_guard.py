@@ -44,6 +44,35 @@ def test_report_is_never_written_by_a_tool(project, dev, who):
     assert guard.check_write(write(project / "runs" / "20261023-130000-x" / "debate" / "05_report.md")) is None
 
 
+JUDGE = {"agent_id": "a5", "agent_type": "debate-judge"}
+
+
+@pytest.mark.parametrize("dev", [False, True])
+@pytest.mark.parametrize("who", [{}, JUDGE, EVALUATOR])
+def test_revised_plan_is_never_written_by_a_tool(project, dev, who):
+    if dev:
+        (project / ".ideaforge-dev").touch()
+    (project / "runs" / "20261023-130000-x").mkdir()
+    (project / "runs" / ".active").write_text("20261023-130000-x", encoding="utf-8")
+    plan = project / "runs" / "20261023-130000-x" / "debate" / "revised_plan.md"
+    assert "immutable" in guard.check_write(write(plan, **who))
+    edit = {"tool_name": "Edit", "tool_input": {"file_path": str(plan)}, **who}
+    assert "immutable" in guard.check_write(edit)
+    assert guard.check_write(write(project / "runs" / "20261023-130000-x" / "debate" / "notes.md", **who)) is None
+
+
+@pytest.mark.parametrize("name", ["interim_scores.json", "verdict.json"])
+def test_only_the_judge_writes_its_files(project, name):
+    (project / "runs" / "20261023-130000-x" / "debate" / "round1").mkdir(parents=True)
+    (project / "runs" / ".active").write_text("20261023-130000-x", encoding="utf-8")
+    debate_dir = project / "runs" / "20261023-130000-x" / "debate"
+    target = debate_dir / ("round1" if name.startswith("interim") else "") / name
+    persona = {"agent_id": "a6", "agent_type": "debate-investor"}
+    assert "only by the debate judge" in guard.check_write(write(target, **persona))
+    assert guard.check_write(write(target, **JUDGE)) is None
+    assert guard.check_write(write(debate_dir / "round1" / "investor.json", **persona)) is None
+
+
 def test_main_session_strict_without_dev_marker(project):
     assert guard.check_write(write(project / "runs" / "x" / "00_spec.json")) is None
     assert guard.check_write(write(project / "cache" / "abc.txt")) is None

@@ -478,7 +478,7 @@
       "area": "debate",
       "title": "Convergence, conformity flag, verdict and revised plan",
       "user_visible_behavior": "`scripts/debate_converged.py` exits 0 on no new evidence and no moved change, on interim scores moving less than the configured delta, or at max rounds; the conformity flag is recomputed in Python; `render_report.py --debate` writes `debate/revised_plan.md` with a diff against the report, the assumption register and experiments sorted by info value per cost, and the tables are persisted.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-017", "F-021"],
       "ticket": "IF-405",
       "spec": "docs/TICKETS.md#if-405-convergence-conformity-flag-verdict-and-revised-plan",
@@ -486,7 +486,12 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_debate_converged.py tests/test_debate.py tests/test_revised_plan.py (each exit condition; conformity flag; revised plan with at least 5 costed experiments)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-24 pnpm check → pass (commit ef2b5ce)",
+        "2026-10-24 uv run pytest tests/test_debate_converged.py tests/test_debate.py tests/test_revised_plan.py → pass (commit ef2b5ce)",
+        "2026-10-24 pnpm check → pass (working tree on ae7fc04)",
+        "2026-10-24 uv run pytest tests/test_debate_converged.py tests/test_debate.py tests/test_revised_plan.py → pass (working tree on ae7fc04)"
+      ],
       "attempts": 0,
       "notes": "Absorbs IF-406 (judge verdict and revised plan)."
     },

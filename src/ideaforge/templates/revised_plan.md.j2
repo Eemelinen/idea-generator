@@ -1,0 +1,84 @@
+{#- debate/revised_plan.md, rendered by ideaforge.revised_plan from debate/verdict.json. -#}
+# {{ spec.title }}: revised plan after the debate
+
+- Run: `{{ run_id }}` (idea `{{ spec.idea_id }}`, version {{ spec.version }})
+- Generated: {{ generated_at }}
+- Compared with: `{{ report_name }}` (verdict {{ sheet.verdict }}, weighted total {{ sheet.weighted_total | num }})
+- Debate: {{ rounds }} rebuttal round(s); judged author-blind against the verified claim ledger
+
+{% if conformity_flag %}
+> **⚠ Conformity flag.** At least {{ min_agree }} of the 5 personas backed the same change while no new claim id entered the debate. Treat that agreement as a warning sign, not as support: check every accepted change against its claims below.
+{% else %}
+Conformity flag: not raised (no change was backed by {{ min_agree }} or more personas without new claim ids).
+{% endif %}
+{% if conformity_flag != judge_flag %}
+
+The judge wrote `conformity_flag: {{ judge_flag | lower }}`; Python recomputed it as `{{ conformity_flag | lower }}` from the accepted debate turns, and `verdict.json` now holds the computed value.
+{% endif %}
+{% if report_changed %}
+
+Note: `04_scores.json` changed after the report was rendered (the report says {{ report_row.verdict }}, {{ report_row.weighted_total | num }}); the comparison uses the current score sheet.
+{% endif %}
+
+This plan is immutable. The projected scores are the judge's proposals; the projected total is computed in Python from them and is not a new score. The verdict changes only when the revised idea is run again as a new version (`/validate --from {{ run_id }}`).
+
+## Changes against the report
+
+```diff
+@@ dimension scores: {{ report_name }} → judge's projection @@
+{% for line in score_lines %}
+{{ line }}
+{% endfor %}
+@@ weighted total: report → projection @@
+{% for line in total_lines %}
+{{ line }}
+{% endfor %}
+@@ plan changes accepted by the judge @@
+{% for a in accepted %}
++ {{ a.change.change | oneline }} [{{ a.change.claim_ids | join(", ") }}]
+{% else %}
+  (none)
+{% endfor %}
+```
+
+### Accepted changes
+
+{% for a in accepted %}
+{{ loop.index }}. **{{ a.change.change | oneline }}** {{ a.change.reason | oneline }}
+{% for c in a.claims %}
+   - `{{ c.claim_id }}`: {{ c | claim }} Source: {{ c.source_title | link(c.source_url) }}, retrieved {{ c.retrieved_at.isoformat() }}.
+{% endfor %}
+{% else %}
+The judge accepted no change.
+{% endfor %}
+
+### Rejected changes
+
+{% for r in rejected %}
+{{ loop.index }}. {{ r.change.change | oneline }} Reason: {{ r.change.reason | oneline }}{% if r.change.claim_ids %} Claims: {{ r.change.claim_ids | join(", ") }}.{% endif %}{% if r.unknown %} Not in the ledger: {{ r.unknown | join(", ") }}.{% endif %}
+
+{% else %}
+The judge rejected no change.
+{% endfor %}
+
+## Assumption register
+
+{% if assumptions %}
+| # | Assumption | Evidence state | Risk if wrong |
+| ---: | --- | --- | --- |
+{% for a in assumptions %}
+| {{ loop.index }} | {{ a.assumption | cell }} | {{ a.evidence_state }} | {{ a.risk_if_wrong | cell }} |
+{% endfor %}
+{% else %}
+The judge listed no assumption.
+{% endif %}
+
+## Experiments
+
+Ordered by information value per euro (info value 1–5 ÷ cost); a free experiment comes first.
+
+| # | Experiment | Cost (EUR) | Days | Success threshold | Info value | Per 100 EUR |
+| ---: | --- | ---: | ---: | --- | ---: | ---: |
+{% for e, ratio in experiments %}
+| {{ loop.index }} | {{ e.name | cell }} | {{ e.cost_eur | num }} | {{ e.days | score }} | {{ e.success_threshold | cell }} | {{ e.info_value }} | {{ ratio }} |
+{% endfor %}

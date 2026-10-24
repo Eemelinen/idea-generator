@@ -76,6 +76,7 @@ def test_research_requires_claim_blocks(tmp_path):
     ("runs/r/04_scores_proposed.json", "scores_proposed"),
     ("runs/r/debate/round0/investor.json", "position"),
     ("runs/r/debate/round2/investor.json", "rebuttal"),
+    ("runs/r/debate/round2/interim_scores.json", "interim_scores"),
     ("runs/r/debate/verdict.json", "verdict"),
 ])
 def test_infer_kind(rel, kind, tmp_path):
@@ -348,3 +349,19 @@ def test_auto_reports_warnings_without_blocking(active_run, capsys):
     shutil.copy(RESEARCH_FIXTURE, active_run / "02_research" / "pricing.md")
     assert vf.auto(hook, stop=False) == 0
     assert not marker.exists()
+
+
+def test_judge_output_is_its_latest_interim_until_the_verdict(tmp_path):
+    from ideaforge import agents
+
+    judge = agents.get("debate-judge")
+    debate_dir = tmp_path / "debate"
+    assert agents.latest_debate_output(tmp_path, judge) is None
+    for n in (1, 2):
+        (debate_dir / f"round{n}").mkdir(parents=True)
+        (debate_dir / f"round{n}" / "interim_scores.json").write_text("{}", encoding="utf-8")
+    (debate_dir / "round2" / "founder.json").write_text("{}", encoding="utf-8")
+    assert agents.latest_debate_output(tmp_path, judge) == debate_dir / "round2" / "interim_scores.json"
+    (debate_dir / "verdict.json").write_text("{}", encoding="utf-8")
+    assert agents.latest_debate_output(tmp_path, judge) == debate_dir / "verdict.json"
+    assert agents.latest_debate_output(tmp_path, agents.get("debate-founder")) == debate_dir / "round2" / "founder.json"

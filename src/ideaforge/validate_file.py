@@ -106,6 +106,8 @@ def infer_kind(path: Path) -> str:
         return "research"
     if len(parts) >= 2 and parts[-2] == "03_claims" and path.name != "verified.json":
         return "claims"
+    if len(parts) >= 2 and re.fullmatch(r"round\d+", parts[-2]) and path.name == "interim_scores.json":
+        return "interim_scores"
     if len(parts) >= 2 and re.fullmatch(r"round\d+", parts[-2]) and path.name != "positions_anon.json":
         return "position" if parts[-2] == "round0" else "rebuttal"
     for rel, kind in STAGE_FILES.items():
