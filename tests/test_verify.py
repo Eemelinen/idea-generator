@@ -817,6 +817,43 @@ def test_no_conflict_across_dimensions_statements_units_or_unverified(other):
     assert verify.detect_conflicts([conflict_claim("market-001", 100), other]) == []
 
 
+@pytest.mark.parametrize(
+    ("statement_a", "statement_b", "same_source"),
+    [
+        # IF-216, shapes from the first live run: one table's cells, a time series, two areas.
+        ("Rääkkylä had {v} residents in 2025.", "Rääkkylä had {v} residents in 2025.", True),
+        ("Rääkkylä had {v} residents on 31 December 2025.", "Rääkkylä had {v} residents on 31 December 2015.", False),
+        ("Occupancy in North Karelia was {v} % in July 2025.", "Occupancy in North Karelia was {v} % in January 2025.", False),
+        ("North Karelia had {v} free-time buildings in 2025.", "Finland had {v} free-time buildings in 2025.", False),
+    ],
+)
+def test_one_source_a_series_or_another_area_is_no_conflict(statement_a, statement_b, same_source):
+    a = conflict_claim("market-001", 100, statement=statement_a)
+    b = conflict_claim("market-002", 200, statement=statement_b)
+    if same_source:
+        b = b.model_copy(update={"source_url": a.source_url + "/"})  # the same URL, normalized
+    assert verify.detect_conflicts([a, b]) == []
+
+
+def test_two_selections_of_one_api_table_are_no_conflict():
+    # IF-216, second sauna run: a work-purpose subset and the total of one StatFin table.
+    table = "https://pxdata.stat.fi/PXWeb/api/v1/fi/StatFin/smat/13h3.px"
+    statement = "Finns spent {v} thousand domestic nights in rented cottages in 2025."
+    a = conflict_claim("market-001", 5780, statement=statement, source_type="api", source_url=f"{table}?tark=0")
+    b = conflict_claim("market-002", 360, statement=statement, source_type="api", source_url=f"{table}?tark=1")
+    assert verify.detect_conflicts([a, b]) == []
+    # The same two URLs as web pages are two sources.
+    pages = [c.model_copy(update={"source_type": "news"}) for c in (a, b)]
+    assert len(verify.detect_conflicts(pages)) == 1
+
+
+def test_two_sources_on_one_quantity_still_conflict():
+    statement = "Rääkkylä had {v} residents in 2025."
+    a = conflict_claim("market-001", 1830, statement=statement, source_type="api")
+    b = conflict_claim("market-002", 2400, statement="In 2025 Rääkkylä had {v} residents.")
+    assert [g.claim_ids for g in verify.detect_conflicts([a, b])] == [["market-001", "market-002"]]
+
+
 def test_a_missing_unit_still_conflicts():
     claims = [conflict_claim("market-001", 100), conflict_claim("market-002", 200, unit=None)]
     assert len(verify.detect_conflicts(claims)) == 1

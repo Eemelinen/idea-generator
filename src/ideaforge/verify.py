@@ -20,7 +20,11 @@ Extracted claims (IF-211): the claim extractor's candidate claims for a research
 verified the same way.
 
 Conflicts (IF-210): `detect_conflicts` groups verified claims of one dimension whose statements
-are similar (rapidfuzz token_sort_ratio ≥ 80) and whose values differ by more than 25 %; every
+are similar (rapidfuzz token_sort_ratio ≥ 80) and whose values differ by more than 25 %, as long
+as they cite different sources (for an `api` claim, another table or endpoint) and their
+statements name the same years, quarters, months and
+capitalised names (IF-216: on the first live run every pair from one source, and every pair that
+differed only in the period or the area, was a time series or a breakdown, not a conflict); every
 claim of a group becomes `conflict` and is kept, and the groups go to 03_claims/conflicts.json in
 preference order (official > api > industry > news > forum > vendor, then the newest) for the
 synthesizer.
@@ -54,7 +58,7 @@ from ideaforge import config, db, extract, runs
 from ideaforge.fi import requery
 from ideaforge.fi.http import Transport
 from ideaforge.schemas import CandidateClaim, Claim, ConflictGroup, SourceType
-from ideaforge.validate_file import candidate_claims
+from ideaforge.validate_file import candidate_claims, normalize_url
 
 USER_AGENT = "ideaforge/0.1 (local business-idea validator; claim quote verification)"
 TIMEOUT_S = 10
@@ -459,13 +463,44 @@ def _units_compatible(a: str | None, b: str | None) -> bool:
     return normalize(a) == normalize(b)
 
 
+_MONTHS = (
+    r"January|February|March|April|May|June|July|August|September|October|November|December"
+    r"|(?:tammi|helmi|maalis|huhti|touko|kesä|heinä|elo|syys|loka|marras|joulu)\w*"
+)
+# What a statement is about besides its value: a year (2025, 2025Q1, 2025M07), a quarter, a month,
+# or a capitalised word (an area, a platform, a group: Rääkkylä, Finland, Airbnb, Finnish).
+QUALIFIER_RE = re.compile(rf"\b(?:(?:19|20)\d{{2}}(?:Q[1-4]|M\d{{2}})?|Q[1-4]|{_MONTHS})\b|\b[A-ZÅÄÖ][\w-]*")
+
+
+# Capitalised only because they start the sentence.
+_NOT_QUALIFIERS = frozenset(
+    "a an the in on at by for from of to since during until after before according there this these "
+    "that its it their under over with without per each every all some most no".split()
+)
+
+
+def qualifiers(statement: str) -> set[str]:
+    return {q.casefold() for q in QUALIFIER_RE.findall(statement)} - _NOT_QUALIFIERS
+
+
+def _source(claim: Claim) -> str:
+    """The claim's source for conflict checks: an `api` claim's table or endpoint (its URL without
+    the query, which only selects cells), any other claim's normalized URL."""
+    url = normalize_url(claim.source_url)
+    return url.split("?", 1)[0] if claim.source_type == "api" else url
+
+
 def in_conflict(a: Claim, b: Claim) -> bool:
+    """Two readings of one quantity that disagree. Two claims on one source are two cells or two
+    facts of it, and statements naming another period or area are a series, not a conflict."""
     return (
         a.dimension == b.dimension
         and a.value is not None
         and b.value is not None
         and _units_compatible(a.unit, b.unit)
         and values_conflict(a.value, b.value)
+        and _source(a) != _source(b)
+        and qualifiers(a.statement) == qualifiers(b.statement)
         and statements_similar(a.statement, b.statement)
     )
 
