@@ -1,0 +1,126 @@
+{
+  "scores": [
+    {
+      "dimension": "customer",
+      "proposed_score": 3.5,
+      "justification": "Synthetic justification for customer.",
+      "supporting_claim_ids": [
+        "customer-001"
+      ],
+      "final_score": 3.5,
+      "cap_reason": null,
+      "status": "scored"
+    },
+    {
+      "dimension": "market",
+      "proposed_score": 3,
+      "justification": "Synthetic justification for market.",
+      "supporting_claim_ids": [
+        "market-001"
+      ],
+      "final_score": 3,
+      "cap_reason": null,
+      "status": "scored"
+    },
+    {
+      "dimension": "competition",
+      "proposed_score": 2,
+      "justification": "Synthetic justification for competition.",
+      "supporting_claim_ids": [
+        "competition-001"
+      ],
+      "final_score": 2,
+      "cap_reason": null,
+      "status": "scored"
+    },
+    {
+      "dimension": "pricing",
+      "proposed_score": 3,
+      "justification": "Synthetic justification for pricing.",
+      "supporting_claim_ids": [
+        "pricing-001"
+      ],
+      "final_score": 3,
+      "cap_reason": null,
+      "status": "scored"
+    },
+    {
+      "dimension": "unit_economics",
+      "proposed_score": 3,
+      "justification": "Synthetic justification for unit_economics.",
+      "supporting_claim_ids": [
+        "unit_economics-001"
+      ],
+      "final_score": 3,
+      "cap_reason": null,
+      "status": "scored"
+    },
+    {
+      "dimension": "gtm",
+      "proposed_score": 3,
+      "justification": "Synthetic justification for gtm.",
+      "supporting_claim_ids": [
+        "gtm-001"
+      ],
+      "final_score": 2,
+      "cap_reason": "min_sources: 1 of 2 independent verified sources",
+      "status": "insufficient_data"
+    },
+    {
+      "dimension": "regulation",
+      "proposed_score": 4,
+      "justification": "Synthetic justification for regulation.",
+      "supporting_claim_ids": [
+        "regulation-001"
+      ],
+      "final_score": 4,
+      "cap_reason": null,
+      "status": "scored"
+    },
+    {
+      "dimension": "financing",
+      "proposed_score": 3.5,
+      "justification": "Synthetic justification for financing.",
+      "supporting_claim_ids": [
+        "financing-001"
+      ],
+      "final_score": 3.5,
+      "cap_reason": null,
+      "status": "scored"
+    },
+    {
+      "dimension": "location",
+      "proposed_score": 3,
+      "justification": "Synthetic justification for location.",
+      "supporting_claim_ids": [
+        "location-001"
+      ],
+      "final_score": 3,
+      "cap_reason": null,
+      "status": "scored"
+    },
+    {
+      "dimension": "founder_risk",
+      "proposed_score": 2.5,
+      "justification": "Synthetic justification for founder_risk.",
+      "supporting_claim_ids": [
+        "founder_risk-001"
+      ],
+      "final_score": 2.5,
+      "cap_reason": null,
+      "status": "scored"
+    }
+  ],
+  "weighted_total": 2.95,
+  "kill_triggers_fired": [
+    "beachhead_below_founder_income"
+  ],
+  "verdict": "PIVOT",
+  "unit_economics": {
+    "price_eur": 120,
+    "variable_cost_eur": 35,
+    "missing_inputs": [
+      "cac_eur"
+    ]
+  }
+}

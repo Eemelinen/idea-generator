@@ -93,7 +93,8 @@ ideaforge/
 │   ├── mini_research.py           # debate mini-research tasks: open (≤ max per debate) and finish
 │   ├── usage.py                   # JSONL log of tool calls; per-run tallies
 │   ├── brief.py                   # run-specific research-brief lines: preset budget line, back-test header
-│   ├── status.py                  # /status text: recent runs, one run's claims, flags, markers, usage
+│   ├── status.py                  # /status text: recent runs, one run's claims, flags, markers, usage; score-sheet diff
+│   ├── review.py                  # /status --review / --reviews: report-section scores 1–5, trend by prompt/model version
 │   ├── golden.py                  # eval golden set: load + validate, find each idea's run, the three checks
 │   ├── validate_file.py           # CLI: validate a JSON file against a schema (used by hooks)
 │   └── fi/                        # free Finnish data tools
@@ -112,7 +113,7 @@ ideaforge/
 │   ├── debate_validate.py         # validate a round's rebuttals; reject unsupported stance changes
 │   ├── debate_converged.py        # exit code 0 if converged
 │   ├── usage_report.py
-│   ├── status.py                  # /status [run_id]
+│   ├── status.py                  # /status [run_id] [--review] | --reviews | --diff <a> <b>
 │   └── eval_check.py              # /eval: check the golden runs, print the summary table
 ├── runs/                          # one folder per run (gitignored)
 │   └── <run_id>/
@@ -336,7 +337,7 @@ Already written by stage 3. `/status <run_id>` prints: claims per dimension (ver
 
 ### Stage 6 — Persistence/versioning
 
-- Reports are immutable. Re-running creates `runs/<run_id>-v2/` linked via `idea_versions.parent` (`/validate --from <run_id>` → `new_run.py --from`; a later version of the same parent gets the next free `-vN`). The parent run's files and rows are never touched. `/status` can diff score sheets between versions (IF-504).
+- Reports are immutable. Re-running creates `runs/<run_id>-v2/` linked via `idea_versions.parent` (`/validate --from <run_id>` → `new_run.py --from`; a later version of the same parent gets the next free `-vN`). The parent run's files and rows are never touched. `/status --diff <a> <b>` compares the score sheets of two versions (IF-504).
 - Record in `runs/<id>/meta.json` (`ideaforge.meta`): git commit of prompts/config (the repository HEAD, the last commit touching `config/`, `prompts/`, `agent_templates/`, and an uncommitted-changes flag), `models.yaml` roles snapshot, Claude Code version, idea id and version, timestamps (`created_at`, `updated_at` per stage transition). Rules: TICKETS.md plan note 24.
 
 ### Stage 7 — Debate (`/debate <run_id>`)
@@ -401,7 +402,7 @@ All free, no keys. Thin wrappers with on-disk caching (24 h) and a `--json` flag
 - **Schema tests**: every example JSON in `tests/fixtures/` validates.
 - **Golden set** (`tests/golden/*.yaml`, 10 ideas for v1, 20 for v2): a short idea, expected verdict range, and 2–3 "must-find" facts (e.g. an existing local competitor, a known regulatory requirement). `/eval` runs the pipeline on each (sequentially, to respect usage limits), then checks: verdict within range, must-find facts present among verified claims, zero unverified claims cited in the score sheet. Include obviously bad ideas, one real existing Rääkkylä business, and one with a Finnish regulatory trap.
 - **Back-test mode**: `--as-of YYYY-MM-DD` adds a header to every research prompt forbidding sources after that date and makes `verify_claims.py` reject claims with `published_date` after it. The header goes in the research brief (`scripts/research_brief.py`), since the agent files are rendered without a run; a claim with no `published_date` is not rejected (TICKETS.md plan note 29).
-- **Human review**: `/status` lets the user score each report section 1–5; stored in `reviews` table to track drift after prompt or model changes.
+- **Human review**: `/status <run_id> --review` lets the user score each report section 1–5; stored in `reviews` table to track drift after prompt or model changes. `/status --reviews` shows the mean per section for each prompt/config and model version (from `meta.json`); `/status --diff <a> <b>` compares two score sheets (TICKETS.md plan note 30).
 - **Harness verification layer (§14)**: L1 `pnpm check` runs the full pytest suite plus the harness checks, and is the gate for every feature. Tests are **offline**. Finnish API responses are recorded once from the live APIs by a human feature (IF-200, `tests/fixtures/api/`) and never invented. Anything that needs a real Claude run or the network (the golden-set `/eval`, phase acceptance runs) is a `manual:` step done interactively.
 
 ---

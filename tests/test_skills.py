@@ -23,6 +23,9 @@ RESEARCH_AGENTS = [a for a in agents.AGENTS.values() if a.kind == "research"]
 PLACEHOLDERS = {
     "<run_id>": "20261023-120000-sauna-cabins",
     "<parent_run_id>": "20261023-110000-sauna-cabins",
+    "<run_a>": "20261023-110000-sauna-cabins",
+    "<run_b>": "20261023-120000-sauna-cabins-v2",
+    "<entries>": "verdict=4 'risks=2:too generic, no mitigation'",
     "<dim>": "market",
     "<stage>": "plan",
     "<idea text>": "sauna cabins by the lake",

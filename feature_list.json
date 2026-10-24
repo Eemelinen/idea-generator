@@ -610,7 +610,7 @@
       "area": "observability",
       "title": "Review scores and status diff",
       "user_visible_behavior": "`/status <run_id> --review` stores 1–5 section scores in the reviews table and `/status --reviews` shows the trend across prompt and model versions; `/status --diff <a> <b>` compares two score sheets per dimension, verdict and kill triggers.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-009", "F-019"],
       "ticket": "IF-504",
       "spec": "docs/TICKETS.md#if-504-review-scores-and-status-diff",
@@ -618,7 +618,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_status.py (reviews persist and show in the trend; v1/v2 fixture diff)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-24 pnpm check → pass (working tree on ee6fcda)",
+        "2026-10-24 uv run pytest tests/test_status.py → pass (working tree on ee6fcda)"
+      ],
       "attempts": 0,
       "notes": "Absorbs IF-505 (/status --diff)."
     }

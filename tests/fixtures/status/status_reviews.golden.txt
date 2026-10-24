@@ -1,0 +1,25 @@
+review scores by prompt/config and model version (oldest first; mean of 1–5)
+A: config aaaaaaa · models opus (all roles) · 2 run(s)
+B: config bbbbbbb · models opus except debate_judge=sonnet, synthesizer=sonnet · 1 run(s)
+C: config unknown · models unknown · 1 run(s)
+
+section           A    B    C
+verdict         4.5  3.0  1.0
+score_table     3.5  4.0    -
+kill_triggers     -    -    -
+unit_economics    -    -    -
+dimensions        -    -    -
+funding           -    -    -
+location          -    -    -
+risks           2.5  2.0    -
+sources         4.0    -    -
+usage             -    -    -
+all sections    3.6  3.0  1.0
+runs              2    1    1
+
+reviewed runs
+run                              version  sections  mean
+20261023-110000-sauna-cabins     A               3   3.3
+20261023-120000-berry-drying     A               4   3.8
+20261023-110000-sauna-cabins-v2  B               3   3.0
+20261022-090000-pizza            C               1   1.0
