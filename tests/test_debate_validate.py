@@ -173,12 +173,13 @@ def test_disagree_with_only_a_computation_is_rejected(run):
 )
 def test_unknown_or_unverified_claim_ids_are_rejected(run, claim_id, message):
     for where in ("new", "cited", "computation", "change"):
-        response = {"target_position_id": other("founder"), "stance": "agree", "basis": {"new_claim_ids": ["market-002"]}}
+        target = other("founder")
+        response = {"target_position_id": target, "stance": "agree", "basis": {"new_claim_ids": ["market-002"]}}
         extra = {}
         if where == "new":
             response["basis"] = {"new_claim_ids": [claim_id]}
         elif where == "cited":
-            response = {"target_position_id": other("founder"), "stance": "disagree", "basis": GAP, "cited_claim_ids": [claim_id]}
+            response = {"target_position_id": target, "stance": "disagree", "basis": GAP, "cited_claim_ids": [claim_id]}
         elif where == "computation":
             response["basis"] = {"computation": f"{claim_id} (40) * 2 = 80"}
         else:

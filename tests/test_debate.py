@@ -12,6 +12,7 @@ from conftest import DEBATE_RUN, debate_position
 from ideaforge import db, debate
 from ideaforge.schemas import PERSONAS
 
+
 def anon_file(run_dir, round_no=0):
     return json.loads((run_dir / "debate" / f"round{round_no}" / "positions_anon.json").read_text(encoding="utf-8"))
 
@@ -137,6 +138,28 @@ SELF_LABELS = [
     ("I'm the Accountant's voice.", "[persona] voice."),
     ("Sijoittajana en rahoittaisi tätä.", "[persona] en rahoittaisi tätä."),
     ("Minä olen kirjanpitäjä ja ALV on riski.", "[persona] ja ALV on riski."),
+    # Every form TICKETS.md plan note 25 lists, so the note and the patterns cannot drift apart.
+    ("See debate-founder.", "See [persona]."),
+    ("The investor persona says no.", "[persona] says no."),
+    ("Through an operator lens, staffing fails.", "Through [persona], staffing fails."),
+    ("As a customer, I would book once.", "[persona], I would book once."),
+    ("I am the operator.", "[persona]."),
+    ("Speaking as the accountant, VAT applies.", "[persona], VAT applies."),
+    ("From the founder's side, time is short.", "[persona], time is short."),
+    ("From an accountant's standpoint it adds up.", "[persona] it adds up."),
+    ("From the customer's view it is cheap.", "[persona] it is cheap."),
+    ("From the investor's angle it is small.", "[persona] it is small."),
+    ("As investor, I would pass.", "[persona], I would pass."),
+    ("Margins are thin. As operator I would hire.", "Margins are thin. [persona] I would hire."),
+    ("As customer I would pay 40 EUR.", "[persona] I would pay 40 EUR."),
+    ("Perustajana jaksan 20 tuntia.", "[persona] jaksan 20 tuntia."),
+    ("Kirjanpitäjänä näen riskin.", "[persona] näen riskin."),
+    ("Minä olen kirjanpitäjänä huolissani.", "[persona] huolissani."),
+    ("Tilintarkastajana vaadin kuitit.", "[persona] vaadin kuitit."),
+    ("Operaattorina palkkaisin apua.", "[persona] palkkaisin apua."),
+    ("Mä oon sijoittaja. Minä sijoittaja en maksa.", "[persona]. [persona] en maksa."),
+    ("Minä olen asiakas ja maksan 40 euroa.", "[persona] ja maksan 40 euroa."),
+    ("Minä yrittäjä teen kaiken.", "[persona] teen kaiken."),
 ]
 
 
@@ -153,6 +176,8 @@ def test_scrub_self_labels(text, redacted):
         "Yrittäjänä toimiminen vaatii starttirahan.",
         "Asiakkaana mökkiläinen maksaa 90 euroa.",
         "Price it for the customer segment that drives.",
+        "Collect proof such as customer reviews.",
+        "Treat them as operator costs.",
     ],
 )
 def test_scrub_keeps_plain_role_words(text):
@@ -223,7 +248,8 @@ def test_rebuttal_round_drops_requested_by_and_rejected_roles(debate_run):
     assert len(data["positions"]) == 4
     text = json.dumps(data)
     assert "requested_by" not in text and '"role"' not in text
-    assert all(p["mini_research"] == {"question": "Synthetic question?", "dimension": "market"} for p in data["positions"])
+    expected = {"question": "Synthetic question?", "dimension": "market"}
+    assert all(p["mini_research"] == expected for p in data["positions"])
 
 
 def test_round0_positions_are_recorded_as_turns(debate_run):
@@ -247,7 +273,10 @@ def test_missing_persona_is_reported_not_fatal(debate_run):
     ("change", "match"),
     [
         (lambda d: (d / "investor.json").write_text("{}", encoding="utf-8"), "not a valid Position"),
-        (lambda d: (d / "investor.json").write_text(json.dumps(debate_position("founder")), encoding="utf-8"), "expected 'investor'"),
+        (
+            lambda d: (d / "investor.json").write_text(json.dumps(debate_position("founder")), encoding="utf-8"),
+            "expected 'investor'",
+        ),
         (lambda d: [p.unlink() for p in d.glob("*.json")], "no usable persona files"),
     ],
 )

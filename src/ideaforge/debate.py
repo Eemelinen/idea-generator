@@ -45,7 +45,9 @@ _ROLE = "|".join(PERSONAS)
 # words stay: "customer", "founder" and "operator" are also ordinary words in a business plan
 # (and "customer" is a dimension), so only labelling phrases are replaced: "debate-<role>",
 # "<role> persona / lens / here", "as (the|a|an) <role>", "from the <role>'s perspective",
-# "I am / I'm / I, the <role>", and the Finnish essive self-labels ("sijoittajana", …).
+# "I am / I'm / I, the <role>", an article-less "as <role>" only before a comma or at the start
+# of a sentence ("such as customer reviews" stays), and the Finnish "minä (olen / oon) <role>" and
+# essive self-labels ("sijoittajana", "kirjanpitäjänä": the ending follows vowel harmony).
 # "yrittäjänä" and "asiakkaana" stay: Finnish plans use them for the real founder and customers.
 _A = r"(?:the\s+|an?\s+|my\s+|our\s+|this\s+|your\s+)"
 _FI_ROLE = r"(?:perustaja|sijoittaja|kirjanpitäjä|tilintarkastaja|operaattori)"
@@ -54,13 +56,16 @@ _SELF_LABEL_RES = (
     re.compile(rf"\b{_A}?(?:{_ROLE})(?:'s)?\s+(?:persona|lens)\b", re.IGNORECASE),
     re.compile(rf"\b(?:I\s+am|I'm|I,|speaking\s+as)\s+{_A}?(?:{_ROLE})\b(?:'s)?", re.IGNORECASE),
     re.compile(rf"\bas\s+{_A}(?:{_ROLE})\b(?:'s)?", re.IGNORECASE),
+    re.compile(rf"\bas\s+(?:{_ROLE})\b(?:'s)?(?=\s*,)", re.IGNORECASE),
+    re.compile(rf"(?:^|(?<=[.!?:;]\s))as\s+(?:{_ROLE})\b(?:'s)?", re.IGNORECASE | re.MULTILINE),
     re.compile(
-        rf"\bfrom\s+{_A}?(?:{_ROLE})(?:'s|s')?\s+(?:perspective|point\s+of\s+view|view|side|standpoint|angle)\b",
+        rf"\bfrom\s+{_A}?(?:{_ROLE})(?:'s|s')?\s+"
+        r"(?:perspective|point\s+of\s+view|view|side|standpoint|angle)\b",
         re.IGNORECASE,
     ),
     re.compile(rf"\b(?:{_ROLE})\s+here\b", re.IGNORECASE),
-    re.compile(rf"\b(?:minä|mä)\s+(?:olen\s+)?(?:{_FI_ROLE}|yrittäjä|asiakas)\b", re.IGNORECASE),
-    re.compile(rf"\b{_FI_ROLE}na\b", re.IGNORECASE),
+    re.compile(rf"\b(?:minä|mä)\s+(?:(?:olen|oon)\s+)?(?:{_FI_ROLE}(?:n[aä])?|yrittäjä|asiakas)\b", re.IGNORECASE),
+    re.compile(rf"\b{_FI_ROLE}n[aä]\b", re.IGNORECASE),
 )
 REDACTED = "[persona]"
 
@@ -357,7 +362,9 @@ def _support_problems(basis: Basis | None, where: str, cited_before: set[str]) -
         if not (CLAIM_ID_IN_TEXT_RE.search(comp) and _NUMBER_RE.search(CLAIM_ID_IN_TEXT_RE.sub(" ", comp))):
             problems.append(f"{where}: the computation must show a number derived from at least one cited claim id")
     elif not basis.new_claim_ids:
-        problems.append(f"{where}: needs basis.new_claim_ids (not cited before) or a basis.computation, not only an evidence_gap")
+        problems.append(
+            f"{where}: needs basis.new_claim_ids (not cited before) or a basis.computation, not only an evidence_gap"
+        )
     return problems
 
 
@@ -465,7 +472,8 @@ def validate_round(run_id: str, round_no: int) -> RoundResult:
     requesting = sorted((r for r, t in turns.items() if t.mini_research), key=lambda r: int(mapping[r][1:]))
     for role in requesting[1:]:
         result.rejected.setdefault(role, []).append(
-            f"mini_research: {mapping[requesting[0]]} already requested one this round (at most 1 per round); drop yours"
+            f"mini_research: {mapping[requesting[0]]} already requested one this round (at most 1 per round); "
+            "drop yours"
         )
 
     for role in PERSONAS:
