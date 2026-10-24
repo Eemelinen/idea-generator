@@ -140,11 +140,22 @@ DEBATE_CLAIMS = {
 }
 
 
-def debate_position(role: str, claim_id: str = "market-001", **fields) -> dict:
+# A verified claim in each persona's evidence subset (agents.PERSONA_EVIDENCE): a position may
+# cite only those.
+DEBATE_OWN_CLAIM = {
+    "founder": "market-001",
+    "investor": "market-001",
+    "customer": "pricing-001",
+    "accountant": "regulation-001",
+    "operator": "gtm-001",
+}
+
+
+def debate_position(role: str, claim_id: str | None = None, **fields) -> dict:
     """A synthetic round-0 Position; the texts avoid persona names, so any leak is visible."""
     return {
         "role": role,
-        "objections": [{"text": f"Synthetic objection {role[:2]}.", "claim_ids": [claim_id]}],
+        "objections": [{"text": f"Synthetic objection {role[:2]}.", "claim_ids": [claim_id or DEBATE_OWN_CLAIM[role]]}],
         "proposed_change": f"Synthetic change {role[:2]}.",
         "expected_score_impact": {"pricing": 0.5},
         "confidence": 0.6,

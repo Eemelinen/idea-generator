@@ -378,6 +378,21 @@ def validate_path(path: Path, kind: str | None = None, warnings: list[str] | Non
         validate_research(path, warnings=warnings)
     else:
         validate_json(path, kind)
+    if kind == "position":
+        validate_position_claims(path)
+
+
+def validate_position_claims(path: Path) -> None:
+    """A round-0 position may cite only verified claims of the persona's evidence subset; the
+    rebuttal rounds get the same check from `debate validate`."""
+    from ideaforge import debate  # debate imports this module
+
+    try:
+        problems = debate.position_problems(path)
+    except debate.DebateError as e:
+        raise Invalid(f"{path}: {e}") from None
+    if problems:
+        raise Invalid(f"{path} cites claims it may not:\n" + "\n".join(f"  - {p}" for p in problems))
 
 
 # ---------------------------------------------------------------- hook mode

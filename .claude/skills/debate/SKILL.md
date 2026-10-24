@@ -61,7 +61,8 @@ mini-research task number, `<role>` with a persona and `<dim>` with a dimension;
    - the inputs: `runs/<run_id>/05_report.md` and the persona's evidence file from the table, and "read no other file"
    - the output: the persona's round file with `<N>` = 0, and "write no other file"
 3. `uv run python -m ideaforge.validate_file --kind position runs/<run_id>/debate/round0/<role>.json`
-   for each persona. A persona whose file is missing or invalid is **re-launched once** with the
+   for each persona (the schema, and every claim id verified and in the persona's evidence file).
+   A persona whose file is missing or invalid is **re-launched once** with the
    validator's message appended (all re-launches in one message). A persona that still wrote no
    file is left out of the debate (step 4 warns); one whose file is still invalid stops the
    debate: report the errors and stop. Never write, repair or delete a position yourself.

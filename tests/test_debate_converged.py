@@ -1,7 +1,7 @@
 """Debate convergence (IF-405): scripts/debate_converged.py and debate.check_convergence.
 
-The run, the claim ledger and the round-0 positions (each citing market-001) come from the
-synthetic `debate_run` fixture in conftest.py; the score sheet is tests/fixtures/scores.json
+The run, the claim ledger and the round-0 positions (each citing `DEBATE_OWN_CLAIM[role]`) come from
+the synthetic `debate_run` fixture in conftest.py; the score sheet is tests/fixtures/scores.json
 (market 2). All synthetic (TICKETS.md plan note 14).
 """
 
@@ -70,7 +70,7 @@ def test_a_new_claim_id_continues(run, capsys):
 
 
 def test_a_claim_new_to_the_role_but_cited_before_in_the_debate_is_not_new(run):
-    # market-001 is in every round-0 position; citing it again brings nothing new into the debate
+    # market-001 is in the round-0 positions; citing it again brings nothing new into the debate
     turn = rebuttal("founder", {**disagree("founder"), "cited_claim_ids": ["market-001"]})
     assert not validated_round(run, founder=turn).rejected
     assert met(check(), "a")
@@ -128,7 +128,7 @@ def test_b_compares_with_the_previous_interim(run):
     assert not validated_round(run, founder=rebuttal("founder", agree("founder"))).rejected
     interim(run, 1, market=3.5)
     assert not check(1).stop
-    turn2 = rebuttal("founder", agree("founder", {"new_claim_ids": ["pricing-001"]}), round_no=2)
+    turn2 = rebuttal("founder", agree("founder", {"new_claim_ids": ["pricing-002"]}), round_no=2)
     assert not validated_round(run, 2, founder=turn2).rejected
     interim(run, 2, market=3.4)
     result = check(2)
@@ -161,7 +161,7 @@ def test_b_interim_with_the_wrong_round_is_an_error(run, capsys):
 
 
 def test_c_max_rounds_stops_even_with_new_evidence(run):
-    for n, cid in enumerate(["market-002", "pricing-001", "pricing-002"], start=1):
+    for n, cid in enumerate(["market-002", "unit_economics-001", "pricing-002"], start=1):
         turn = rebuttal("founder", agree("founder", {"new_claim_ids": [cid]}), round_no=n)
         assert not validated_round(run, n, founder=turn).rejected
         result = check(n)
@@ -172,7 +172,7 @@ def test_c_max_rounds_stops_even_with_new_evidence(run):
 def test_c_follows_the_runs_budget_preset(run):
     with db.session() as conn:
         conn.execute("UPDATE runs SET budget_preset='economy' WHERE run_id=?", (DEBATE_RUN,))
-    for n, cid in enumerate(["market-002", "pricing-001"], start=1):
+    for n, cid in enumerate(["market-002", "unit_economics-001"], start=1):
         turn = rebuttal("founder", agree("founder", {"new_claim_ids": [cid]}), round_no=n)
         assert not validated_round(run, n, founder=turn).rejected
     assert check(2).met == ["(c) round 2 reached max_rounds 2"]

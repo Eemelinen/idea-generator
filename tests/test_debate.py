@@ -7,7 +7,7 @@ conftest.py (TICKETS.md plan note 14).
 import json
 
 import pytest
-from conftest import DEBATE_RUN, debate_position
+from conftest import DEBATE_OWN_CLAIM, DEBATE_RUN, debate_position
 
 from ideaforge import db, debate
 from ideaforge.schemas import PERSONAS, Rebuttal
@@ -328,11 +328,15 @@ def test_cli(debate_run, capsys):
 CONF_SEED = 2026
 CONF_MAP = debate.mapping_for(CONF_SEED)
 TARGET = "founder"  # the position the others agree on
-COMPUTATION = {"computation": "market-001 gives 1200 nights x 0.3 = 360 bookable nights"}
+
+
+def computation(role):
+    """A computation over the claim the role's round-0 position already cites: no new claim id."""
+    return {"computation": f"{DEBATE_OWN_CLAIM[role]} gives 1200 nights x 0.3 = 360 bookable nights"}
 
 
 def stance(role, stance_name, basis=None, target=TARGET):
-    basis = basis or ({"evidence_gap": "No verified claim."} if stance_name == "disagree" else COMPUTATION)
+    basis = basis or ({"evidence_gap": "No verified claim."} if stance_name == "disagree" else computation(role))
     return {"target_position_id": CONF_MAP[target], "stance": stance_name, "basis": basis}
 
 
@@ -385,7 +389,7 @@ def write_conf_round(run_dir, round_no, data):
 def test_run_conformity_flag_from_the_validated_last_round(debate_run):
     debate.anonymize(DEBATE_RUN, 0, seed=CONF_SEED)
     assert not debate.run_conformity_flag(DEBATE_RUN)  # no rebuttal round yet
-    # agreement backed only by computations over market-001, which every round-0 position cites
+    # agreement backed only by computations over claims the round-0 positions already cite
     assert not write_conf_round(debate_run, 1, turns("investor", "customer", "accountant")).rejected
     assert debate.run_conformity_flag(DEBATE_RUN)
 
@@ -393,7 +397,7 @@ def test_run_conformity_flag_from_the_validated_last_round(debate_run):
 def test_run_conformity_flag_off_once_new_evidence_entered_in_any_round(debate_run):
     debate.anonymize(DEBATE_RUN, 0, seed=CONF_SEED)
     first = turns()
-    first["operator"] = conf_rebuttal("operator", stance("operator", "disagree", {"new_claim_ids": ["pricing-001"]}))
+    first["operator"] = conf_rebuttal("operator", stance("operator", "disagree", {"new_claim_ids": ["unit_economics-001"]}))
     assert not write_conf_round(debate_run, 1, first).rejected
     second = {r: conf_rebuttal(r, *t.responses, round_no=2) for r, t in turns("investor", "customer", "accountant").items()}
     assert not write_conf_round(debate_run, 2, second).rejected
@@ -492,6 +496,43 @@ def test_persona_evidence_files_hold_only_their_subset(debate_run):
     assert {c["claim_id"] for c in founder["claims"]} == verified
     accountant = json.loads(debate.evidence_path(DEBATE_RUN, "accountant").read_text(encoding="utf-8"))
     assert {c["claim_id"] for c in accountant["claims"]} == {"regulation-001", "unit_economics-001"}
+
+
+@pytest.mark.parametrize("where", ["cited", "new", "computation", "change"])
+def test_rebuttal_citing_another_personas_claim_is_rejected(debating, where):
+    # market-002 is verified but belongs to the investor's dimensions, not the accountant's
+    assert "market-002" not in debate.allowed_claim_ids(debating, "accountant")
+    response = {"target_position_id": other_id("accountant"), "stance": "disagree", "basis": GAP}
+    extra = {}
+    if where == "cited":
+        response["cited_claim_ids"] = ["market-002"]
+    elif where == "new":
+        response = {**response, "stance": "agree", "basis": {"new_claim_ids": ["market-002"]}}
+    elif where == "computation":
+        response = {**response, "stance": "modify", "basis": {"computation": "market-002 (40 nights) x 2 = 80"}}
+    else:
+        extra = {"updated_change": "Other change.", "updated_change_basis": {"new_claim_ids": ["market-002"]}}
+    result = rebuttal_round(debating, 1, accountant=plain("accountant", 1, responses=[response], **extra))
+    assert "claim id market-002 is not in your evidence file" in "\n".join(result.rejected["accountant"]), where
+    own = {**response, "stance": "agree", "basis": {"new_claim_ids": ["unit_economics-001"]}, "cited_claim_ids": []}
+    result = rebuttal_round(debating, 1, accountant=plain("accountant", 1, responses=[own]))
+    assert "accountant" in result.accepted
+
+
+def test_position_citing_another_personas_claim_is_rejected(debate_run):
+    from ideaforge import validate_file as vf
+
+    path = debate_run / "debate" / "round0" / "customer.json"
+    vf.validate_path(path)  # pricing-001: in the customer's subset
+    path.write_text(json.dumps(debate_position("customer", "regulation-001")), encoding="utf-8")
+    with pytest.raises(vf.Invalid, match="claim id regulation-001 is not in your evidence file"):
+        vf.validate_path(path)
+    with pytest.raises(debate.DebateError, match="regulation-001 is not in your evidence file"):
+        debate.anonymize(DEBATE_RUN, 0, seed=MINI_SEED)
+    assert not (debate_run / "debate" / "round0" / debate.ANON_NAME).exists()
+    path.write_text(json.dumps(debate_position("customer", "competition-001")), encoding="utf-8")
+    with pytest.raises(vf.Invalid, match="competition-001 is unverified"):
+        vf.validate_path(path)
 
 
 def test_evidence_creates_the_debate_seed_used_by_anonymize(debate_run):
