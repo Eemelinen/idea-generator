@@ -92,6 +92,7 @@ ideaforge/
 │   ├── debate.py                  # anonymization (P1…P5, seeded), rebuttal validation, evidence subsets, resume status
 │   ├── mini_research.py           # debate mini-research tasks: open (≤ max per debate) and finish
 │   ├── usage.py                   # JSONL log of tool calls; per-run tallies
+│   ├── brief.py                   # run-specific research-brief lines: preset budget line, back-test header
 │   ├── status.py                  # /status text: recent runs, one run's claims, flags, markers, usage
 │   ├── golden.py                  # eval golden set: load + validate, find each idea's run, the three checks
 │   ├── validate_file.py           # CLI: validate a JSON file against a schema (used by hooks)
@@ -103,6 +104,7 @@ ideaforge/
 │   ├── gen_agents.py              # render agent_templates/* with config/models.yaml → .claude/agents/
 │   ├── new_run.py                 # create run dir + db row + meta.json, print run_id; --from = next version
 │   ├── run_stage.py               # stage state machine: --begin/--finish/--insufficient-data/--resume/--next
+│   ├── research_brief.py          # print a research brief's budget line and back-test header for <run_id> <dim>
 │   ├── verify_claims.py           # stage 3 verification over a run
 │   ├── synthesis_input.py         # stage 5: the synthesizer's only input file
 │   ├── score_run.py               # stage 5 scoring

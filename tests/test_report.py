@@ -272,6 +272,19 @@ def test_table_cells_escape_pipes(scored):
     assert "unverified ×1; unfetchable" in unfetched and "| yes |" in unfetched
 
 
+def test_sources_table_shows_the_after_as_of_flag(scored):
+    """IF-503: a back-test claim rejected as after_as_of is labelled like the fetch flags."""
+
+    def late(data):
+        claim = next(c for c in data if "finnvera.fi/synthetic" in c["source_url"])
+        claim["flags"] = ["after_as_of"]
+
+    edit_json(scored / "03_claims" / "verified.json", late)
+    sources = section(render(scored), "Sources")
+    row = next(line for line in sources.splitlines() if "finnvera.fi/synthetic" in line)
+    assert "unverified ×1; after_as_of" in row
+
+
 def test_missing_research_file_is_a_gap_not_an_error(scored):
     body = subsection(section(render(scored), "Dimensions"), "Market size (bottom-up beachhead) (`market`)")
     assert "- No research file for this dimension." in body

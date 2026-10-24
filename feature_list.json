@@ -597,7 +597,9 @@
       ],
       "evidence": [
         "2026-10-24 pnpm check → pass (working tree on 81c82a2)",
-        "2026-10-24 uv run pytest tests/test_verify.py tests/test_usage.py tests/test_skills.py → pass (working tree on 81c82a2)"
+        "2026-10-24 uv run pytest tests/test_verify.py tests/test_usage.py tests/test_skills.py → pass (working tree on 81c82a2)",
+        "2026-10-24 pnpm check → pass (working tree on e14c62c)",
+        "2026-10-24 uv run pytest tests/test_verify.py tests/test_usage.py tests/test_skills.py → pass (working tree on e14c62c)"
       ],
       "attempts": 0,
       "notes": "Absorbs IF-506 (--preset wiring) and IF-508 (README usage limits and model downgrade)."
