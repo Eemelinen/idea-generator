@@ -13,8 +13,11 @@ others are named on stderr). `*` selects every value. A variable without a filte
 value, so its whole size counts towards the cell limit.
 
 `get` prints CSV (one row per cell: a label and a `_code` column per variable, `value`, `status`)
-on stdout and the exact request (method, URL, query body, retrieval time) on stderr; `--json`
-prints all of it as one object. Cite the URL as `source_url` with `source_type: api`.
+on stdout and the exact request (method, URL, query body, retrieval time) on stderr, followed by
+the `cite:` URL; `--json` prints all of it as one object (`cite_url`). Cite the `cite:` URL as
+`source_url` with `source_type: api`: it is the table URL with the selected value codes as its
+query string (`11ra.px?alue_23_20260101=KU707,MK12&contentscode=vaerak-vaesto`), so claim
+verification can re-run the same query (IF-209, `ideaforge.fi.requery`).
 
 Base URLs (one `Api` per API version, so the newer PxWeb API can be swapped in):
     StatFin: https://pxdata.stat.fi/PXWeb/api/v1/{lang}/StatFin/
@@ -37,7 +40,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 import pandas as pd
 
@@ -79,6 +82,13 @@ class Api:
 
     def search_url(self, lang: str, keyword: str) -> str:
         return f"{self.root(lang)}?query={quote(keyword, safe='')}"
+
+    def cite_url(self, lang: str, path: str, selections: dict[str, list[str] | None]) -> str:
+        """The table URL with the selection as `?<code>=<value>,<value>&…` (variables that select
+        every value left out); `requery.parse` turns it back into the same query."""
+        params = [(code, ",".join(values)) for code, values in selections.items() if values is not None]
+        url = self.node_url(lang, path)
+        return f"{url}?{urlencode(params, quote_via=quote, safe=',')}" if params else url
 
     def query_body(self, selections: dict[str, list[str] | None]) -> dict[str, Any]:
         """None selects every value of the variable."""
@@ -356,6 +366,7 @@ class QueryResult:
     label: str
     source: str
     updated: str | None
+    cite_url: str  # the URL to cite; it carries the selection (Api.cite_url)
 
 
 def _category_codes(dim: dict[str, Any]) -> list[str]:
@@ -431,6 +442,7 @@ def query(
         data.get("label", meta.title),
         data.get("source", ""),
         data.get("updated"),
+        api.cite_url(client.lang, path, sel),
     )
 
 
@@ -505,6 +517,7 @@ def _cmd_get(args: argparse.Namespace, client: Client) -> int:
             "source": result.source,
             "updated": result.updated,
             "request": _request_json(result.response),
+            "cite_url": result.cite_url,
             "rows": json.loads(result.frame.to_json(orient="records", force_ascii=False)),
         }
         print(json.dumps(out, ensure_ascii=False, indent=1))
@@ -512,6 +525,7 @@ def _cmd_get(args: argparse.Namespace, client: Client) -> int:
     for line in _request_lines(result.response):
         print(line, file=sys.stderr)
     print(f"source: {result.source}; updated {result.updated}", file=sys.stderr)
+    print(f"cite: {result.cite_url}", file=sys.stderr)
     sys.stdout.write(result.frame.to_csv(index=False, lineterminator="\n"))
     return 0
 

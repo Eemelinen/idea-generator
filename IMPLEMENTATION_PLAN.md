@@ -103,7 +103,8 @@ ideaforge/
 │       ├── http.py                # shared transport, 24 h cache and request printing
 │       ├── pxweb.py               # Statistics Finland + Luke PxWeb client
 │       ├── prh.py                 # PRH open data (YTJ) client
-│       └── eurostat.py            # Eurostat JSON-stat client
+│       ├── eurostat.py            # Eurostat JSON-stat client
+│       └── requery.py             # cited API URL → client call, re-run for claim verification
 ├── scripts/
 │   ├── gen_agents.py              # render agent_templates/* with config/models.yaml → .claude/agents/
 │   ├── new_run.py                 # create run dir + db row + meta.json, print run_id; --from = next version
@@ -127,7 +128,8 @@ ideaforge/
 │       ├── 02_research/<dimension>.md          # subagent prose with inline citations
 │       ├── 03_claims/<dimension>.json          # extracted claims
 │       ├── 03_claims/verified.json
-│       ├── 04_synthesis_input.json             # spec + verified/conflict claims + rubric
+│       ├── 03_claims/conflicts.json            # conflict groups in preference order (IF-210)
+│       ├── 04_synthesis_input.json             # spec + verified/conflict claims + conflicts + rubric
 │       ├── 04_scores_proposed.json
 │       ├── 04_risks.json
 │       ├── 04_scores.json
@@ -306,7 +308,7 @@ SQLite tables mirror these: `runs`, `idea_versions`, `stages` (run_id, stage, st
   - A section `## Gaps` listing what could not be found.
   - Never invent a URL. Only cite URLs that appeared in a search result or were fetched.
 - Finland data tools exposed to subagents (free):
-  - `python -m ideaforge.fi.pxweb search "<keyword>"` → candidate StatFin/Luke tables; `... get <table_path> --filter Alue=Rääkkylä,Pohjois-Karjala` → CSV. Output includes the API URL to cite as `source_type: api`.
+  - `python -m ideaforge.fi.pxweb search "<keyword>"` → candidate StatFin/Luke tables; `... get <table_path> --filter Alue=Rääkkylä,Pohjois-Karjala` → CSV. Output includes the `cite:` URL (the table URL with the selection in its query string) to cite as `source_type: api`.
   - `python -m ideaforge.fi.prh search --name "<text>" | --industry <TOL> --municipality Rääkkylä` → companies in that industry/area (count, names, registration dates, status). Use for competition density and "has this been tried here".
   - `python -m ideaforge.fi.eurostat get <dataset> --geo FI`.
 - `SubagentStop` hook: runs `validate_file.py --kind research runs/<run_id>/02_research/<dimension>.md` (checks the JSON block parses as `list[Claim]`, word limit, no bare numbers without a quote, every cited URL in the agent's `.seen_urls.txt` or an `ideaforge.fi` API URL; sentences without `[src: …]` are warnings). On failure the orchestrator re-launches that subagent once with the validator's error message appended; second failure → `INSUFFICIENT_DATA` for that dimension.
@@ -316,8 +318,8 @@ SQLite tables mirror these: `runs`, `idea_versions`, `stages` (run_id, stage, st
 1. `scripts/verify_claims.py <run_id>`:
    - Parse the candidate-claims blocks → `03_claims/<dimension>.json`.
    - For each claim: fetch `source_url` with `requests` (10 s timeout, UA string, respect robots.txt via `urllib.robotparser`), extract text with `trafilatura`, cache to `cache/<sha>.txt`. Fuzzy-match the quote (`rapidfuzz.fuzz.partial_ratio ≥ 90`). Set `verified` / `unverified`. If the page can't be fetched (JS-only, 403), set `unverified` and `flags += ["unfetchable"]`.
-   - For `source_type: api` claims, re-run the query and compare the value (exact for counts, ±1% for floats).
-   - Conflict detection: same `dimension` + similar `statement` (FTS + fuzz ≥ 80) with `value` differing by > 25% → both `conflict`; keep both; preference order official > api > industry > news > forum > vendor, then newest.
+   - For `source_type: api` claims citing a `fi` tool URL, re-run the query (`ideaforge.fi.requery`) and compare the value (exact for counts, ±1% for floats); a mismatch → `unverified` + `api_mismatch`.
+   - Conflict detection: same `dimension` + similar `statement` (fuzz ≥ 80; pairwise, TICKETS.md plan note 33) with `value` differing by > 25% → both `conflict`; keep both; preference order official > api > industry > news > forum > vendor, then newest, recorded in `03_claims/conflicts.json` and passed to the synthesizer.
    - Write `03_claims/verified.json` and upsert into SQLite.
 2. Optional model pass (`claim_extractor` role) only if a research file has prose claims that the mechanical parser missed; it emits additional `Claim` JSON which goes through the same verification.
 
@@ -327,7 +329,7 @@ Already written by stage 3. `/status <run_id>` prints: claims per dimension (ver
 
 ### Stage 5 — Synthesis and scoring
 
-1. The `synthesizer` subagent (role `synthesizer`; a generated agent, not the orchestrator, see TICKETS.md plan note 22) receives **only** `04_synthesis_input.json`, which `scripts/synthesis_input.py <run_id>` builds from `00_spec.json` + `verified.json` (verified and conflict claims; unverified and pending excluded) + rubric. It writes `04_scores_proposed.json` (`list[DimensionScore]` with `proposed_score`, `justification`, `supporting_claim_ids`, plus `unit_economics_inputs`: economics role → claim ids) and `04_risks.json`. Rule in prompt: every justification must cite at least one `claim_id`; scores for dimensions with no verified claims must be proposed as 0 with justification "no verified evidence".
+1. The `synthesizer` subagent (role `synthesizer`; a generated agent, not the orchestrator, see TICKETS.md plan note 22) receives **only** `04_synthesis_input.json`, which `scripts/synthesis_input.py <run_id>` builds from `00_spec.json` + `verified.json` (verified and conflict claims; unverified and pending excluded) + the conflict groups in preference order (`conflicts.json`) + rubric. It writes `04_scores_proposed.json` (`list[DimensionScore]` with `proposed_score`, `justification`, `supporting_claim_ids`, plus `unit_economics_inputs`: economics role → claim ids) and `04_risks.json`. Rule in prompt: every justification must cite at least one `claim_id`; scores for dimensions with no verified claims must be proposed as 0 with justification "no verified evidence".
 2. `scripts/score_run.py <run_id>`:
    - Validates that every cited `claim_id` exists and is verified; drops citations that aren't. A proposal with no verified citation left is set to 0 ("no verified evidence").
    - Applies evidence rules → caps (`final_score = min(proposed, 2)` + `cap_reason`, `status = insufficient_data`).
@@ -393,6 +395,7 @@ All free, no keys. Thin wrappers with on-disk caching (24 h) and a `--json` flag
 - `pxweb.py`: base URLs for StatFin (`https://pxdata.stat.fi/PXWeb/api/v1/{lang}/StatFin/`) and Luke (`https://statdb.luke.fi/PXWeb/api/v1/{lang}/LUKE/`). Functions: `list_tables(path)`, `metadata(table)`, `query(table, filters) -> DataFrame`. Handle the 100 000-cell limit by refusing with a helpful message. Wrap the base URL so the newer API can be swapped in. CLI: `search`, `meta` (variables and value codes) and `get` (CSV on stdout, the request on stderr); details in TICKETS.md plan note 31.
 - `prh.py`: `https://avoindata.prh.fi/opendata-ytj-api/v3/companies` — search by name, TOL industry code, municipality, registration date; return count + rows. Note in docstring: no sole traders, no contact details. CLI `search` (the count and CSV rows on stdout, the request on stderr); industry codes are TOL 2025 since 2026-01-01, details in TICKETS.md plan note 32.
 - `eurostat.py`: JSON-stat endpoint; `get(dataset, filters)`. CLI `get <dataset> --geo FI [--filter dim=code] [--since …]` (CSV on stdout, the request on stderr).
+- `requery.py`: parses a cited URL of the three tools back into the client call and re-runs it for claim verification (IF-209); details in TICKETS.md plan note 33.
 - `http.py`: the transport (`requests` + `truststore`), the 24 h cache under `cache/<tool>/` and the request lines every tool prints.
 - Each tool prints the exact request URL so the subagent can cite it as `source_url` with `source_type: api`.
 

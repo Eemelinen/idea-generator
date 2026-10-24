@@ -36,6 +36,7 @@ STAGE_FILES: dict[str, str] = {
     "00_spec.json": "spec",
     "01_plan.json": "plan",
     "03_claims/verified.json": "claims",
+    "03_claims/conflicts.json": "conflicts",
     "04_scores_proposed.json": "scores_proposed",
     "04_risks.json": "risks",
     "04_scores.json": "scores",
@@ -104,7 +105,7 @@ def infer_kind(path: Path) -> str:
     parts = path.as_posix().split("/")
     if len(parts) >= 2 and parts[-2] == "02_research" and path.suffix == ".md":
         return "research"
-    if len(parts) >= 2 and parts[-2] == "03_claims" and path.name != "verified.json":
+    if len(parts) >= 2 and parts[-2] == "03_claims" and path.name not in ("verified.json", "conflicts.json"):
         return "claims"
     if len(parts) >= 2 and re.fullmatch(r"round\d+", parts[-2]) and path.name == "interim_scores.json":
         return "interim_scores"

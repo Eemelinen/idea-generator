@@ -10,7 +10,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from ideaforge import config
-from ideaforge.fi import API_URL_PREFIXES, pxweb
+from ideaforge.fi import API_URL_PREFIXES, pxweb, requery
 
 FIXTURES = config.ROOT / "tests" / "fixtures" / "api"
 T0 = datetime(2026, 10, 24, 12, 0, tzinfo=UTC)
@@ -180,6 +180,12 @@ def test_get_prints_csv_plus_the_exact_request(capsys, recorded):
     assert body == json.loads((FIXTURES / "statfin" / "11ra_raakkyla_population.meta.json").read_text("utf-8"))["request"]
     assert f"retrieved_at: {T0.isoformat()}\n" in err
     assert recorded.calls == [("GET", STATFIN_11RA), ("POST", STATFIN_11RA)]
+    # the URL to cite carries the selection, so verification can re-run this query (IF-209)
+    cite = f"{STATFIN_11RA}?alue_23_20260101=KU707,MK12&contentscode=vaerak-vaesto&timeperiod_y=2021,2022,2023,2024,2025"
+    assert err.endswith(f"cite: {cite}\n")
+    call = requery.parse(cite)
+    assert (call.table_path, call.lang) == ("statfin/vaerak/11ra.px", "fi")
+    assert [v for _, v in call.filters.items()] == [["KU707", "MK12"], ["vaerak-vaesto"], ["2021", "2022", "2023", "2024", "2025"]]
 
 
 def test_get_matches_variables_and_values_by_code_or_text(capsys, recorded):
@@ -209,6 +215,10 @@ def test_get_json_has_rows_url_and_missing_cells(capsys, recorded):
     assert data["request"]["url"] == "https://statdb.luke.fi/PXWeb/api/v1/fi/LUKE/maa/muuyri/0100_muuyri.px"
     assert data["request"]["from_cache"] is False
     assert data["source"].startswith("SVT: Luonnonvarakeskus")
+    assert data["cite_url"] == (
+        "https://statdb.luke.fi/PXWeb/api/v1/fi/LUKE/maa/muuyri/0100_muuyri.px"
+        "?INFO=TILA_KPL&A=2020,2023&ELY=SSS,ELY09&RAJ=SUUR_TOIM,KAIK_YRI&TOL=TOL_YHT,MATK"
+    )
     rows = data["rows"]
     assert len(rows) == 16
     assert rows[0] == {

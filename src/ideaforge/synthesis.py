@@ -1,7 +1,8 @@
 """Stage 5: the synthesizer's input file and the score run.
 
     synthesis_input(run_id)   → the only thing the synthesizer reads (04_synthesis_input.json):
-                                 00_spec.json, the verified and conflict claims, the rubric
+                                 00_spec.json, the verified and conflict claims, the conflict
+                                 groups in preference order, the rubric
     score_run(run_id)         → 04_scores.json + the `scores` rows, from 04_scores_proposed.json
 
 The synthesizer only proposes. `score_run` drops cited claim ids that are unknown or not
@@ -22,7 +23,7 @@ from typing import Any
 
 from pydantic import TypeAdapter, ValidationError
 
-from ideaforge import agents, config, db, economics, runs, scoring
+from ideaforge import agents, config, db, economics, runs, scoring, verify
 from ideaforge.schemas import (
     Claim,
     DimensionScore,
@@ -33,6 +34,11 @@ from ideaforge.schemas import (
 )
 
 INPUT_STATES = ("verified", "conflict")
+CONFLICT_PREFERENCE = (
+    "each group's claim_ids are in preference order, the claim to prefer first: by source type "
+    + " > ".join(verify.SOURCE_PREFERENCE)
+    + ", then the newest"
+)
 NO_EVIDENCE = "no verified evidence"
 AUTOMATIC_PICK_NOTE = (
     "no unit_economics_inputs from the synthesizer: inputs were picked automatically, so a "
@@ -112,18 +118,31 @@ def _write_json(path: Path, data: Any) -> None:
 
 
 def synthesis_input(run_id: str) -> dict[str, Any]:
-    """The synthesizer's whole input: the spec, the verified + conflict claims and the rubric.
+    """The synthesizer's whole input: the spec, the verified + conflict claims, the conflict
+    groups (03_claims/conflicts.json, in preference order) and the rubric.
 
     Unverified and pending claims are left out, so the synthesizer cannot lean on them.
     """
     run_dir = runs.run_dir(run_id)
     spec = load_spec(run_dir)
     claims = [c for c in load_claims(run_dir) if c.verification in INPUT_STATES]
+    try:
+        groups = verify.load_conflicts(run_dir)
+    except ValidationError as e:
+        raise InputError(f"{run_dir / '03_claims' / verify.CONFLICTS_FILE} is not valid: {e.errors()[0]['msg']}") from None
+    known = {c.claim_id for c in claims}
+    conflicts = [
+        {"dimension": g.dimension, "claim_ids": ids}
+        for g in groups
+        if len(ids := [cid for cid in g.claim_ids if cid in known]) > 1
+    ]
     rubric = config.rubric()
     return {
         "run_id": run_id,
         "spec": spec.model_dump(mode="json"),
         "claims": [c.model_dump(mode="json") for c in sorted(claims, key=lambda c: c.claim_id)],
+        "conflicts": conflicts,
+        "conflict_preference": CONFLICT_PREFERENCE,
         "rubric": {
             "verdict_thresholds": rubric.verdict_thresholds.model_dump(),
             "dimensions": [

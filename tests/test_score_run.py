@@ -94,7 +94,8 @@ def test_synthesis_input_holds_only_spec_verified_and_conflict_claims_and_rubric
     out = capsys.readouterr().out
     assert "wrote runs/20261023-130000-sauna-cabins/04_synthesis_input.json" in out
     data = json.loads((run / agents.SYNTHESIS_INPUT).read_text(encoding="utf-8"))
-    assert set(data) == {"run_id", "spec", "claims", "rubric", "economics_roles"}
+    assert set(data) == {"run_id", "spec", "claims", "conflicts", "conflict_preference", "rubric", "economics_roles"}
+    assert data["conflicts"] == []  # no 03_claims/conflicts.json in this fixture run
     assert IdeaSpec.model_validate(data["spec"]).idea_id == "sauna-cabins-remote-work"
     states = {c["claim_id"]: c["verification"] for c in data["claims"]}
     assert set(states.values()) == {"verified", "conflict"}
@@ -104,6 +105,26 @@ def test_synthesis_input_holds_only_spec_verified_and_conflict_claims_and_rubric
     assert [d["id"] for d in data["rubric"]["dimensions"]] == list(RUBRIC_DIMENSIONS)
     assert data["rubric"]["verdict_thresholds"]["go"] == 3.5
     assert set(data["economics_roles"]) == set(economics.ROLES)
+
+
+def test_synthesis_input_passes_the_conflict_groups_in_preference_order(run, capsys):
+    # Synthetic groups: market-004 (conflict) vs market-003, and a group whose other member is
+    # unverified, so it is not in the input and the group is dropped.
+    groups = [
+        {"dimension": "market", "claim_ids": ["market-003", "market-004"]},
+        {"dimension": "customer", "claim_ids": ["customer-003", "customer-004"]},
+    ]
+    (run / "03_claims" / "conflicts.json").write_text(json.dumps(groups), encoding="utf-8")
+    assert synthesis_input.main([RUN]) == 0
+    data = json.loads((run / agents.SYNTHESIS_INPUT).read_text(encoding="utf-8"))
+    assert data["conflicts"] == [{"dimension": "market", "claim_ids": ["market-003", "market-004"]}]
+    assert "official > api > industry > news > forum > vendor, then the newest" in data["conflict_preference"]
+
+
+def test_synthesis_input_refuses_an_invalid_conflicts_file(run, capsys):
+    (run / "03_claims" / "conflicts.json").write_text('[{"dimension": "market", "claim_ids": ["market-003"]}]', encoding="utf-8")
+    assert synthesis_input.main([RUN]) == 1
+    assert "conflicts.json is not valid" in capsys.readouterr().err
 
 
 def test_synthesis_input_flags_dimensions_without_verified_claims(run, capsys):

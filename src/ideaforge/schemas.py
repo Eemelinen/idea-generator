@@ -34,7 +34,7 @@ KILL_TRIGGERS = (
     "no_evidence_anyone_pays",
 )
 # Non-trigger flags set by verification.
-SYSTEM_FLAGS = ("unfetchable", "robots_disallowed", "after_as_of")
+SYSTEM_FLAGS = ("unfetchable", "robots_disallowed", "after_as_of", "api_mismatch")
 
 PERSONAS = ("founder", "investor", "customer", "accountant", "operator")
 
@@ -53,7 +53,7 @@ KillTrigger = Literal[
 ClaimFlag = Literal[
     "free_good_enough_substitute", "permit_impossible", "negative_contribution_margin",
     "beachhead_below_founder_income", "no_evidence_anyone_pays",
-    "unfetchable", "robots_disallowed", "after_as_of",
+    "unfetchable", "robots_disallowed", "after_as_of", "api_mismatch",
 ]
 SourceType = Literal["official", "industry", "news", "forum", "vendor", "api"]
 VerificationState = Literal["pending", "verified", "unverified", "conflict"]
@@ -187,6 +187,16 @@ class Claim(Strict):
         if not self.claim_id.startswith(f"{self.dimension}-"):
             raise ValueError("claim_id prefix must equal the claim's dimension")
         return self
+
+
+class ConflictGroup(Strict):
+    """One entry of 03_claims/conflicts.json: claims of one dimension whose statements are similar
+    but whose values differ by more than 25 % (verify.detect_conflicts, IF-210). `claim_ids` is in
+    preference order, the claim to prefer first: official > api > industry > news > forum >
+    vendor, then the newest."""
+
+    dimension: Dimension
+    claim_ids: Annotated[list[str], Field(min_length=2)]
 
 
 class CandidateClaim(Claim):
@@ -490,4 +500,5 @@ SCHEMAS: dict[str, type[BaseModel]] = {
 LIST_KINDS: dict[str, type[BaseModel]] = {
     "claims": Claim,
     "candidate_claims": CandidateClaim,
+    "conflicts": ConflictGroup,
 }

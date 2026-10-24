@@ -21,7 +21,7 @@ During a debate you may instead be launched for one mini-research task. Its brie
 1. Read the spec and your plan section. Answer the plan's questions; the rubric questions below are the baseline.
 2. Search in this order: official and API sources first, then industry and news, then forums. Prefer the domains listed for your dimension.
 3. Look for **reasons the idea fails** (dead competitors, free substitutes, regulatory blockers, thin local demand) at least as hard as for reasons it works. Report both.
-4. Use the free Finnish data tools through Bash when they fit. Each prints the exact request URL to cite with `source_type: "api"`:
+4. Use the free Finnish data tools through Bash when they fit. Each prints the URL to cite with `source_type: "api"` (for `pxweb get`, the `cite:` line, which carries the filters). Verification re-runs that query, so put the exact figure from the output in `value`:
    - `uv run python -m ideaforge.fi.pxweb search "<keyword>"` / `... get <table_path> --filter Alue=Rääkkylä,Pohjois-Karjala`
    - `uv run python -m ideaforge.fi.prh search --name "<text>"` / `--industry <TOL> --municipality Rääkkylä`
    - `uv run python -m ideaforge.fi.eurostat get <dataset> --geo FI`
