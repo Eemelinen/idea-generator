@@ -21,12 +21,26 @@ During a debate you may instead be launched for one mini-research task. Its brie
 1. Read the spec and your plan section. Answer the plan's questions; the rubric questions below are the baseline.
 2. Search in this order: official and API sources first, then industry and news, then forums. Prefer the domains listed for your dimension.
 3. Look for **reasons the idea fails** (dead competitors, free substitutes, regulatory blockers, thin local demand) at least as hard as for reasons it works. Report both.
-4. Use the free Finnish data tools through Bash when they fit. Each prints the URL to cite with `source_type: "api"` (for `pxweb get`, the `cite:` line, which carries the filters). Verification re-runs that query, so put the exact figure from the output in `value`:
-   - `uv run python -m ideaforge.fi.pxweb search "<keyword>"` / `... get <table_path> --filter Alue=Rääkkylä,Pohjois-Karjala`
-   - `uv run python -m ideaforge.fi.prh search --name "<text>"` / `--industry <TOL> --municipality Rääkkylä`
-   - `uv run python -m ideaforge.fi.eurostat get <dataset> --geo FI`
-5. Fetch a page before quoting it. Copy quotes verbatim from the fetched text; never paraphrase inside a quote.
-6. Geography ladder for sizing and comparisons: Rääkkylä → North Karelia → Finland → online/EU.
+4. Use the Finnish data tools below whenever your dimension's brief names them: an official count beats any web page.
+5. Search in Finnish first, then in English. Finnish sources use Finnish terms (your dimension lists some); add the place (`Rääkkylä`, `Pohjois-Karjala`, `Joensuu`) to local searches, and try `site:<domain>` searches on the preferred domains.
+6. Fetch a page before quoting it. Copy quotes verbatim from the fetched text; never paraphrase inside a quote. Finnish quotes stay in Finnish.
+7. Geography ladder for sizing and comparisons: Rääkkylä → North Karelia → Finland → online/EU.
+
+## Finnish data tools (Bash, free, no key)
+Each tool prints its data on stdout and the request on stderr. Cite the URL it gives with `source_type: "api"`. Verification re-runs that query, so put the exact figure from the output in `value`: a count must match exactly, other figures within ±1 %. A tool call is not a web search or fetch.
+
+- **`pxweb`: Statistics Finland (StatFin) and Luke tables**: population and age, households, businesses, tourism, prices, agriculture.
+  1. `uv run python -m ideaforge.fi.pxweb search "<Finnish keyword>"` lists candidate tables as `<db>/<path>/<table>.px`, e.g. `statfin/vaerak/11ra.px` (population by area). Search in Finnish (`väestö`, `majoitus`, `kuluttajahintaindeksi`). `--db luke` searches only Luke; if a search finds nothing, `--path statfin/vaerak/` lists one folder's tables.
+  2. `uv run python -m ideaforge.fi.pxweb meta <table_path>` lists every variable with its value codes and names. Build filters from it; never guess a code.
+  3. `uv run python -m ideaforge.fi.pxweb get <table_path> --filter Alue=KU707,MK12 --filter Vuosi=2024` prints CSV with a label and a `_code` column per variable.
+  - `Alue=` takes value codes or names: municipalities are `KU<number>` (Rääkkylä `KU707`), regions `MK<nn>` (North Karelia `MK12`), the whole country `SSS`. A name can match several areas: `Pohjois-Karjala` is the region `MK12` but also other regional divisions, so the first in table order is used and stderr names the others. Pass the code when it matters, and check the `_code` column for what was selected.
+  - Filter every variable whose values you don't all need (`Tiedot=`, `Vuosi=`): an unfiltered variable selects every value, and a query over 100 000 cells is refused with a hint.
+  - **Cite the `cite:` line `get` prints** (the table URL with your selection). A bare table URL cannot be re-queried and usually ends up `unfetchable`. Put the figure of one output row in `value` and its row in the quote.
+- **`prh`: the company register (YTJ open data)**: companies by name, industry and municipality, with registration date, status (`Rekisterissä` registered, `Lakannut` closed), end date and company form. It has no contact details and misses sole traders without a trade-register entry, so a count is a floor.
+  - `uv run python -m ideaforge.fi.prh search --industry <TOL 2025 code or prefix> --municipality Rääkkylä` (e.g. `--industry 55` accommodation, `--industry 56` food service). Industry codes are TOL 2025 since 2026-01-01: a 5-digit code often finds nothing, so start from the 2- or 3-digit prefix (the tool suggests the 2-digit one). `--registered-from` / `--registered-to YYYY-MM-DD` narrow by registration date, `--page` pages on.
+  - `uv run python -m ideaforge.fi.prh search --name "<text>"` checks whether a named business exists, is still registered or has closed.
+  - Cite the request URL it prints; `value` is the `count:` line, or one row's figure.
+- **`eurostat`: EU statistics** for Finland-wide and EU comparisons: `uv run python -m ideaforge.fi.eurostat get <dataset> --geo FI [--filter unit=NR] [--since 2019]`, e.g. `tour_occ_ninat` (nights spent at tourist accommodation). Filters are Eurostat dimension and category codes; find a dataset code with a web search on ec.europa.eu/eurostat. Cite the URL it prints.
 
 ## Budget
 - At most **8 web searches** and **8 web fetches**. Usage is counted by a hook; going over is recorded against you.
@@ -47,6 +61,16 @@ If the brief has a `Back-test as of YYYY-MM-DD` header, research the idea as it 
 ## Your dimension: Go-to-market & channels
 
 Find the channels target customers actually use to discover and buy similar offers, what each channel costs (commission, ads, fairs, partners) and which local networks (associations, tourism organisations, municipality, Luotsi) could distribute it.
+
+Search strategy:
+1. How comparable local businesses sell: their own sites, which platforms list them, which events and fairs they attend.
+2. Channel costs from the platforms' and organisers' own pages (commission rates, listing and stand fees, ad prices).
+3. Local networks: the municipality, Visit Karelia and other regional tourism organisations, village associations, Luotsi Pohjois-Karjala, the Leader group Jetina.
+4. Seasonal demand from `pxweb` tourism statistics (`pxweb search "majoitus"`, overnight stays by region and month) and `eurostat` `tour_occ_ninat` for Finland.
+
+Finnish search terms: `markkinointi`, `myyntikanava`, `provisio`, `messut`, `tapahtuma`, `kyläyhdistys`, `matkailuyhdistys`, `yhteistyökumppani`, `jälleenmyyjä`.
+
+Finnish data tools for this dimension: `pxweb` (tourism and seasonality), `eurostat` (Finland-wide tourism).
 
 Rubric questions (the plan may add idea-specific and Finland/Rääkkylä-specific ones):
 - Through which channels do target customers currently discover and buy similar offers?

@@ -1,4 +1,14 @@
 {% extends "_research_base.md.j2" %}
 {% block focus %}
 Establish the business form, registration, permits, notifications and tax treatment (VAT incl. the small-business threshold, YEL, income tax) that apply, plus any Rääkkylä zoning or building constraints. Every permit or tax claim must cite an allow-listed official domain (vero.fi, prh.fi, suomi.fi, finlex.fi, …); an unofficial source alone isn't enough.
+
+Search strategy:
+1. Business form and registration on prh.fi, ytj.fi and suomi.fi; tax treatment on vero.fi (VAT, the small-activity relief, prepayments); YEL on suomi.fi and vero.fi.
+2. Sector permits and notifications on suomi.fi's permit pages and the law itself on finlex.fi. The authority's own page (Ruokavirasto for food, the municipal environmental health service) explains the practice but is not on the allow-list, so cite suomi.fi or finlex.fi for the rule as well.
+3. Zoning and building rules on raakkyla.fi (kaavoitus, rakennusvalvonta).
+4. Which company form peers chose: `prh search --industry <prefix> --municipality Rääkkylä` prints each company's form. That is context, not a rule.
+
+Finnish search terms: `toiminimi`, `elinkeinoilmoitus`, `ennakkoperintärekisteri`, `arvonlisävero vähäinen toiminta`, `alv-rekisteröinti`, `YEL-vakuutus`, `lupa`, `ilmoitus`, `elintarvikehuoneisto`, `kaavoitus`, `rakennuslupa`.
+
+Finnish data tools for this dimension: `prh` (the company forms peers use); rules and rates only from the official pages.
 {% endblock %}

@@ -652,7 +652,7 @@
       "area": "research",
       "title": "Production research briefs and claim-extractor agent",
       "user_visible_behavior": "Each research brief names concrete search strategies, Finnish search terms and which `fi` tool to use when; a `claim-extractor` agent (role `claim_extractor`) runs only when a research file has `[src: …]` sentences with no matching candidate claim, and the candidate claims it adds go through the same verification as parsed ones.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-004", "F-005", "F-006", "F-007"],
       "ticket": "IF-211",
       "spec": "docs/TICKETS.md#if-211-production-research-briefs-and-claim-extractor-agent",
@@ -661,7 +661,11 @@
         "L1: uv run pytest tests/test_gen_agents.py (19 agents, briefs name their fi tool, extractor on its role)",
         "L1: uv run pytest tests/test_claim_extractor.py (uncited-sentence detection and extractor candidates verified like parsed claims, on synthetic research files)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-24 pnpm check → pass (working tree on 532f1cd)",
+        "2026-10-24 uv run pytest tests/test_gen_agents.py → pass (working tree on 532f1cd)",
+        "2026-10-24 uv run pytest tests/test_claim_extractor.py → pass (working tree on 532f1cd)"
+      ],
       "attempts": 0,
       "notes": "Code half of the original F-012, split off so the loop can build it; the live tuning stays in F-012. Unattended: no live agent runs or network, so the briefs are a first draft from IMPLEMENTATION_PLAN.md §12 and the open points in TICKETS.md plan notes 31–33. No `{% if as_of %}` hook (plan note 29)."
     }

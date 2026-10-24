@@ -14,7 +14,7 @@ from ideaforge.schemas import PERSONAS, RESEARCH_DIMENSIONS
 class AgentSpec:
     name: str          # subagent name == .claude/agents/<name>.md == hook agent_type
     role: str          # key in config/models.yaml roles
-    kind: str          # research | synthesizer | debate | judge | harness
+    kind: str          # research | extractor | synthesizer | debate | judge | harness
     dimension: str | None = None
     persona: str | None = None
     budget_key: str | None = None   # key in a budget preset
@@ -44,6 +44,9 @@ for _dim in RESEARCH_DIMENSIONS:
         dimension=_dim,
         budget_key="killcause_scout" if _killcause else "research_subagent",
     )
+# Stage 3 (IF-211): the optional claim-extraction pass, launched only when
+# scripts/extract_claims.py lists research sentences no candidate claim covers.
+AGENTS["claim-extractor"] = AgentSpec(name="claim-extractor", role="claim_extractor", kind="extractor")
 # Stage 5 (IF-304): proposes scores and risks from runs/<run_id>/04_synthesis_input.json only.
 AGENTS["synthesizer"] = AgentSpec(name="synthesizer", role="synthesizer", kind="synthesizer")
 for _p in PERSONAS:
@@ -91,6 +94,23 @@ def parse_mini_stem(stem: str) -> tuple[int, str] | None:
     if m is None or m.group(2) not in RESEARCH_DIMENSIONS:
         return None
     return int(m.group(1)), m.group(2)
+
+
+# Claim-extraction pass (IF-211): scripts/extract_claims.py writes the request, the claim-extractor
+# agent one JSON list of candidate claims per listed research file stem next to it.
+EXTRACT_REQUEST = "request.json"
+
+
+def extracted_dir(run_dir: Path) -> Path:
+    return run_dir / "03_claims" / "extracted"
+
+
+def extract_request(run_dir: Path) -> Path:
+    return extracted_dir(run_dir) / EXTRACT_REQUEST
+
+
+def extracted_output(run_dir: Path, stem: str) -> Path:
+    return extracted_dir(run_dir) / f"{stem}.json"
 
 
 SYNTHESIS_INPUT = "04_synthesis_input.json"

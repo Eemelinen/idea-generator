@@ -9,7 +9,8 @@ Policy (exit 2 = deny, reason on stderr):
   tool: render_report.py (with --debate for the plan) writes each once (they are immutable).
 - Subagents are always strict: a research agent may write only its own
   runs/<run_id>/02_research/<dimension>.md, or during a debate the running mini-research task's
-  02_research/mini-<n>-<dimension>.md instead, the synthesizer only
+  02_research/mini-<n>-<dimension>.md instead, the claim extractor only the output files
+  runs/<run_id>/03_claims/extracted/request.json lists (never the request), the synthesizer only
   runs/<run_id>/04_scores_proposed.json and 04_risks.json, a debate agent only
   under runs/<run_id>/debate/ (never the files debate.py writes: .mapping.json,
   positions_anon.json, REJECTED_<role>, .reprompted, evidence/, revised_plan.md; the judge's
@@ -36,7 +37,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from ideaforge import agents, config, debate, hookio, runs
+from ideaforge import agents, config, debate, extract, hookio, runs
 
 REPORT_NAME = runs.STAGE_OUTPUTS["report"][0][0]
 REVISED_PLAN_NAME = "revised_plan.md"
@@ -133,6 +134,14 @@ def check_write(data: dict[str, Any]) -> str | None:
             allowed = agents.research_target(runs_dir / run_id, spec)
             if target != allowed.resolve():
                 return f"write denied: {spec.name} may only write {allowed.relative_to(root).as_posix()}"
+            return None
+        if spec is not None and spec.kind == "extractor":
+            if run_id is None:
+                return "write denied: no active run (runs/.active) for the claim extractor"
+            outputs = extract.requested_outputs(runs_dir / run_id)
+            if target not in [p.resolve() for p in outputs]:
+                request = agents.extract_request(runs_dir / run_id).relative_to(root).as_posix()
+                return f"write denied: the claim extractor may only write the output files {request} lists"
             return None
         if spec is not None and spec.kind == "synthesizer":
             if run_id is None:

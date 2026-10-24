@@ -2,7 +2,7 @@
 name: validate
 description: Validate a business idea with the Ideaforge pipeline, stages 0–3. Creates a run (or, with --from <run_id>, the next version of an earlier run), writes the idea spec (at most 5 clarifying questions), the research plan, launches the 11 research subagents in parallel and verifies their claims; given an existing run id it resumes that run and skips completed stages and dimensions. Use when the user types /validate with an idea or a run id.
 argument-hint: '[--preset economy|standard|deep] [--as-of YYYY-MM-DD] <idea text> | <run_id> | --from <run_id> [<revised idea text>]'
-allowed-tools: Read Write Agent AskUserQuestion Bash(uv run python scripts/new_run.py*) Bash(uv run python scripts/run_stage.py*) Bash(uv run python scripts/research_brief.py*) Bash(uv run python scripts/verify_claims.py*) Bash(uv run python scripts/usage_report.py*) Bash(uv run python scripts/status.py*) Bash(uv run python -m ideaforge.validate_file*) Bash(ls*) Bash(cat*)
+allowed-tools: Read Write Agent AskUserQuestion Bash(uv run python scripts/new_run.py*) Bash(uv run python scripts/run_stage.py*) Bash(uv run python scripts/research_brief.py*) Bash(uv run python scripts/extract_claims.py*) Bash(uv run python scripts/verify_claims.py*) Bash(uv run python scripts/usage_report.py*) Bash(uv run python scripts/status.py*) Bash(uv run python -m ideaforge.validate_file*) Bash(ls*) Bash(cat*)
 ---
 
 You are the orchestrator of an Ideaforge run. You write only the two planning files
@@ -184,15 +184,24 @@ that first, never work around it.
 ## Stage 3 — Claim verification
 
 1. `uv run python scripts/run_stage.py <run_id> verify --begin`
-2. `uv run python scripts/verify_claims.py <run_id>`: it parses the candidate claims,
-   fetches and caches each source, matches the quotes and writes `03_claims/<dim>.json`,
-   `03_claims/verified.json` and the `claims` rows. Exit 1 means an unknown run or no
-   `02_research/`; report it and stop (the stage stays `running`; the next `--resume` resets
-   it). Show its `warning:` lines.
-3. `uv run python -m ideaforge.validate_file --kind claims runs/<run_id>/03_claims/verified.json`;
+2. `uv run python scripts/extract_claims.py <run_id>` finds the `[src: …]` sentences that no
+   candidate claim covers and writes them to `03_claims/extracted/request.json`. If it prints
+   `nothing to extract`, go to step 3. Otherwise launch the claim extractor **once**
+   (`subagent_type: claim-extractor`) with a brief that contains `run_id: <run_id>`, the
+   request path `runs/<run_id>/03_claims/extracted/request.json`, the `extract:` lines
+   verbatim and "write only these output files". When it returns, read
+   `runs/<run_id>/VALIDATION_FAILED_claim-extractor` if it exists and report it, but do not
+   re-launch the extractor: the verifier drops the claims that fail the checks and says so in a
+   `warning:` line. Never write or fix an extraction file yourself.
+3. `uv run python scripts/verify_claims.py <run_id>`: it parses the candidate claims and the
+   extractor's, fetches and caches each source, matches the quotes and writes
+   `03_claims/<dim>.json`, `03_claims/verified.json` and the `claims` rows. Exit 1 means an
+   unknown run or no `02_research/`; report it and stop (the stage stays `running`; the next
+   `--resume` resets it). Show its `warning:` lines.
+4. `uv run python -m ideaforge.validate_file --kind claims runs/<run_id>/03_claims/verified.json`;
    on exit 1 report the error and stop (never edit claim files).
-4. `uv run python scripts/run_stage.py <run_id> verify --finish`
-5. `uv run python scripts/usage_report.py <run_id>`: report it to the user.
+5. `uv run python scripts/run_stage.py <run_id> verify --finish`
+6. `uv run python scripts/usage_report.py <run_id>`: report it to the user.
 
 ## End
 

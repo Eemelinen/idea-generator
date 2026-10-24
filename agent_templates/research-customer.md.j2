@@ -1,4 +1,13 @@
 {% extends "_research_base.md.j2" %}
 {% block focus %}
 Establish who has the problem, how they solve it today and whether anyone pays to solve it. Look for complaints, workarounds, reviews and spend: real behaviour, not opinions about the idea.
+
+Search strategy:
+1. Size the target group first: `pxweb` population by age (`statfin/vaerak/11re.px`) or households (`pxweb search "asuntokunnat"`) for Rääkkylä (`KU707`) and North Karelia (`MK12`), or summer-cottage owners (`pxweb search "kesämökit"`) when visitors are the customers.
+2. Then behaviour: forum threads (suomi24.fi, vauva.fi, Facebook-group posts quoted on the web), Google and Tripadvisor reviews of the closest existing offers, and municipal or association surveys.
+3. Then spend: Statistics Finland's household consumption survey (`pxweb search "kulutus"`) or a sector report.
+
+Finnish search terms: `kokemuksia`, `suosittelen`, `kannattaako`, `ongelma`, `etsin`, `mistä saa`, `kulutustutkimus`, `kotitalouksien kulutus`, with the service name and the place.
+
+Finnish data tools for this dimension: `pxweb` (target-group size and spend); `prh` only when the customers are businesses (count them by industry).
 {% endblock %}

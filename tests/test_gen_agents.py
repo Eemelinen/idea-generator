@@ -12,9 +12,9 @@ def frontmatter(text):
     return yaml.safe_load(fm), body
 
 
-def test_renders_18_agents_all_on_opus():
+def test_renders_19_agents_all_on_opus():
     rendered = gen_agents.render_all()
-    assert len(rendered) == 18
+    assert len(rendered) == 19
     for path, text in rendered.items():
         fm, body = frontmatter(text)
         assert fm["name"] == path.stem
@@ -54,6 +54,7 @@ def test_model_comes_from_config(monkeypatch):
     assert rendered["debate-founder"] == "sonnet"
     assert rendered["debate-judge"] == "opus"
     assert rendered["research-market"] == "opus"
+    assert rendered["claim-extractor"] == "haiku"
 
 
 def test_committed_agent_files_are_up_to_date():
@@ -102,3 +103,78 @@ def test_research_agents_know_the_mini_research_contract():
         if agents.AGENTS[name].kind == "research":
             assert "02_research/mini-<n>-<dimension>.md" in text, name
             assert "first claim id" in text, name
+
+
+# The `fi` tools each research brief names for its dimension (IF-211).
+BRIEF_TOOLS = {
+    "customer": {"pxweb", "prh"},
+    "market": {"pxweb", "prh", "eurostat"},
+    "competition": {"prh"},
+    "pricing": {"pxweb"},
+    "unit_economics": {"pxweb", "eurostat"},
+    "gtm": {"pxweb", "eurostat"},
+    "regulation": {"prh"},
+    "financing": {"pxweb"},
+    "location": {"pxweb", "prh"},
+    "founder_risk": {"prh", "pxweb"},
+    "killcause": {"prh", "pxweb"},
+}
+
+
+def test_research_briefs_name_their_fi_tools_strategy_and_finnish_terms():
+    rendered = {p.stem: t for p, t in gen_agents.render_all().items()}
+    research = [s for s in agents.AGENTS.values() if s.kind == "research"]
+    assert {s.dimension for s in research} == set(BRIEF_TOOLS)
+    for spec in research:
+        text = rendered[spec.name]
+        focus = text.split("## Your dimension:", 1)[1].split("Rubric questions", 1)[0]
+        line = next(ln for ln in focus.splitlines() if ln.startswith("Finnish data tools for this dimension:"))
+        named = set(re.findall(r"`(pxweb|prh|eurostat)`", line))
+        assert named == BRIEF_TOOLS[spec.dimension], spec.name
+        terms = next(ln for ln in focus.splitlines() if ln.startswith("Finnish search terms:"))
+        assert len(re.findall(r"`[^`]+`", terms)) >= 5, spec.name
+        if spec.dimension != "killcause":  # its strategy is the kill-cause brief
+            assert "Search strategy:" in focus and "\n1. " in focus, spec.name
+
+
+def test_research_base_explains_the_fi_tools():
+    text = {p.stem: t for p, t in gen_agents.render_all().items()}["research-market"]
+    for command in (
+        "uv run python -m ideaforge.fi.pxweb search",
+        "uv run python -m ideaforge.fi.pxweb meta <table_path>",
+        "uv run python -m ideaforge.fi.pxweb get <table_path> --filter Alue=KU707,MK12",
+        "uv run python -m ideaforge.fi.prh search --industry <TOL 2025 code or prefix> --municipality Rääkkylä",
+        "uv run python -m ideaforge.fi.prh search --name",
+        "uv run python -m ideaforge.fi.eurostat get <dataset> --geo FI",
+    ):
+        assert command in text, command
+    # Plan notes 31–33: cite the `cite:` line, TOL 2025 prefixes, how Alue names resolve.
+    assert "**Cite the `cite:` line `get` prints**" in text and "`unfetchable`" in text
+    assert "TOL 2025" in text and "2- or 3-digit prefix" in text
+    assert "Rääkkylä `KU707`" in text and "North Karelia `MK12`" in text and "first in table order" in text
+
+
+def test_fi_commands_in_the_briefs_pass_the_research_guard():
+    from ideaforge import guard
+
+    text = {p.stem: t for p, t in gen_agents.render_all().items()}["research-location"]
+    commands = set(re.findall(r"`(uv run python -m ideaforge\.fi\.[^`]+)`", text))
+    assert len(commands) >= 6
+    for command in commands:
+        filled = command.replace("<table_path>", "statfin/vaerak/11ra.px").replace("<dataset>", "tour_occ_ninat")
+        filled = re.sub(r"<[^>]+>", "55", filled).replace("[", "").replace("]", "")
+        data = {"tool_input": {"command": filled}, "agent_id": "a1", "agent_type": "research-location"}
+        assert guard.check_bash(data) is None, filled
+
+
+def test_claim_extractor_is_on_its_role_and_writes_only_extraction_files():
+    spec = agents.AGENTS["claim-extractor"]
+    assert (spec.role, spec.kind, spec.budget_key) == ("claim_extractor", "extractor", None)
+    text = {p.stem: t for p, t in gen_agents.render_all().items()}["claim-extractor"]
+    fm, body = frontmatter(text)
+    assert fm["tools"] == "Read, Write"
+    assert "03_claims/extracted/request.json" in body and "first_claim_id" in body
+    assert "Never fetch, search or add a fact" in body
+    assert "Write `[]` when none" in body
+    for forbidden in ("WebSearch", "WebFetch", "ideaforge.fi."):
+        assert forbidden not in body, forbidden

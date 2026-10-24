@@ -21,12 +21,26 @@ During a debate you may instead be launched for one mini-research task. Its brie
 1. Read the spec and your plan section. Answer the plan's questions; the rubric questions below are the baseline.
 2. Search in this order: official and API sources first, then industry and news, then forums. Prefer the domains listed for your dimension.
 3. Look for **reasons the idea fails** (dead competitors, free substitutes, regulatory blockers, thin local demand) at least as hard as for reasons it works. Report both.
-4. Use the free Finnish data tools through Bash when they fit. Each prints the URL to cite with `source_type: "api"` (for `pxweb get`, the `cite:` line, which carries the filters). Verification re-runs that query, so put the exact figure from the output in `value`:
-   - `uv run python -m ideaforge.fi.pxweb search "<keyword>"` / `... get <table_path> --filter Alue=Rääkkylä,Pohjois-Karjala`
-   - `uv run python -m ideaforge.fi.prh search --name "<text>"` / `--industry <TOL> --municipality Rääkkylä`
-   - `uv run python -m ideaforge.fi.eurostat get <dataset> --geo FI`
-5. Fetch a page before quoting it. Copy quotes verbatim from the fetched text; never paraphrase inside a quote.
-6. Geography ladder for sizing and comparisons: Rääkkylä → North Karelia → Finland → online/EU.
+4. Use the Finnish data tools below whenever your dimension's brief names them: an official count beats any web page.
+5. Search in Finnish first, then in English. Finnish sources use Finnish terms (your dimension lists some); add the place (`Rääkkylä`, `Pohjois-Karjala`, `Joensuu`) to local searches, and try `site:<domain>` searches on the preferred domains.
+6. Fetch a page before quoting it. Copy quotes verbatim from the fetched text; never paraphrase inside a quote. Finnish quotes stay in Finnish.
+7. Geography ladder for sizing and comparisons: Rääkkylä → North Karelia → Finland → online/EU.
+
+## Finnish data tools (Bash, free, no key)
+Each tool prints its data on stdout and the request on stderr. Cite the URL it gives with `source_type: "api"`. Verification re-runs that query, so put the exact figure from the output in `value`: a count must match exactly, other figures within ±1 %. A tool call is not a web search or fetch.
+
+- **`pxweb`: Statistics Finland (StatFin) and Luke tables**: population and age, households, businesses, tourism, prices, agriculture.
+  1. `uv run python -m ideaforge.fi.pxweb search "<Finnish keyword>"` lists candidate tables as `<db>/<path>/<table>.px`, e.g. `statfin/vaerak/11ra.px` (population by area). Search in Finnish (`väestö`, `majoitus`, `kuluttajahintaindeksi`). `--db luke` searches only Luke; if a search finds nothing, `--path statfin/vaerak/` lists one folder's tables.
+  2. `uv run python -m ideaforge.fi.pxweb meta <table_path>` lists every variable with its value codes and names. Build filters from it; never guess a code.
+  3. `uv run python -m ideaforge.fi.pxweb get <table_path> --filter Alue=KU707,MK12 --filter Vuosi=2024` prints CSV with a label and a `_code` column per variable.
+  - `Alue=` takes value codes or names: municipalities are `KU<number>` (Rääkkylä `KU707`), regions `MK<nn>` (North Karelia `MK12`), the whole country `SSS`. A name can match several areas: `Pohjois-Karjala` is the region `MK12` but also other regional divisions, so the first in table order is used and stderr names the others. Pass the code when it matters, and check the `_code` column for what was selected.
+  - Filter every variable whose values you don't all need (`Tiedot=`, `Vuosi=`): an unfiltered variable selects every value, and a query over 100 000 cells is refused with a hint.
+  - **Cite the `cite:` line `get` prints** (the table URL with your selection). A bare table URL cannot be re-queried and usually ends up `unfetchable`. Put the figure of one output row in `value` and its row in the quote.
+- **`prh`: the company register (YTJ open data)**: companies by name, industry and municipality, with registration date, status (`Rekisterissä` registered, `Lakannut` closed), end date and company form. It has no contact details and misses sole traders without a trade-register entry, so a count is a floor.
+  - `uv run python -m ideaforge.fi.prh search --industry <TOL 2025 code or prefix> --municipality Rääkkylä` (e.g. `--industry 55` accommodation, `--industry 56` food service). Industry codes are TOL 2025 since 2026-01-01: a 5-digit code often finds nothing, so start from the 2- or 3-digit prefix (the tool suggests the 2-digit one). `--registered-from` / `--registered-to YYYY-MM-DD` narrow by registration date, `--page` pages on.
+  - `uv run python -m ideaforge.fi.prh search --name "<text>"` checks whether a named business exists, is still registered or has closed.
+  - Cite the request URL it prints; `value` is the `count:` line, or one row's figure.
+- **`eurostat`: EU statistics** for Finland-wide and EU comparisons: `uv run python -m ideaforge.fi.eurostat get <dataset> --geo FI [--filter unit=NR] [--since 2019]`, e.g. `tour_occ_ninat` (nights spent at tourist accommodation). Filters are Eurostat dimension and category codes; find a dataset code with a web search on ec.europa.eu/eurostat. Cite the URL it prints.
 
 ## Budget
 - At most **8 web searches** and **8 web fetches**. Usage is counted by a hook; going over is recorded against you.
@@ -47,6 +61,16 @@ If the brief has a `Back-test as of YYYY-MM-DD` header, research the idea as it 
 ## Your dimension: Financing & funding fit
 
 Check the fit with starttiraha, Leader (Jetina), elinvoimakeskus business grants and Finnvera, citing each funder's own site for eligibility rules, amounts and deadlines. Confirm every value in config/finland.yaml against its verify_url before relying on it.
+
+Search strategy:
+1. Starttiraha on tyomarkkinatori.fi: who qualifies, the amount, the duration and what the application needs (a business plan and a profitability calculation).
+2. Leader funding on jetina.fi and maaseutu.fi: open calls, the share of costs covered and the rules for business grants.
+3. Elinvoimakeskus business-development grants on elinvoimakeskus.fi, Finnvera loans and guarantees on finnvera.fi, Business Finland only if the idea is growth- or export-oriented.
+4. Figures an application cites about the area (population trend, unemployment) from `pxweb` (`statfin/vaerak/11ra.px`, `pxweb search "työttömyysaste"`).
+
+Finnish search terms: `starttiraha`, `yritystuki`, `kehittämisavustus`, `investointituki`, `Leader-tuki`, `yritysryhmähanke`, `mikrolaina`, `takaus`, `haku avoinna`, `hakuaika`.
+
+Finnish data tools for this dimension: `pxweb` (area figures an application cites); funding rules only from the funders' own pages.
 
 Rubric questions (the plan may add idea-specific and Finland/Rääkkylä-specific ones):
 - Is the founder eligible for starttiraha, and under what conditions?

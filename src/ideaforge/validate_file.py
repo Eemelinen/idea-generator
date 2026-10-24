@@ -19,6 +19,7 @@ import argparse
 import json
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -28,7 +29,7 @@ from ideaforge import agents, config, hookio, runs, usage
 from ideaforge.fi import API_URL_PREFIXES
 from ideaforge.schemas import LIST_KINDS, SCHEMAS, CandidateClaim
 
-KINDS = sorted([*SCHEMAS, *LIST_KINDS, "research"])
+KINDS = sorted([*SCHEMAS, *LIST_KINDS, "research", "extracted"])
 
 # Run-relative path → kind, for inference and the Stop hook.
 STAGE_FILES: dict[str, str] = {
@@ -105,6 +106,8 @@ def infer_kind(path: Path) -> str:
     parts = path.as_posix().split("/")
     if len(parts) >= 2 and parts[-2] == "02_research" and path.suffix == ".md":
         return "research"
+    if len(parts) >= 3 and parts[-3:-1] == ["03_claims", "extracted"] and path.suffix == ".json":
+        return "extraction_request" if path.name == agents.EXTRACT_REQUEST else "extracted"
     if len(parts) >= 2 and parts[-2] == "03_claims" and path.name not in ("verified.json", "conflicts.json"):
         return "claims"
     if len(parts) >= 2 and re.fullmatch(r"round\d+", parts[-2]) and path.name == "interim_scores.json":
@@ -221,6 +224,39 @@ def check_prose(md: str) -> tuple[list[str], list[str]]:
     return problems, warnings
 
 
+@dataclass(frozen=True)
+class SourcedSentence:
+    """A body sentence with `[src: …]` tags: the unit the claim-extraction pass checks (IF-211)."""
+
+    section: str
+    sentence: str
+    urls: tuple[str, ...]  # normalize_url'd, in order of appearance
+    quote: str | None  # the '> quote' block right after it, when the sentence ends its paragraph
+
+
+def sourced_sentences(md: str) -> list[SourcedSentence]:
+    """Every sentence with a `[src: …]` tag in the sections check_prose checks."""
+    found: list[SourcedSentence] = []
+    for name, body in _sections(md).items():
+        if name in UNCHECKED_SECTIONS:
+            continue
+        units = _units(body)
+        for i, (kind, text) in enumerate(units):
+            if kind != "prose":
+                continue
+            sentences = SENTENCE_SPLIT_RE.split(text)
+            quote = units[i + 1][1] if i + 1 < len(units) and units[i + 1][0] == "quote" else None
+            for j, sentence in enumerate(sentences):
+                urls = tuple(
+                    dict.fromkeys(
+                        normalize_url(u) for tag in SRC_TAG_RE.findall(sentence) for u in usage.URL_RE.findall(tag)
+                    )
+                )
+                if urls:
+                    found.append(SourcedSentence(name, sentence, urls, quote if j == len(sentences) - 1 else None))
+    return found
+
+
 def normalize_url(url: str) -> str:
     return url.rstrip(".,;:`*").split("#", 1)[0].rstrip("/")
 
@@ -284,8 +320,9 @@ def candidate_claims(md: str) -> tuple[list[CandidateClaim], list[str]]:
 
 def claim_ids_elsewhere(run_dir: Path, stem: str) -> set[str]:
     """Claim ids the run has outside the research file `stem`: the ledger and every other
-    03_claims/<stem>.json (minus the ids this file's own 03_claims/<stem>.json holds) and the
-    candidate claims still in the other 02_research/*.md files."""
+    03_claims/<stem>.json (minus the ids this file's own 03_claims/<stem>.json holds), the
+    candidate claims still in the other 02_research/*.md files and the claim extractor's output
+    for the other files (03_claims/extracted/<stem>.json)."""
 
     def file_ids(path: Path) -> set[str]:
         try:
@@ -302,6 +339,9 @@ def claim_ids_elsewhere(run_dir: Path, stem: str) -> set[str]:
     for path in (run_dir / "02_research").glob("*.md"):
         if path.stem != stem:
             ids |= {c.claim_id for c in candidate_claims(path.read_text(encoding="utf-8"))[0]}
+    for path in agents.extracted_dir(run_dir).glob("*.json"):
+        if path.stem != stem and path.name != agents.EXTRACT_REQUEST:
+            ids |= file_ids(path)
     return ids
 
 
@@ -377,6 +417,12 @@ def validate_path(path: Path, kind: str | None = None, warnings: list[str] | Non
     kind = kind or infer_kind(path)
     if kind == "research":
         validate_research(path, warnings=warnings)
+    elif kind == "extracted":
+        from ideaforge import extract  # extract imports this module
+
+        problems = extract.extracted_problems(path)
+        if problems:
+            raise Invalid(f"{path} is not a valid claim extraction:\n" + "\n".join(f"  - {p}" for p in problems))
     else:
         validate_json(path, kind)
     if kind == "position":
@@ -421,6 +467,10 @@ def auto(data: dict[str, Any], stop: bool) -> int:
         agent = usage.counter_key(run_dir, spec.name)
         if spec.kind == "research":
             targets = [(agents.research_target(run_dir, spec), "research")]
+        elif spec.kind == "extractor":
+            from ideaforge import extract  # extract imports this module
+
+            targets = [(path, "extracted") for path in extract.requested_outputs(run_dir)]
         elif spec.kind == "synthesizer":
             targets = [(path, None) for path in agents.synthesizer_outputs(run_dir)]
         else:
@@ -430,7 +480,10 @@ def auto(data: dict[str, Any], stop: bool) -> int:
     errors = []
     warnings: list[str] = []
     if not stop and not targets:
-        errors.append(f"{agent} did not write its output file under {run_dir.name}/debate/")
+        if spec.kind == "extractor":
+            errors.append(f"{agent}: no {run_dir.name}/03_claims/extracted/{agents.EXTRACT_REQUEST} lists a file to extract")
+        else:
+            errors.append(f"{agent} did not write its output file under {run_dir.name}/debate/")
     for path, kind in targets:
         try:
             validate_path(path, kind, warnings)
