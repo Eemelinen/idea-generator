@@ -9,8 +9,10 @@ Policy (exit 2 = deny, reason on stderr):
   tool: render_report.py (with --debate for the plan) writes each once (they are immutable).
 - Subagents are always strict: a research agent may write only its own
   runs/<run_id>/02_research/<dimension>.md, or during a debate the running mini-research task's
-  02_research/mini-<n>-<dimension>.md instead, the claim extractor only the output files
-  runs/<run_id>/03_claims/extracted/request.json lists (never the request), the synthesizer only
+  02_research/mini-<n>-<dimension>.md instead, the claim extractor only
+  runs/<run_id>/03_claims/extracted/<stem>.json for each research file the request.json there
+  lists (never the request; an entry whose paths do not follow from its stem is invalid), the
+  synthesizer only
   runs/<run_id>/04_scores_proposed.json and 04_risks.json, a debate agent only
   under runs/<run_id>/debate/ (never the files debate.py writes: .mapping.json,
   positions_anon.json, REJECTED_<role>, .reprompted, evidence/, revised_plan.md; the judge's

@@ -364,5 +364,34 @@ def test_the_extractor_writes_only_the_requested_outputs(run, project):
         assert "may only write the output files" in guard.check_write(write(other, **EXTRACTOR)), other
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("output_file", "../../src/ideaforge/guard.py"),
+        ("output_file", "../../.claude/settings.json"),
+        ("output_file", "/etc/passwd"),
+        ("output_file", "03_claims/extracted/request.json"),
+        ("output_file", "03_claims/extracted/gtm.json"),
+        ("stem", "../../src/x"),
+        ("stem", "request"),
+    ],
+)
+def test_a_tampered_request_lets_the_extractor_write_nothing(run, project, field, value):
+    extract.write_request(RUN_ID)
+    path = agents.extract_request(run)
+    request = json.loads(path.read_text(encoding="utf-8"))
+    request["files"][0][field] = value
+    path.write_text(json.dumps(request), encoding="utf-8")
+    assert extract.load_request(run) is None
+    assert extract.requested_outputs(run) == []
+    for target in (
+        agents.extracted_output(run, "pricing"),
+        project / "src" / "ideaforge" / "guard.py",
+        project / ".claude" / "settings.json",
+        agents.extract_request(run),
+    ):
+        assert "may only write the output files" in guard.check_write(write(target, **EXTRACTOR)), target
+
+
 def test_the_extractor_needs_an_active_run(project):
     assert "no active run" in guard.check_write(write(project / "runs" / "x" / "a.json", **EXTRACTOR))

@@ -95,14 +95,15 @@ def load_request(run_dir: Path) -> ExtractionRequest | None:
 
 
 def requested_outputs(run_dir: Path) -> list[Path]:
-    """The output file of every entry of the run's request (what the extractor must write)."""
+    """The output file of every entry of the run's request (what the extractor must write). The
+    guard allows exactly these, so they are built from the stem, never read from the request."""
     request = load_request(run_dir)
-    return [run_dir / f.output_file for f in request.files] if request else []
+    return [agents.extracted_output(run_dir, f.stem) for f in request.files] if request else []
 
 
 def pending(run_dir: Path, request: ExtractionRequest) -> list[ExtractionFile]:
     """The request's entries whose output the extractor has not written yet."""
-    return [f for f in request.files if not (run_dir / f.output_file).exists()]
+    return [f for f in request.files if not agents.extracted_output(run_dir, f.stem).exists()]
 
 
 def _first_number(taken: set[str], dimension: str, reserved: dict[str, int]) -> int:

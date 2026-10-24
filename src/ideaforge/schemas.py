@@ -218,7 +218,9 @@ class ExtractionSentence(Strict):
 class ExtractionFile(Strict):
     """One research file the claim extractor is asked to read. `research_sha256` is the version
     of the file the extraction is for; `output_file` (run-relative) is where the agent writes its
-    JSON list of candidate claims, numbered up from `first_claim_id`."""
+    JSON list of candidate claims, numbered up from `first_claim_id`. The guard lets the extractor
+    write the output files, so the paths must follow from the stem: anything that can write under
+    runs/ could otherwise point an output at project source."""
 
     stem: str
     dimension: Dimension
@@ -234,6 +236,16 @@ class ExtractionFile(Strict):
         if not CLAIM_ID_RE.match(v):
             raise ValueError("first_claim_id must look like '<dimension>-NNN'")
         return v
+
+    @model_validator(mode="after")
+    def _paths_follow_the_stem(self) -> ExtractionFile:
+        if not re.fullmatch(rf"(mini-[1-9][0-9]*-)?{re.escape(self.dimension)}", self.stem):
+            raise ValueError(f"stem must be '{self.dimension}' or 'mini-<n>-{self.dimension}'")
+        if self.research_file != f"02_research/{self.stem}.md":
+            raise ValueError(f"research_file must be 02_research/{self.stem}.md")
+        if self.output_file != f"03_claims/extracted/{self.stem}.json":
+            raise ValueError(f"output_file must be 03_claims/extracted/{self.stem}.json")
+        return self
 
 
 class ExtractionRequest(Strict):
