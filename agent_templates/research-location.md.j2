@@ -1,4 +1,14 @@
 {% extends "_research_base.md.j2" %}
 {% block focus %}
 Assess Rääkkylä and North Karelia as the base for this idea: population and age structure (PxWeb), tourism and seasonality, distances and logistics, and local assets or constraints. Use official or API statistics where they exist.
+
+Search strategy:
+1. Population, its trend and age structure from `pxweb`: `statfin/vaerak/11ra.px` and `11re.px` with `Alue=KU707,MK12,SSS`; check codes with `pxweb meta` first.
+2. Tourism and seasonality from `pxweb` (`pxweb search "majoitus"`), and farm or forest data from Luke when the idea uses them (`pxweb search "<keyword>" --db luke`).
+3. Logistics: distances and connections to Joensuu, Kitee and Savonlinna, delivery services, broadband coverage.
+4. Local assets and constraints from raakkyla.fi and the region's sites: premises, lakes and nature sites, events, services.
+
+Finnish search terms: `Rääkkylä väkiluku`, `väestörakenne`, `matkailu Pohjois-Karjala`, `yöpymiset`, `etäisyys Joensuu`, `liiketila Rääkkylä`, `valokuitu Rääkkylä`, `kesäasukkaat`.
+
+Finnish data tools for this dimension: `pxweb` (StatFin population and tourism, Luke farm data), `prh` (what businesses already operate here).
 {% endblock %}

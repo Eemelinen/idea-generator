@@ -206,6 +206,55 @@ class CandidateClaim(Claim):
     verification: Literal["pending"] = "pending"
 
 
+class ExtractionSentence(Strict):
+    """A research sentence with `[src: …]` tags that no candidate claim covers (IF-211)."""
+
+    section: str
+    sentence: str
+    urls: Annotated[list[str], Field(min_length=1)]
+    quote: str | None = None  # the '> quote' block right after it, when it ends its paragraph
+
+
+class ExtractionFile(Strict):
+    """One research file the claim extractor is asked to read. `research_sha256` is the version
+    of the file the extraction is for; `output_file` (run-relative) is where the agent writes its
+    JSON list of candidate claims, numbered up from `first_claim_id`. The guard lets the extractor
+    write the output files, so the paths must follow from the stem: anything that can write under
+    runs/ could otherwise point an output at project source."""
+
+    stem: str
+    dimension: Dimension
+    research_file: str
+    research_sha256: str
+    output_file: str
+    first_claim_id: str
+    sentences: Annotated[list[ExtractionSentence], Field(min_length=1)]
+
+    @field_validator("first_claim_id")
+    @classmethod
+    def _first_id_format(cls, v: str) -> str:
+        if not CLAIM_ID_RE.match(v):
+            raise ValueError("first_claim_id must look like '<dimension>-NNN'")
+        return v
+
+    @model_validator(mode="after")
+    def _paths_follow_the_stem(self) -> ExtractionFile:
+        if not re.fullmatch(rf"(mini-[1-9][0-9]*-)?{re.escape(self.dimension)}", self.stem):
+            raise ValueError(f"stem must be '{self.dimension}' or 'mini-<n>-{self.dimension}'")
+        if self.research_file != f"02_research/{self.stem}.md":
+            raise ValueError(f"research_file must be 02_research/{self.stem}.md")
+        if self.output_file != f"03_claims/extracted/{self.stem}.json":
+            raise ValueError(f"output_file must be 03_claims/extracted/{self.stem}.json")
+        return self
+
+
+class ExtractionRequest(Strict):
+    """runs/<run_id>/03_claims/extracted/request.json, written by scripts/extract_claims.py."""
+
+    run_id: str
+    files: list[ExtractionFile] = []
+
+
 # ---------------------------------------------------------------- stage 5: scoring
 
 
@@ -498,6 +547,7 @@ SCHEMAS: dict[str, type[BaseModel]] = {
     "verdict": Verdict,
     "interim_scores": InterimScores,
     "meta": RunMeta,
+    "extraction_request": ExtractionRequest,
 }
 # Kinds whose file holds a JSON list of the model rather than a single object.
 LIST_KINDS: dict[str, type[BaseModel]] = {

@@ -76,6 +76,7 @@ ideaforge/
 │       ├── debate-accountant.md
 │       ├── debate-operator.md
 │       ├── debate-judge.md
+│       ├── claim-extractor.md     # stage 3 optional pass (IF-211); runs only when extract_claims.py lists files
 │       └── synthesizer.md         # stage 5 (IF-304); reads only 04_synthesis_input.json
 ├── agent_templates/               # source templates for the above (edit these, not .claude/agents)
 ├── prompts/                       # long prompt bodies, versioned in git
@@ -86,6 +87,7 @@ ideaforge/
 │   ├── runs.py                    # run lifecycle, stage state machine, resume, child run ids
 │   ├── meta.py                    # meta.json: git/config commit, models snapshot, Claude Code version, timestamps
 │   ├── verify.py                  # quote verification, conflict detection, source typing
+│   ├── extract.py                 # stage 3 claim-extraction pass: uncovered [src:] sentences, request, output checks
 │   ├── scoring.py                 # weighted score, caps, kill triggers, verdict
 │   ├── economics.py               # unit economics calculator
 │   ├── synthesis.py               # stage 5: synthesizer input, score run (score_run.py)
@@ -110,6 +112,7 @@ ideaforge/
 │   ├── new_run.py                 # create run dir + db row + meta.json, print run_id; --from = next version
 │   ├── run_stage.py               # stage state machine: --begin/--finish/--insufficient-data/--resume/--next
 │   ├── research_brief.py          # print a research brief's budget line and back-test header for <run_id> <dim>
+│   ├── extract_claims.py          # stage 3: list the research sentences no candidate claim covers (request.json)
 │   ├── verify_claims.py           # stage 3 verification over a run
 │   ├── synthesis_input.py         # stage 5: the synthesizer's only input file
 │   ├── score_run.py               # stage 5 scoring
@@ -129,6 +132,7 @@ ideaforge/
 │       ├── 03_claims/<dimension>.json          # extracted claims
 │       ├── 03_claims/verified.json
 │       ├── 03_claims/conflicts.json            # conflict groups in preference order (IF-210)
+│       ├── 03_claims/extracted/                # claim-extractor pass (IF-211): request.json + <stem>.json
 │       ├── 04_synthesis_input.json             # spec + verified/conflict claims + conflicts + rubric
 │       ├── 04_scores_proposed.json
 │       ├── 04_risks.json
@@ -309,7 +313,7 @@ SQLite tables mirror these: `runs`, `idea_versions`, `stages` (run_id, stage, st
   - Never invent a URL. Only cite URLs that appeared in a search result or were fetched.
 - Finland data tools exposed to subagents (free):
   - `python -m ideaforge.fi.pxweb search "<keyword>"` → candidate StatFin/Luke tables; `... get <table_path> --filter Alue=Rääkkylä,Pohjois-Karjala` → CSV. Output includes the `cite:` URL (the table URL with the selection in its query string) to cite as `source_type: api`.
-  - `python -m ideaforge.fi.prh search --name "<text>" | --industry <TOL> --municipality Rääkkylä` → companies in that industry/area (count, names, registration dates, status). Use for competition density and "has this been tried here".
+  - `python -m ideaforge.fi.prh search --name "<text>" | --industry <TOL 2025 code or prefix> --municipality Rääkkylä` → companies in that industry/area (count, names, registration dates, status). Use for competition density and "has this been tried here".
   - `python -m ideaforge.fi.eurostat get <dataset> --geo FI`.
 - `SubagentStop` hook: runs `validate_file.py --kind research runs/<run_id>/02_research/<dimension>.md` (checks the JSON block parses as `list[Claim]`, word limit, no bare numbers without a quote, every cited URL in the agent's `.seen_urls.txt` or an `ideaforge.fi` API URL; sentences without `[src: …]` are warnings). On failure the orchestrator re-launches that subagent once with the validator's error message appended; second failure → `INSUFFICIENT_DATA` for that dimension.
 
@@ -321,7 +325,7 @@ SQLite tables mirror these: `runs`, `idea_versions`, `stages` (run_id, stage, st
    - For `source_type: api` claims citing a `fi` tool URL, re-run the query (`ideaforge.fi.requery`) and compare the value (exact for counts, ±1% for floats); a mismatch → `unverified` + `api_mismatch`.
    - Conflict detection: same `dimension` + similar `statement` (fuzz ≥ 80; pairwise, TICKETS.md plan note 33) with `value` differing by > 25% → both `conflict`; keep both; preference order official > api > industry > news > forum > vendor, then newest, recorded in `03_claims/conflicts.json` and passed to the synthesizer.
    - Write `03_claims/verified.json` and upsert into SQLite.
-2. Optional model pass (`claim_extractor` role) only if a research file has prose claims that the mechanical parser missed; it emits additional `Claim` JSON which goes through the same verification.
+2. Optional model pass (`claim_extractor` role) only if a research file has prose claims that the mechanical parser missed; it emits additional `Claim` JSON which goes through the same verification. It runs **before** `verify_claims.py`: `scripts/extract_claims.py <run_id>` lists the `[src: …]` sentences no candidate claim covers in `03_claims/extracted/request.json`, the `claim-extractor` agent writes `03_claims/extracted/<stem>.json`, and `verify_claims.py` verifies those claims with the parsed ones (TICKETS.md plan note 35).
 
 ### Stage 4 — Evidence store
 

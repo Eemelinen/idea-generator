@@ -235,6 +235,21 @@ def test_validate_stage3_runs_the_verifier():
     assert text.find("verify --begin") < text.find("verify_claims.py") < text.find("verify --finish")
 
 
+def test_validate_stage3_launches_the_extractor_only_when_needed():
+    """IF-211: extract_claims.py decides, the registered claim-extractor runs once, before the verifier."""
+    text = sections(split("validate")[1])["Stage 3 — Claim verification"]
+    spec = agents.AGENTS["claim-extractor"]
+    assert spec.role == "claim_extractor"
+    assert f"subagent_type: {spec.name}" in text and "nothing to extract" in text
+    assert (
+        text.find("verify --begin")
+        < text.find("extract_claims.py <run_id>")
+        < text.find(f"subagent_type: {spec.name}")
+        < text.find("verify_claims.py <run_id>")
+    )
+    assert "VALIDATION_FAILED_claim-extractor" in text and "do not\n   re-launch" in text
+
+
 def test_validate_resumes_an_existing_run():
     text = read("validate")
     assert "new_run.py" in text

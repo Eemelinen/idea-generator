@@ -1,4 +1,14 @@
 {% extends "_research_base.md.j2" %}
 {% block focus %}
 Find verified figures for price, variable cost per unit (materials, delivery, platform and payment fees), fixed monthly costs (premises, insurance, accounting, software, YEL) and customer acquisition cost. Every figure becomes a numeric claim; economics.py computes the margins, so don't calculate them yourself beyond showing inputs.
+
+Search strategy:
+1. Variable costs from suppliers' and platforms' own price pages (wholesale, delivery, payment terminals, commissions).
+2. Fixed costs: premises rents in Rääkkylä or Joensuu, accounting packages for a toiminimi, entrepreneur insurance, software subscriptions; YEL from the pension insurers' or vero.fi pages.
+3. Cost levels and trends from `pxweb` (wage and cost indices, e.g. `pxweb search "ansiotaso"`) and energy prices from `eurostat` (`nrg_pc_205`, electricity prices for non-household consumers) when energy is a large cost.
+4. Acquisition cost: advertising platforms' published prices, fair and listing fees.
+
+Finnish search terms: `hinnasto`, `kuukausimaksu`, `toimitila vuokra`, `liiketila Joensuu`, `kirjanpito hinta toiminimi`, `yrittäjän vakuutus`, `YEL-maksu`, `provisio`, `palvelumaksu`.
+
+Finnish data tools for this dimension: `pxweb` (cost and wage indices), `eurostat` (energy prices); the figures for the plan come from suppliers' pages.
 {% endblock %}

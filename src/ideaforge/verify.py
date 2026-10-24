@@ -15,6 +15,10 @@ quote matches the answer's text. A mismatch or a URL that is not a client call �
 with `api_mismatch`; a failed re-query → `unfetchable`. An `api` claim on any other URL is
 fetched and quote-matched like a page.
 
+Extracted claims (IF-211): the claim extractor's candidate claims for a research file
+(03_claims/extracted/<stem>.json, `ideaforge.extract`) join that file's parsed claims and are
+verified the same way.
+
 Conflicts (IF-210): `detect_conflicts` groups verified claims of one dimension whose statements
 are similar (rapidfuzz token_sort_ratio ≥ 80) and whose values differ by more than 25 %; every
 claim of a group becomes `conflict` and is kept, and the groups go to 03_claims/conflicts.json in
@@ -46,7 +50,7 @@ import trafilatura
 from pydantic import TypeAdapter
 from rapidfuzz import fuzz
 
-from ideaforge import agents, config, db, runs
+from ideaforge import config, db, extract, runs
 from ideaforge.fi import requery
 from ideaforge.fi.http import Transport
 from ideaforge.schemas import CandidateClaim, Claim, ConflictGroup, SourceType
@@ -575,27 +579,25 @@ def _write_claims(path: Path, claims: list[Claim]) -> None:
 def parse_run(
     run_dir: Path, retrieved_at: datetime, only: set[str] | None = None
 ) -> tuple[dict[str, list[Claim]], list[str]]:
-    """Candidate claims of every 02_research/*.md (or only the stems in `only`), written to
-    03_claims/<stem>.json (pending)."""
+    """Candidate claims of every 02_research/*.md (or only the stems in `only`), plus the claim
+    extractor's for that file (IF-211), written to 03_claims/<stem>.json (pending)."""
     parsed: dict[str, list[Claim]] = {}
     warnings: list[str] = []
 
-    # Debate mini-research files (mini-<n>-<dim>.md) come after the stage-2 files, in task order,
-    # so a reused claim id never displaces a stage-2 claim (verify_run keeps the first).
-    def order(p: Path) -> tuple[int, str]:
-        mini = agents.parse_mini_stem(p.stem)
-        return (mini[0], p.name) if mini else (0, p.name)
-
-    paths = sorted((run_dir / "02_research").glob("*.md"), key=order)
+    # Debate mini-research files come after the stage-2 files, so verify_run keeps the first.
+    paths = extract.research_files(run_dir)
     if only is not None:
         missing = sorted(only - {p.stem for p in paths})
         if missing:
             raise FileNotFoundError(f"no 02_research/{missing[0]}.md")
         paths = [p for p in paths if p.stem in only]
     for md_path in paths:
-        candidates, problems = candidate_claims(md_path.read_text(encoding="utf-8"))
+        md = md_path.read_text(encoding="utf-8")
+        candidates, problems = candidate_claims(md)
+        extracted, extract_problems = extract.extracted_claims(run_dir, md_path.stem, md)
         warnings.extend(f"{md_path.name}: {p}" for p in problems)
-        claims = [_fill(c, retrieved_at) for c in candidates]
+        warnings.extend(extract_problems)
+        claims = [_fill(c, retrieved_at) for c in [*candidates, *extracted]]
         parsed[md_path.stem] = claims
         _write_claims(run_dir / "03_claims" / f"{md_path.stem}.json", claims)
     return parsed, warnings
