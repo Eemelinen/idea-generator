@@ -217,6 +217,12 @@ These came out of reviewing the plan. Phase 1 already applies them; later ticket
     - **Extractor pass**: it ran once on 7 sentences of 3 files and wrote 5 claims; `market-102` (a basic cottage at 300–500 EUR a week, quoted from Taloustaito) is a prose claim the parser missed and verified, as did `market-101` and `killcause-101`. `competition-101` split a count the file already claimed into a number counted from rows (`api_mismatch`), and `competition-102` is a not-found sentence with the fallback quote (its page also timed out). The prompt now skips reasoning and not-found sentences (except an API `count: 0`), prefers a passage the sentence quotes, and keeps API values to numbers the tool prints. Note 35's coverage rule did miss prose claims: 54 of 230 sourced sentences had no quote and were "covered" by any claim on their URL, among them Jetina's exclusion of content production for booking platforms and its applicant types. `extract.covers` now needs such a claim to state the sentence (`token_set_ratio` ≥ 70 between statement and sentence, or its quote inside the sentence); on this run other facts of the page scored 29–58 and restatements 56–99, and 41 sentences instead of 7 would go to the extractor.
     - **Left for IF-216 (F-013)**: conflict detection (note 33) marked 51 claims `conflict` in 21 groups, and on inspection every group is a time series, another area or another subgroup of one table or page (Rääkkylä 2015 vs 2025, July vs January nights, Rääkkylä vs Finland unemployment), so those claims drop out of scoring. The tuned briefs themselves have not run live yet; F-013's run is the first.
 
+37. **Phase 2 acceptance run (IF-216).**
+    - **Conflict detection tightened (supporting change to IF-210, note 33)**: `verify.in_conflict` now also needs the two claims to cite different sources (`normalize_url`; for an `api` claim the URL without its query, i.e. the table or endpoint, because on the second run two selections of `13h3`, a work-purpose subset and the total, still formed 2 false groups) and to name the same qualifiers: years (`2025`, `2025Q1`, `2025M07`), quarters, months (English and Finnish) and capitalised words (areas, platforms, groups), minus sentence-initial function words (`In`, `The`). On the first sauna run all 21 groups (33 pairs) were false, 28 pairs from one source (cells of one table, two facts of one page) and 5 from one statement shape about another period or area; under the new rule none remain, while two sources disagreeing about one quantity still conflict. Real conflicts phrased with different names for one area (`Pohjois-Karjala` vs `North Karelia`) are now missed; the agents write statements in English, so that is accepted.
+    - **The run (results under IF-216)**: 11 of 11 research files valid on the first launch (first run: 1 of 11), every agent ran the self-check (29 runs in all) and the guard denied 3 Bash calls in the whole stage (first run: about 40: a `>` redirect, `validate_file --help`, `uv run python -c`); stage 2 took about 11 minutes and ~475k tokens (first run, both launches: ~900k). One budget overrun (gtm, 9 searches of 8, although its report said 8). Despite the brief, the market agent tried the folder `rakke` again (the location agent found holiday homes in `15er`), and the financing agent fetched a URL it had guessed (a 404, not cited).
+    - **Extractor**: 26 sentences in 9 files went to the extractor (note 36's coverage rule); it wrote 3 claims and `[]` for 6 files, skipping repeats and reasoning as the prompt now asks. All 3 used the fallback quote (the research file's own words, none of the sentences had a quote block) and all 3 are `unverified`; with the first run's `competition-102` that is 4 of 4. The fallback quote only adds noise and should go (IF-204 follow-up; not changed here).
+    - **Verification**: no warnings, no conflicts after the fix; the 7 unverified claims are the 3 extracted ones, 2 quoting the jetina.fi front page (a menu label), and the dynamic Airbnb and Nettimökki listing pages.
+
 ---
 
 ## Index
@@ -456,6 +462,13 @@ Absorbs IF-102–IF-107. Kept for reference:
   - the re-run launches no agent for completed dimensions; a killed stage-2 session resumes (IF-507)
   - 3 sampled research files show no false rejections by the IF-205 rules
 - Record the results under this ticket.
+- **Results (2026-10-24, run `20261024-132504-sauna-and-lake-cabin-rentals`, commit 0054f25 + the conflict fix, preset standard; plan note 37):**
+  - all 11 research files written, every one valid on its first launch: met
+  - 237 of 244 claims verified (97 %): met
+  - spot check of 10 random claims: all 10 verified on their page or re-queried answer; and every one of the 141 non-API claim URLs is in its agent's `.seen_urls.txt`: no invented URL, met
+  - `usage_report.py` prints per stage and agent (354 calls, ~546k tokens), `/status <run_id>` shows the run: met
+  - the re-run (`run_stage.py <run_id> --resume`) resets nothing and lists only `synthesize`, so no agent is launched: met. **The killed stage-2 session (IF-507 manual crash test) has not been done yet** (the user deferred it), so F-013 stays `in_progress`.
+  - no research file was rejected, so none of the sampled ones falsely: met
 
 ---
 

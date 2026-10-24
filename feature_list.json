@@ -301,7 +301,7 @@
       "area": "acceptance",
       "title": "Phase 2 acceptance run",
       "user_visible_behavior": "On the real sauna-and-lake cabin idea, `/validate` completes stages 0–3: 11 research files (or insufficient_data), ≥ 60 % of claims verified, no invented URL in a 10-claim spot check, the usage report and `/status` work, a re-run skips completed dimensions and a killed stage-2 session resumes.",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": ["F-002", "F-008", "F-011", "F-012"],
       "ticket": "IF-216",
       "spec": "docs/TICKETS.md#if-216-phase-2-acceptance-run",
