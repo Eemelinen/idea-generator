@@ -14,10 +14,16 @@ dependencies = [
     "jinja2>=3.1",
     "truststore>=0.9",
     "lxml>=5.3",
+    "fastapi>=0.162.0",
+    "uvicorn>=0.54.0",
+    "python-multipart>=0.0.32",
+    "markdown-it-py>=4.2.0",
+    "ruamel-yaml>=0.19.1",
 ]
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "pytest>=8.2",
     "pytest-cov>=5.0",
 ]

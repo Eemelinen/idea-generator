@@ -12,6 +12,7 @@ runs/*
 cache/
 ideaforge.db
 ideaforge.db-*
+backups/
 
 # Local dev-mode marker (relaxes the write/bash guard for the main session)
 .ideaforge-dev

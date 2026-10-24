@@ -675,7 +675,7 @@
       "area": "ui",
       "title": "Web app shell, storage upkeep and runs dashboard",
       "user_visible_behavior": "`uv run python -m ideaforge.web` serves a local web UI on 127.0.0.1:8765 whose dashboard lists every run with its stage progress, verdict, version lineage, preset, as-of date and usage totals; `db.init()` migrates the schema by version, `python -m ideaforge.db backup` writes a consistent copy to `backups/`, and the UI warns when `runs/` and the database disagree.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-019", "F-028"],
       "ticket": "IF-601",
       "spec": "docs/TICKETS.md#if-601-web-app-shell-storage-upkeep-and-runs-dashboard",
@@ -684,7 +684,11 @@
         "L1: uv run pytest tests/test_web_dashboard.py (dashboard rows, lineage and stage progress on synthetic runs; DB/disk mismatch banner)",
         "L1: uv run pytest tests/test_db.py (schema_version migrations are idempotent and keep existing rows; backup copy opens and matches)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-24 pnpm check → pass (working tree on 5d44eed)",
+        "2026-10-24 uv run pytest tests/test_web_dashboard.py → pass (working tree on 5d44eed)",
+        "2026-10-24 uv run pytest tests/test_db.py → pass (working tree on 5d44eed)"
+      ],
       "attempts": 0,
       "notes": "Promotes the Phase 6 backlog item IF-601 (a Streamlit viewer) to a FastAPI + Jinja2 + HTMX app (D-008). Carries D-008 and the new dependencies."
     },

@@ -1,15 +1,23 @@
-"""SQLite schema and helpers. WAL mode; FTS5 over claim statements and quotes."""
+"""SQLite schema and helpers. WAL mode; FTS5 over claim statements and quotes.
+
+The schema is versioned (IF-601): `init()` applies the `MIGRATIONS` a database has not seen yet,
+in order, and records each in `schema_version`. `python -m ideaforge.db backup [--to <dir>]`
+writes a consistent copy with the sqlite backup API.
+"""
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sqlite3
+import sys
 from collections.abc import Callable, Iterable
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
+from ideaforge import config
 from ideaforge.config import ROOT
 from ideaforge.schemas import Assumption, Claim, DimensionScore, Experiment
 
@@ -216,9 +224,70 @@ def session(path: Path | None = None):
         conn.close()
 
 
+SCHEMA_VERSION_TABLE = """
+CREATE TABLE IF NOT EXISTS schema_version (
+    version    INTEGER PRIMARY KEY,
+    applied_at TEXT NOT NULL
+);
+"""
+
+# Ordered migrations: version n is MIGRATIONS[n - 1]. Never edit or reorder an applied one;
+# append a new one. Each must be idempotent (CREATE … IF NOT EXISTS), because a database made
+# before IF-601 already has the version-1 tables, and two processes may migrate at once.
+MIGRATIONS: list[str] = [
+    SCHEMA,  # 1: the pipeline schema as it stood before versioning
+]
+
+
+def schema_version(conn: sqlite3.Connection) -> int:
+    """The highest applied migration; 0 for a database without a `schema_version` table."""
+    try:
+        return conn.execute("SELECT COALESCE(MAX(version), 0) FROM schema_version").fetchone()[0]
+    except sqlite3.OperationalError as e:
+        if "no such table" in str(e):
+            return 0
+        raise
+
+
 def init(path: Path | None = None) -> None:
+    """Create or migrate the database to the latest schema version; existing rows are kept."""
     with session(path) as conn:
-        conn.executescript(SCHEMA)
+        conn.executescript(SCHEMA_VERSION_TABLE)
+        current = schema_version(conn)
+        for version, sql in enumerate(MIGRATIONS, start=1):
+            if version <= current:
+                continue
+            conn.executescript(sql)
+            conn.execute(
+                "INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (?,?)", (version, now())
+            )
+            conn.commit()
+
+
+def backup(to: Path | None = None, path: Path | None = None) -> Path:
+    """Copy the database to `<to>/ideaforge-<UTC timestamp>.db` (default `backups/`) with the
+    sqlite backup API, which is consistent while other connections write (WAL). Raises
+    FileNotFoundError when there is no database to copy."""
+    src_path = path or db_path()
+    if not src_path.is_file():
+        raise FileNotFoundError(f"no database at {src_path}")
+    out_dir = to or config.ROOT / "backups"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    dest = out_dir / f"ideaforge-{stamp}.db"
+    n = 1
+    while dest.exists():  # two backups in the same second
+        n += 1
+        dest = out_dir / f"ideaforge-{stamp}-{n}.db"
+    src = sqlite3.connect(src_path)
+    dst = sqlite3.connect(dest)
+    try:
+        with dst:
+            src.backup(dst)
+    finally:
+        dst.close()
+        src.close()
+    return dest
 
 
 def create_run(
@@ -445,3 +514,32 @@ def mini_research_tasks(run_id: str) -> list[sqlite3.Row]:
         if "no such table" in str(e):
             return []
         raise
+
+
+# ---------------------------------------------------------------- CLI
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="ideaforge.db", description="Database upkeep.")
+    sub = parser.add_subparsers(dest="command", required=True)
+    sub.add_parser("init", help="create or migrate the database to the latest schema version")
+    bak = sub.add_parser("backup", help="write a consistent copy to backups/ideaforge-<UTC timestamp>.db")
+    bak.add_argument("--to", type=Path, default=None, help="directory for the copy (default: backups/)")
+    args = parser.parse_args(argv)
+
+    if args.command == "init":
+        init()
+        with session() as conn:
+            print(f"schema version {schema_version(conn)}: {db_path()}")
+        return 0
+    try:
+        dest = backup(args.to)
+    except (FileNotFoundError, sqlite3.Error) as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+    print(f"wrote {dest}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
