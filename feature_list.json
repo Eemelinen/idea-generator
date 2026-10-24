@@ -513,7 +513,11 @@
         "2026-10-24 pnpm check → pass (commit fe1c7c1)",
         "2026-10-24 uv run pytest tests/test_gen_agents.py tests/test_debate.py tests/test_skills.py → pass (commit fe1c7c1)",
         "2026-10-24 pnpm check → pass (commit 7474fc0)",
-        "2026-10-24 uv run pytest tests/test_gen_agents.py tests/test_debate.py tests/test_skills.py → pass (commit 7474fc0)"
+        "2026-10-24 uv run pytest tests/test_gen_agents.py tests/test_debate.py tests/test_skills.py → pass (commit 7474fc0)",
+        "2026-10-24 pnpm check → pass (commit 24b49f0)",
+        "2026-10-24 uv run pytest tests/test_gen_agents.py tests/test_debate.py tests/test_skills.py → pass (commit 24b49f0)",
+        "2026-10-24 pnpm check → pass (working tree on e0cf9bf)",
+        "2026-10-24 uv run pytest tests/test_gen_agents.py tests/test_debate.py tests/test_skills.py → pass (working tree on e0cf9bf)"
       ],
       "attempts": 1,
       "notes": "Absorbs IF-401 (persona and judge prompts) and IF-404 (mini-research). The live debate moved to F-024. Attempt 1 failed 2026-10-24: evaluator: Revise"
