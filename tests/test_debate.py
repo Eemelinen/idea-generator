@@ -407,3 +407,327 @@ def test_run_conformity_flag_ignores_rejected_agreement(debate_run):
     result = write_conf_round(debate_run, 1, t)
     assert list(result.rejected) == ["accountant"]
     assert not debate.run_conformity_flag(DEBATE_RUN)
+
+
+# ---------------------------------------------------------------- evidence subsets and mini-research (IF-407)
+
+import shutil  # noqa: E402
+
+import debate_validate  # noqa: E402
+from conftest import DEBATE_CLAIMS, FIXTURES  # noqa: E402
+from test_verify import FakeWeb, html  # noqa: E402
+
+from ideaforge import agents, mini_research, verify  # noqa: E402
+from ideaforge.schemas import RESEARCH_DIMENSIONS, Claim  # noqa: E402
+
+MINI_SEED = 2026
+MINI_MAP = debate.mapping_for(MINI_SEED)
+MINI_URL = "https://example.invalid/synthetic/mini-market"
+MINI_QUOTE = "Synthetic quote: 40 remote workers rented a lakeside cabin in 2025."
+GAP = {"evidence_gap": "No verified claim on winter occupancy."}
+
+
+def other_id(role):
+    return next(pid for r, pid in MINI_MAP.items() if r != role)
+
+
+def plain(role, round_no, **fields):
+    response = {"target_position_id": other_id(role), "stance": "disagree", "basis": GAP}
+    return {"role": role, "round": round_no, "responses": [response]} | fields
+
+
+def request(role, dimension="market"):
+    return {"question": "Synthetic question?", "dimension": dimension, "requested_by": role}
+
+
+def rebuttal_round(run_dir, round_no, **overrides):
+    for role in PERSONAS:
+        write_role(run_dir, round_no, role, overrides.get(role) or plain(role, round_no))
+    return debate.validate_round(DEBATE_RUN, round_no)
+
+
+def mini_markdown(claim_id="market-101", dimension="market"):
+    """A synthetic mini-research file (TICKETS.md plan note 14) that meets the research contract."""
+    claim = {
+        "claim_id": claim_id, "dimension": dimension, "statement": "Synthetic: 40 remote workers rented a cabin.",
+        "value": 40, "unit": "persons", "source_url": MINI_URL, "source_title": "Synthetic source",
+        "quote": MINI_QUOTE, "published_date": None, "source_type": "news", "confidence": 0.7, "flags": [],
+    }  # fmt: skip
+    return (
+        f"# {dimension}\n\nA synthetic mini-research answer.\n\n## Findings\n\n"
+        f"Synthetic: 40 remote workers rented a lakeside cabin in 2025 [src: {MINI_URL}].\n> {MINI_QUOTE}\n\n"
+        f"## Candidate claims\n\n```json\n{json.dumps([claim], indent=2)}\n```\n\n## Gaps\n\n- None (synthetic).\n"
+    )
+
+
+def write_mini(run_dir, task, text=None):
+    path = task.output(DEBATE_RUN)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text if text is not None else mini_markdown(f"{task.dimension}-{task.claim_start:03d}",
+                                                               task.dimension), encoding="utf-8")
+    with open(run_dir / ".seen_urls.txt", "a", encoding="utf-8") as f:
+        f.write(f"{task.agent}\t{MINI_URL}\n")
+
+
+@pytest.fixture
+def debating(debate_run):
+    debate.anonymize(DEBATE_RUN, 0, seed=MINI_SEED)
+    shutil.copy(FIXTURES / "scores.json", debate_run / "04_scores.json")
+    return debate_run
+
+
+def test_persona_evidence_files_hold_only_their_subset(debate_run):
+    debate.write_evidence(DEBATE_RUN, seed=MINI_SEED)
+    verified = {cid for cid, state in DEBATE_CLAIMS.items() if state == "verified"}
+    for role in PERSONAS:
+        data = json.loads(debate.evidence_path(DEBATE_RUN, role).read_text(encoding="utf-8"))
+        dims = agents.PERSONA_EVIDENCE[role] or RESEARCH_DIMENSIONS
+        assert data["role"] == role and data["position_id"] == MINI_MAP[role]
+        assert data["dimensions"] == list(dims)
+        ids = {c["claim_id"] for c in data["claims"]}
+        assert ids == {cid for cid in verified if cid.rsplit("-", 1)[0] in dims}, role
+        assert all(c["verification"] == "verified" for c in data["claims"])
+        assert data["mini_research_claims"] == []
+    founder = json.loads(debate.evidence_path(DEBATE_RUN, "founder").read_text(encoding="utf-8"))
+    assert {c["claim_id"] for c in founder["claims"]} == verified
+    accountant = json.loads(debate.evidence_path(DEBATE_RUN, "accountant").read_text(encoding="utf-8"))
+    assert {c["claim_id"] for c in accountant["claims"]} == {"regulation-001", "unit_economics-001"}
+
+
+def test_evidence_creates_the_debate_seed_used_by_anonymize(debate_run):
+    debate.write_evidence(DEBATE_RUN, seed=7)
+    debate.anonymize(DEBATE_RUN, 0)
+    assert debate.load_mapping(DEBATE_RUN) == debate.mapping_for(7)
+    assert debate.main(["evidence", DEBATE_RUN, "--seed", "8"]) == 1
+
+
+def test_evidence_is_stale_when_the_ledger_changes(debate_run):
+    debate.write_evidence(DEBATE_RUN, seed=MINI_SEED)
+    assert debate.stale_evidence(DEBATE_RUN) == []
+    ledger = debate_run / "03_claims" / "verified.json"
+    ledger.write_text(ledger.read_text(encoding="utf-8") + " ", encoding="utf-8")
+    assert debate.stale_evidence(DEBATE_RUN) == list(PERSONAS)
+
+
+def open_round(run_dir, round_no, role="investor", dimension="market"):
+    result = rebuttal_round(run_dir, round_no, **{role: plain(role, round_no, mini_research=request(role, dimension))})
+    assert result.rejected == {}, result.rejected
+    return mini_research.open_task(DEBATE_RUN, round_no)
+
+
+def test_open_turns_the_accepted_request_into_task_1(debating, capsys):
+    task = open_round(debating, 1)
+    assert (task.n, task.round, task.role, task.anon_id) == (1, 1, "investor", MINI_MAP["investor"])
+    assert (task.dimension, task.status, task.claim_start) == ("market", "running", 101)
+    assert task.output(DEBATE_RUN) == debating / "02_research" / "mini-1-market.md"
+    assert mini_research.open_task(DEBATE_RUN, 1) == task  # idempotent
+    assert mini_research.main(["open", DEBATE_RUN, "1"]) == 0
+    out = capsys.readouterr().out
+    assert "subagent_type: research-market" in out and "first claim id: market-101" in out
+    assert f"output: runs/{DEBATE_RUN}/02_research/mini-1-market.md" in out
+
+
+def test_a_round_without_a_request_opens_nothing(debating, capsys):
+    rebuttal_round(debating, 1)
+    assert mini_research.open_task(DEBATE_RUN, 1) is None
+    assert mini_research.main(["open", DEBATE_RUN, "1"]) == 0
+    assert "requested no mini-research" in capsys.readouterr().out
+
+
+def finish_ok(run_dir, task):
+    write_mini(run_dir, task)
+    assert mini_research.finish_task(DEBATE_RUN, task.n).task.status == "done"
+    web = FakeWeb({MINI_URL: html(MINI_QUOTE)})
+    verify.verify_run(DEBATE_RUN, web, only=[task.stem])
+
+
+def test_a_fourth_mini_research_request_is_refused(debating, capsys):
+    for n in (1, 2, 3):
+        task = open_round(debating, n)
+        assert task.n == n
+        finish_ok(debating, task)
+    assert debate.debate_budget(DEBATE_RUN).max_mini_research_tasks == 3
+    # Validation sends the fourth request back...
+    result = rebuttal_round(debating, 4, investor=plain("investor", 4, mini_research=request("investor")))
+    assert "max_mini_research_tasks: 3" in "\n".join(result.rejected["investor"])
+    assert mini_research.open_task(DEBATE_RUN, 4) is None
+    assert len(mini_research.tasks(DEBATE_RUN)) == 3
+
+
+def test_open_refuses_a_request_past_the_limit(debating, monkeypatch, capsys):
+    """The Python backstop: a request that passed validation is refused when the limit is used."""
+    finish_ok(debating, open_round(debating, 1))
+    open_round_2 = rebuttal_round(debating, 2, founder=plain("founder", 2, mini_research=request("founder")))
+    assert open_round_2.rejected == {}
+    budget = debate.debate_budget(DEBATE_RUN).model_copy(update={"max_mini_research_tasks": 1})
+    monkeypatch.setattr(debate, "debate_budget", lambda run_id: budget)
+    with pytest.raises(mini_research.Refused, match="max_mini_research_tasks: 1"):
+        mini_research.open_task(DEBATE_RUN, 2)
+    assert mini_research.main(["open", DEBATE_RUN, "2"]) == 3
+    assert "refused:" in capsys.readouterr().err
+    assert len(mini_research.tasks(DEBATE_RUN)) == 1
+
+
+def test_economy_preset_allows_one_task(debating):
+    with db.session() as conn:
+        conn.execute("UPDATE runs SET budget_preset='economy' WHERE run_id=?", (DEBATE_RUN,))
+    finish_ok(debating, open_round(debating, 1))
+    result = rebuttal_round(debating, 2, customer=plain("customer", 2, mini_research=request("customer")))
+    assert "max_mini_research_tasks: 1" in "\n".join(result.rejected["customer"])
+
+
+def test_round_1_mini_research_claims_are_usable_in_round_2(debating):
+    before = json.loads((debating / "03_claims" / "verified.json").read_text(encoding="utf-8"))
+    task = open_round(debating, 1, role="customer")
+    finish_ok(debating, task)
+    ledger = json.loads((debating / "03_claims" / "verified.json").read_text(encoding="utf-8"))
+    # earlier claims keep their state and retrieved_at
+    assert [Claim.model_validate(c) for c in ledger[: len(before)]] == [Claim.model_validate(c) for c in before]
+    new = ledger[len(before):]
+    assert [(c["claim_id"], c["verification"]) for c in new] == [("market-101", "verified")]
+
+    debate.write_evidence(DEBATE_RUN)
+    for role in PERSONAS:  # every persona gets the new claim, whatever its subset
+        data = json.loads(debate.evidence_path(DEBATE_RUN, role).read_text(encoding="utf-8"))
+        assert [c["claim_id"] for c in data["mini_research_claims"]] == ["market-101"]
+        assert "market-101" not in {c["claim_id"] for c in data["claims"]}
+
+    agree = {"target_position_id": other_id("accountant"), "stance": "agree", "basis": {"new_claim_ids": ["market-101"]}}
+    result = rebuttal_round(debating, 2, accountant={"role": "accountant", "round": 2, "responses": [agree]})
+    assert "accountant" in result.accepted
+    assert debate_validate.main([DEBATE_RUN, "2"]) == 0
+
+
+def test_a_mini_research_claim_is_unknown_before_it_is_verified(debating):
+    task = open_round(debating, 1)
+    write_mini(debating, task)
+    agree = {"target_position_id": other_id("accountant"), "stance": "agree", "basis": {"new_claim_ids": ["market-101"]}}
+    result = rebuttal_round(debating, 2, accountant={"role": "accountant", "round": 2, "responses": [agree]})
+    assert "market-101" in "\n".join(result.rejected["accountant"])
+
+
+def test_finish_relaunches_once_then_sets_the_file_aside(debating, capsys):
+    task = open_round(debating, 1)
+    write_mini(debating, task, "# market\n\nNo claims.\n")
+    assert mini_research.main(["finish", DEBATE_RUN, "1"]) == 2
+    assert "Candidate claims" in capsys.readouterr().out
+    assert mini_research.get(DEBATE_RUN, 1).status == "running"
+    assert mini_research.main(["finish", DEBATE_RUN, "1"]) == 3
+    failed = mini_research.get(DEBATE_RUN, 1)
+    assert (failed.status, failed.attempts) == ("failed", 2)
+    assert not task.output(DEBATE_RUN).exists()
+    assert task.output(DEBATE_RUN).with_name("mini-1-market.md.failed").exists()
+    # the failed task still counts, and a later round can open the next one
+    nxt = open_round(debating, 2)
+    assert nxt.n == 2
+
+
+def test_finish_rejects_claim_ids_the_ledger_already_has(debating):
+    task = open_round(debating, 1)
+    write_mini(debating, task, mini_markdown("market-001"))
+    result = mini_research.finish_task(DEBATE_RUN, 1)
+    assert result.task.status == "running"
+    assert "already in the run's ledger: market-001" in result.problems
+
+
+def test_only_one_task_runs_at_a_time(debating):
+    open_round(debating, 1)
+    rebuttal_round(debating, 2, founder=plain("founder", 2, mini_research=request("founder")))
+    with pytest.raises(debate.DebateError, match="still running"):
+        mini_research.open_task(DEBATE_RUN, 2)
+
+
+def test_claim_numbers_start_past_the_runs_ids(debating):
+    finish_ok(debating, open_round(debating, 1))  # market-101
+    second = open_round(debating, 2)
+    assert second.claim_start == 201
+    assert mini_research.claim_start(debating, "gtm") == 101
+
+
+def test_verify_only_replaces_the_files_own_claims(debating):
+    task = open_round(debating, 1)
+    finish_ok(debating, task)
+    web = FakeWeb({MINI_URL: html(MINI_QUOTE)})
+    verify.verify_run(DEBATE_RUN, web, only=[task.stem])  # again: no duplicate, same ledger size
+    ledger = json.loads((debating / "03_claims" / "verified.json").read_text(encoding="utf-8"))
+    assert [c["claim_id"] for c in ledger].count("market-101") == 1
+    assert len(ledger) == len(DEBATE_CLAIMS) + 1
+    with pytest.raises(FileNotFoundError):
+        verify.verify_run(DEBATE_RUN, web, only=["mini-9-market"])
+
+
+# ---------------------------------------------------------------- re-prompts and resume (IF-407)
+
+
+def test_reprompt_sends_each_rejected_persona_back_once(debating, capsys):
+    bad = {"target_position_id": other_id("founder"), "stance": "agree", "basis": GAP}
+    rebuttal_round(debating, 1, founder={"role": "founder", "round": 1, "responses": [bad]})
+    assert debate.reprompt(DEBATE_RUN, 1) == (["founder"], [])
+    assert debate.reprompt(DEBATE_RUN, 1) == ([], ["founder"])
+    assert debate.main(["reprompt", DEBATE_RUN, "1"]) == 0
+    assert "final: founder" in capsys.readouterr().out
+
+
+def status():
+    return debate.progress(DEBATE_RUN)
+
+
+def test_status_walks_the_debate_step_by_step(debate_run, capsys):
+    shutil.copy(FIXTURES / "scores.json", debate_run / "04_scores.json")
+    assert status().step == "report"
+    (debate_run / "05_report.md").write_text("# Synthetic report\n", encoding="utf-8")
+    assert (status().step, status().roles) == ("evidence", list(PERSONAS))
+    debate.write_evidence(DEBATE_RUN, seed=MINI_SEED)
+    (debate_run / "debate" / "round0" / "operator.json").unlink()
+    assert (status().step, status().round, status().roles) == ("positions", 0, ["operator"])
+    write_role(debate_run, 0, "operator", debate_position("operator"))
+    assert (status().step, status().round) == ("anonymize", 0)
+    debate.anonymize(DEBATE_RUN, 0)
+    assert (status().step, status().round, status().roles) == ("rebuttals", 1, list(PERSONAS))
+
+    for role in PERSONAS[:4]:
+        write_role(debate_run, 1, role, plain(role, 1))
+    assert (status().step, status().roles) == ("rebuttals", ["operator"])
+    bad = {"target_position_id": other_id("operator"), "stance": "agree", "basis": GAP}
+    write_role(debate_run, 1, "operator", {"role": "operator", "round": 1, "responses": [bad]})
+    assert status().step == "validate"
+    debate.validate_round(DEBATE_RUN, 1)
+    assert (status().step, status().roles) == ("reprompt", ["operator"])
+    debate.reprompt(DEBATE_RUN, 1)
+    write_role(debate_run, 1, "operator", plain("operator", 1, mini_research=request("operator")))
+    assert status().step == "validate"
+    debate.validate_round(DEBATE_RUN, 1)
+    assert (status().step, status().round) == ("mini-research", 1)
+    task = mini_research.open_task(DEBATE_RUN, 1)
+    assert status().notes == ["task 1 is running"]
+    write_mini(debate_run, task)
+    mini_research.finish_task(DEBATE_RUN, 1)
+    assert (status().step, status().notes) == ("verify", ["mini-1-market"])
+    verify.verify_run(DEBATE_RUN, FakeWeb({MINI_URL: html(MINI_QUOTE)}), only=[task.stem])
+    assert status().step == "evidence"
+    debate.write_evidence(DEBATE_RUN)
+    assert (status().step, status().round) == ("anonymize", 1)
+    debate.anonymize(DEBATE_RUN, 1)
+    assert (status().step, status().round) == ("interim", 1)
+    scores = json.loads((debate_run / "04_scores.json").read_text(encoding="utf-8"))
+    projected = {s["dimension"]: s["final_score"] for s in scores["scores"] if s["final_score"] is not None}
+    moved = projected | {"market": min(5.0, projected["market"] + 1)}
+    (debate_run / "debate" / "round1" / debate.INTERIM_NAME).write_text(
+        json.dumps({"round": 1, "projected_scores": moved}), encoding="utf-8"
+    )
+    # round 1 brought a mini-research request and moved a projection, so the debate goes on
+    assert (status().step, status().round) == ("rebuttals", 2)
+    for role in PERSONAS:
+        write_role(debate_run, 2, role, plain(role, 2))
+    debate.validate_round(DEBATE_RUN, 2)
+    debate.anonymize(DEBATE_RUN, 2)
+    (debate_run / "debate" / "round2" / debate.INTERIM_NAME).write_text(
+        json.dumps({"round": 2, "projected_scores": moved}), encoding="utf-8"
+    )
+    assert status().step == "judge"
+    shutil.copy(FIXTURES / "debate" / "verdict.synthetic.json", debate_run / "debate" / "verdict.json")
+    assert status().step == "render"
+    (debate_run / "debate" / "revised_plan.md").write_text("# plan\n", encoding="utf-8")
+    assert status().step == "done"
+    assert debate.main(["status", DEBATE_RUN]) == 0
+    assert capsys.readouterr().out.strip().endswith("next: done")

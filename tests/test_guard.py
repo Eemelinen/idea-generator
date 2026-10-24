@@ -100,6 +100,35 @@ def test_research_agent_only_own_file(active_run, project):
     assert "may only write" in guard.check_write(write(project / "prompts" / "research_base.md", **RESEARCH))
 
 
+def open_mini_task(run_dir, dimension="pricing", status="running"):
+    from ideaforge import db, runs
+
+    db.init()
+    db.create_run(run_dir.name, "test idea", idea_id="test-idea", stages=runs.STAGES)
+    with db.session() as conn:
+        conn.execute(
+            "INSERT INTO mini_research(run_id, n, round, role, anon_id, dimension, question, claim_start, status,"
+            " created_at) VALUES (?, 1, 1, 'investor', 'P2', ?, 'q?', 101, ?, '2026-10-24T10:00:00+00:00')",
+            (run_dir.name, dimension, status),
+        )
+
+
+def test_research_agent_writes_only_its_running_mini_research_file(active_run, project):
+    open_mini_task(active_run)
+    mini = active_run / "02_research" / "mini-1-pricing.md"
+    assert guard.check_write(write(mini, **RESEARCH)) is None
+    assert "mini-1-pricing.md" in guard.check_write(write(active_run / "02_research" / "pricing.md", **RESEARCH))
+    other = {"agent_id": "a9", "agent_type": "research-market"}
+    assert guard.check_write(write(active_run / "02_research" / "market.md", **other)) is None
+    assert guard.check_write(write(mini, **other)) is not None
+
+
+def test_a_finished_mini_research_task_closes_its_file(active_run, project):
+    open_mini_task(active_run, status="done")
+    assert guard.check_write(write(active_run / "02_research" / "mini-1-pricing.md", **RESEARCH)) is not None
+    assert guard.check_write(write(active_run / "02_research" / "pricing.md", **RESEARCH)) is None
+
+
 def test_research_agent_needs_active_run(project):
     assert "no active run" in guard.check_write(write(project / "runs" / "x" / "pricing.md", **RESEARCH))
 
@@ -109,7 +138,11 @@ def test_debate_agent_only_debate_dir(active_run):
     assert guard.check_write(write(active_run / "04_scores.json", **DEBATE)) is not None
 
 
-@pytest.mark.parametrize("name", [".mapping.json", "round0/positions_anon.json", "round1/REJECTED_investor"])
+@pytest.mark.parametrize(
+    "name",
+    [".mapping.json", "round0/positions_anon.json", "round1/REJECTED_investor", "round1/.reprompted",
+     "evidence/investor.json", "evidence/founder.json"],
+)
 def test_debate_agent_never_writes_debate_py_files(active_run, name):
     judge = {"agent_id": "a3", "agent_type": "debate-judge"}
     for agent in (DEBATE, judge):

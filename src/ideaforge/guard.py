@@ -8,11 +8,13 @@ Policy (exit 2 = deny, reason on stderr):
 - runs/<run_id>/05_report.md and runs/<run_id>/debate/revised_plan.md are never written by a
   tool: render_report.py (with --debate for the plan) writes each once (they are immutable).
 - Subagents are always strict: a research agent may write only its own
-  runs/<run_id>/02_research/<dimension>.md, the synthesizer only
+  runs/<run_id>/02_research/<dimension>.md, or during a debate the running mini-research task's
+  02_research/mini-<n>-<dimension>.md instead, the synthesizer only
   runs/<run_id>/04_scores_proposed.json and 04_risks.json, a debate agent only
   under runs/<run_id>/debate/ (never the files debate.py writes: .mapping.json,
-  positions_anon.json, REJECTED_<role>, revised_plan.md; the judge's interim_scores.json and
-  verdict.json are the judge's only), any other subagent only under runs/ or cache/.
+  positions_anon.json, REJECTED_<role>, .reprompted, evidence/, revised_plan.md; the judge's
+  interim_scores.json and verdict.json are the judge's only), any other subagent only under
+  runs/ or cache/.
 - The main session is strict (runs/ and cache/ only) unless it is a development
   session: the dev marker file .ideaforge-dev exists at the project root, or the
   harness loop driver started it (HARNESS_LOOP=1, docs/DECISIONS.md D-005). A
@@ -128,7 +130,7 @@ def check_write(data: dict[str, Any]) -> str | None:
         if spec is not None and spec.kind == "research":
             if run_id is None:
                 return "write denied: no active run (runs/.active) for this research agent"
-            allowed = agents.research_output(runs_dir / run_id, spec)
+            allowed = agents.research_target(runs_dir / run_id, spec)
             if target != allowed.resolve():
                 return f"write denied: {spec.name} may only write {allowed.relative_to(root).as_posix()}"
             return None
@@ -145,8 +147,12 @@ def check_write(data: dict[str, Any]) -> str | None:
                 return "write denied: no active run (runs/.active) for this debate agent"
             if not _within(target, (runs_dir / run_id / "debate").resolve()):
                 return f"write denied: {spec.name} may only write under runs/{run_id}/debate/"
-            if target.name in (debate.MAPPING_NAME, debate.ANON_NAME) or target.name.startswith(debate.REJECTED_PREFIX):
+            if target.name in (debate.MAPPING_NAME, debate.ANON_NAME, debate.REPROMPTED_NAME) or target.name.startswith(
+                debate.REJECTED_PREFIX
+            ):
                 return f"write denied: {target.name} is written only by ideaforge.debate"
+            if _within(target, (runs_dir / run_id / "debate" / debate.EVIDENCE_DIR).resolve()):
+                return f"write denied: debate/{debate.EVIDENCE_DIR}/ is written only by ideaforge.debate"
             if spec.kind == "debate" and target.name in (debate.INTERIM_NAME, debate.VERDICT_NAME):
                 return f"write denied: {target.name} is written only by the debate judge"
             return None

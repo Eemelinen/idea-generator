@@ -1,7 +1,10 @@
+import re
+
 import yaml
 
 import gen_agents
 from ideaforge import agents, config
+from ideaforge.schemas import RUBRIC_DIMENSIONS
 
 
 def frontmatter(text):
@@ -55,3 +58,47 @@ def test_model_comes_from_config(monkeypatch):
 
 def test_committed_agent_files_are_up_to_date():
     assert gen_agents.main(["--check"]) == 0
+
+
+def test_persona_briefs_reference_only_their_evidence_subset():
+    rendered = {p.stem: t for p, t in gen_agents.render_all().items()}
+    personas = [s for s in agents.AGENTS.values() if s.kind == "debate"]
+    assert {s.persona for s in personas} == set(agents.PERSONA_EVIDENCE)
+    for spec in personas:
+        text = rendered[spec.name]
+        own = f"runs/<run_id>/debate/evidence/{spec.persona}.json"
+        assert own in text, spec.name
+        assert set(re.findall(r"debate/evidence/[\w<>]+\.json", text)) == {f"debate/evidence/{spec.persona}.json"}
+        for forbidden in ("03_claims", "verified.json", ".mapping.json", "02_research"):
+            assert forbidden not in text, (spec.name, forbidden)
+        dims = agents.PERSONA_EVIDENCE[spec.persona]
+        subset = f"verified {', '.join(dims)} claims" if dims else "all verified claims"
+        assert f"Your evidence subset (`{own}`): {subset}" in text
+        for rule in (
+            "Agreement is not a goal. Changing your position without new evidence is a failure.",
+            "Cite only claim ids that are in your evidence file",
+            "Never name your role",
+            "never your own `position_id`",
+            "names at least one claim id",
+        ):
+            assert rule in text, (spec.name, rule)
+        assert f"debate/round<N>/{spec.persona}.json" in text
+
+
+def test_judge_prompt_forbids_facts_and_projects_every_dimension():
+    text = {p.stem: t for p, t in gen_agents.render_all().items()}["debate-judge"]
+    assert "**Never introduce facts.**" in text
+    assert "Every accepted change cites at least one verified claim id" in text
+    assert "debate/round<N>/interim_scores.json" in text and "debate/verdict.json" in text
+    assert "**every** rubric dimension" in text
+    for dim in RUBRIC_DIMENSIONS:
+        assert f"`{dim}`" in text, dim
+    assert "debate/evidence" not in text and ".mapping.json" not in text
+    assert "at least 5" in text
+
+
+def test_research_agents_know_the_mini_research_contract():
+    for name, text in ((p.stem, t) for p, t in gen_agents.render_all().items()):
+        if agents.AGENTS[name].kind == "research":
+            assert "02_research/mini-<n>-<dimension>.md" in text, name
+            assert "first claim id" in text, name

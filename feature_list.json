@@ -501,7 +501,7 @@
       "area": "debate",
       "title": "Debate skill, prompts and mini-research",
       "user_visible_behavior": "`/debate <run_id>` runs round 0 with the 5 personas in one message, anonymizes, runs rebuttal rounds with validation, one re-prompt, mini-research (at most 3 per debate, enforced in Python) and the convergence check, then the judge and the render, resumable per round; persona briefs see only their evidence subset.",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": ["F-011", "F-022"],
       "ticket": "IF-407",
       "spec": "docs/TICKETS.md#if-407-debate-skill-prompts-and-mini-research",

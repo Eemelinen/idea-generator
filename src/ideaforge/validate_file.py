@@ -281,6 +281,29 @@ def candidate_claims(md: str) -> tuple[list[CandidateClaim], list[str]]:
     return claims, problems
 
 
+def claim_ids_elsewhere(run_dir: Path, stem: str) -> set[str]:
+    """Claim ids the run has outside the research file `stem`: the ledger and every other
+    03_claims/<stem>.json (minus the ids this file's own 03_claims/<stem>.json holds) and the
+    candidate claims still in the other 02_research/*.md files."""
+
+    def file_ids(path: Path) -> set[str]:
+        try:
+            return {c["claim_id"] for c in json.loads(path.read_text(encoding="utf-8")) if isinstance(c, dict)}
+        except (FileNotFoundError, json.JSONDecodeError, TypeError, KeyError):
+            return set()
+
+    claims_dir = run_dir / "03_claims"
+    ids: set[str] = set()
+    for path in claims_dir.glob("*.json"):
+        if path.stem not in (stem, "verified"):
+            ids |= file_ids(path)
+    ids |= file_ids(claims_dir / "verified.json") - file_ids(claims_dir / f"{stem}.json")
+    for path in (run_dir / "02_research").glob("*.md"):
+        if path.stem != stem:
+            ids |= {c.claim_id for c in candidate_claims(path.read_text(encoding="utf-8"))[0]}
+    return ids
+
+
 def validate_research(
     path: Path,
     max_words: int | None = None,
@@ -298,7 +321,9 @@ def validate_research(
     except FileNotFoundError:
         raise Invalid(f"{path} does not exist") from None
     problems: list[str] = []
-    dimension = path.stem
+    # A debate mini-research file (mini-<n>-<dimension>.md) follows the same contract.
+    mini = agents.parse_mini_stem(path.stem)
+    dimension = mini[1] if mini else path.stem
     spec = agents.research_agent(dimension)
     agent = spec.name if spec else f"research-{dimension}"
 
@@ -318,6 +343,11 @@ def validate_research(
     dupes = sorted({i for i in ids if ids.count(i) > 1})
     if dupes:
         problems.append(f"duplicate claim ids: {', '.join(dupes)}")
+    if mini:
+        # verify_claims.py keeps the first of two claims with one id, so a reused id would be lost.
+        taken = sorted(set(ids) & claim_ids_elsewhere(path.parent.parent, path.stem))
+        if taken:
+            problems.append(f"claim ids already in the run's ledger: {', '.join(taken)}; number new ids as the brief says")
 
     if max_words is None:
         # The run's preset (meta.json), as the brief and the usage hook use; else the default.
@@ -373,7 +403,7 @@ def auto(data: dict[str, Any], stop: bool) -> int:
             return hookio.OK  # not one of our pipeline agents
         agent = spec.name
         if spec.kind == "research":
-            targets = [(agents.research_output(run_dir, spec), "research")]
+            targets = [(agents.research_target(run_dir, spec), "research")]
         elif spec.kind == "synthesizer":
             targets = [(path, None) for path in agents.synthesizer_outputs(run_dir)]
         else:
