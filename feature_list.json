@@ -668,6 +668,134 @@
       ],
       "attempts": 0,
       "notes": "Code half of the original F-012, split off so the loop can build it; the live tuning stays in F-012. Unattended: no live agent runs or network, so the briefs are a first draft from IMPLEMENTATION_PLAN.md §12 and the open points in TICKETS.md plan notes 31–33. No `{% if as_of %}` hook (plan note 29)."
+    },
+    {
+      "id": "F-030",
+      "priority": 30,
+      "area": "ui",
+      "title": "Web app shell, storage upkeep and runs dashboard",
+      "user_visible_behavior": "`uv run python -m ideaforge.web` serves a local web UI on 127.0.0.1:8765 whose dashboard lists every run with its stage progress, verdict, version lineage, preset, as-of date and usage totals; `db.init()` migrates the schema by version, `python -m ideaforge.db backup` writes a consistent copy to `backups/`, and the UI warns when `runs/` and the database disagree.",
+      "status": "not_started",
+      "depends_on": ["F-019", "F-028"],
+      "ticket": "IF-601",
+      "spec": "docs/TICKETS.md#if-601-web-app-shell-storage-upkeep-and-runs-dashboard",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_web_dashboard.py (dashboard rows, lineage and stage progress on synthetic runs; DB/disk mismatch banner)",
+        "L1: uv run pytest tests/test_db.py (schema_version migrations are idempotent and keep existing rows; backup copy opens and matches)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Promotes the Phase 6 backlog item IF-601 (a Streamlit viewer) to a FastAPI + Jinja2 + HTMX app (D-008). Carries D-008 and the new dependencies."
+    },
+    {
+      "id": "F-031",
+      "priority": 31,
+      "area": "ui",
+      "title": "Run detail: stages, claims, scores, report, usage",
+      "user_visible_behavior": "A run page shows its stages and budget/validation markers, the idea spec and research plan, a claims table filterable by dimension and verification state with conflict groups, the score sheet with caps and fired kill triggers, unit economics and sensitivity, `05_report.md` rendered as HTML, usage per stage and agent, and a read-only browser over the run's files.",
+      "status": "not_started",
+      "depends_on": ["F-030"],
+      "ticket": "IF-605",
+      "spec": "docs/TICKETS.md#if-605-run-detail-stages-claims-scores-report-usage",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_web_run.py (every tab on a synthetic finished run and on a run stopped after stage 3; claim filters; artefact browser refuses paths outside runs/<id>/)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "F-032",
+      "priority": 32,
+      "area": "ui",
+      "title": "Debate, review scores and run comparison in the UI",
+      "user_visible_behavior": "A run's debate tab shows each round's anonymized positions and rebuttals, the judge's interim scores, the verdict with a conformity-flag banner, the revised plan, the assumption register and the experiments ordered by info value per cost; a review form stores 1–5 section scores in the reviews table with the trend view; any two runs can be compared per dimension, verdict and kill triggers.",
+      "status": "not_started",
+      "depends_on": ["F-023", "F-031"],
+      "ticket": "IF-606",
+      "spec": "docs/TICKETS.md#if-606-debate-review-scores-and-run-comparison-in-the-ui",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_web_debate.py (debate tab on a synthetic finished debate and on one stopped mid-round; review scores persist and match /status --reviews; diff matches /status --diff on the v1/v2 fixture pair)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "The review form writes the same rows as `/status --review` (IF-504)."
+    },
+    {
+      "id": "F-033",
+      "priority": 33,
+      "area": "ui",
+      "title": "Persistent job queue and headless runner",
+      "user_visible_behavior": "`python -m ideaforge.jobs enqueue|list|cancel|retry|worker` keeps pipeline jobs (validate, research, synthesize, debate, eval) in a `jobs` table; the worker runs one job at a time as `claude -p` with the strict guard, logs to `runs/.jobs/<job_id>.log`, chains follow-up jobs, marks a job interrupted by a restart or stopped by a usage limit as failed with that reason, and a new idea is created with `new_run.py --intake` so `/validate` takes its clarifications from `intake.json` and asks nothing.",
+      "status": "not_started",
+      "depends_on": ["F-011", "F-019", "F-023", "F-025"],
+      "ticket": "IF-604",
+      "spec": "docs/TICKETS.md#if-604-persistent-job-queue-and-headless-runner",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_jobs.py (queue order, one job at a time, chaining, cancel/retry, restart recovery, usage-limit reason, dev-marker refusal and HARNESS_LOOP dropped; fake claude binary)",
+        "L1: uv run pytest tests/test_new_run.py tests/test_skills.py (--intake writes a valid intake.json; validate stage 0 reads it and asks no questions)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Promotes and widens the Phase 6 backlog item IF-604 (`claude -p` batch wrapper)."
+    },
+    {
+      "id": "F-034",
+      "priority": 34,
+      "area": "ui",
+      "title": "Pipeline control from the UI",
+      "user_visible_behavior": "From the UI the user submits a new idea (text, goal, capital, hours, geography, preset, as-of date and how far to run: validate, + synthesize, + debate), resumes a run, starts synthesis or a debate, creates a new version from a run, starts the golden-set eval, and on the jobs page follows the live log, cancels and retries jobs.",
+      "status": "not_started",
+      "depends_on": ["F-031", "F-033"],
+      "ticket": "IF-607",
+      "spec": "docs/TICKETS.md#if-607-pipeline-control-from-the-ui",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_web_control.py (each form and action enqueues the right job chain; invalid input is rejected with a message; log tail; dev-marker banner; fake claude binary)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "F-035",
+      "priority": 35,
+      "area": "ui",
+      "title": "Settings editor with history",
+      "user_visible_behavior": "A settings page edits every `config/*.yaml` file (models, budget presets, founder, report, rubric, domains, Finland hints) through forms validated by the `ideaforge.config` models, keeps the files' comments, regenerates the agents after a model change, refuses to save while a job runs, and records every save in a `settings_history` table with a diff and a revert.",
+      "status": "not_started",
+      "depends_on": ["F-030"],
+      "ticket": "IF-608",
+      "spec": "docs/TICKETS.md#if-608-settings-editor-with-history",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_web_settings.py (round-trip keeps comments; invalid values rejected unchanged; models save runs gen_agents and keeps harness_* roles read-only; history diff and revert; refusal while a job runs)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "Pipeline settings only: `harness.config.json` stays out of the UI."
+    },
+    {
+      "id": "F-036",
+      "priority": 36,
+      "area": "acceptance",
+      "title": "Web UI acceptance run",
+      "user_visible_behavior": "Through the UI alone, a real idea runs validate → synthesize → debate headless, its report and debate are readable in the UI, a settings change takes effect on the next run, and the jobs, logs, settings history and results survive a server restart and a restore from backup.",
+      "status": "not_started",
+      "depends_on": ["F-032", "F-034", "F-035"],
+      "ticket": "IF-609",
+      "spec": "docs/TICKETS.md#if-609-web-ui-acceptance-run",
+      "verification": [
+        "L1: pnpm check",
+        "manual: every IF-609 acceptance item observed through the UI on a real idea; results recorded under the ticket"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": ""
     }
   ]
 }

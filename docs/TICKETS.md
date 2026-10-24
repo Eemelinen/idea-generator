@@ -207,6 +207,15 @@ These came out of reviewing the plan. Phase 1 already applies them; later ticket
     - **Same verification**: `verify.parse_run` appends a file's extracted claims to its parsed ones (so `03_claims/<stem>.json` lists both) and `verify_run` fetches, quote-matches, re-queries and conflict-checks them unchanged. An extracted claim is dropped with a `warning:` when it has another dimension, cites a URL that is not in a `[src: …]` tag of the file's checked sections, or reuses an id (its own file's, another extraction's or the run's); the whole file is ignored when it does not parse or was made for an older version of the research file (the sha256 differs).
     - **Not re-run**: a file whose extraction exists for its current version stays in the request but is not listed again, so a resumed stage 3 does not launch the extractor twice; a re-written research file has its old extraction deleted (a `note:` line) and is listed again. Debate mini-research (`/debate`, `verify_claims.py --only`) has no extraction pass; `parse_run` would still pick up an extraction for such a file if one existed.
 
+36. **Web UI (IF-601, IF-604–IF-609; D-008).** Rules every UI ticket follows:
+    - **Local only**: the server binds to `127.0.0.1` and has no login. It is a single-user tool on the founder's machine and must never be exposed on a network interface.
+    - **Same rules as the pipeline**: the UI never writes a run's artefacts itself. Runs change only through the pipeline (jobs run the skills and scripts, so the immutability of `05_report.md`, the stage state machine and every validator still apply). The only data the UI writes directly is review scores (the `reviews` table, as `/status --review` does), job rows and settings.
+    - **Reuse, not re-implementation**: pages read through the existing modules (`ideaforge.status`, `ideaforge.usage`, `ideaforge.runs`, `ideaforge.meta`, `ideaforge.debate status`, `ideaforge.db`). A number the UI shows comes from the same function `/status` uses, so the two never disagree.
+    - **Settings**: every save is validated by the `ideaforge.config` models before it is written. Non-negotiable 2 still holds: model choice lives only in `config/models.yaml`, and agents are regenerated through `gen_agents.py`. The `harness_*` roles are shown read-only, because `harness.config.json` must match them (D-004) and the UI does not edit the development harness. `config/finland.yaml` is labelled as hints to verify, never facts (§3.6).
+    - **Persistence**: all state lives in `ideaforge.db` and `runs/` (both gitignored, local). The UI adds the `jobs` and `settings_history` tables and the job logs under `runs/.jobs/`. Schema changes go through the `schema_version` migrations from IF-601. `backups/` holds copies made by `python -m ideaforge.db backup`.
+    - **Headless control**: jobs run `claude -p` with the strict pipeline guard (§7): the worker refuses to start while `.ideaforge-dev` exists and removes `HARNESS_LOOP` from the child environment. Jobs run strictly one at a time (§10). The orchestrator model comes from `config/models.yaml: roles.orchestrator`. Clarifying questions are answered in the new-idea form and passed as `intake.json`, so a headless `/validate` never needs `AskUserQuestion`.
+    - **Tests**: offline, through FastAPI's `TestClient`, on synthetic run directories and DB rows labelled synthetic. `claude` is replaced by a fake executable named in `IDEAFORGE_CLAUDE_BIN`. HTMX is vendored under `src/ideaforge/web/static/`, so no page loads anything from the network.
+
 ---
 
 ## Index
@@ -243,7 +252,14 @@ These came out of reviewing the plan. Phase 1 already applies them; later ticket
 | IF-503        | F-027   | Back-test as-of, preset wiring and usage-limit docs    | IF-506, IF-508  | F-007, F-011, F-025        | unattended |
 | IF-504        | F-028   | Review scores and status diff                          | IF-505          | F-009, F-019               | unattended |
 | IF-211        | F-029   | Production research briefs and claim-extractor agent   | —               | F-004, F-005, F-006, F-007 | unattended |
-| IF-601–IF-604 | —       | Phase 6 backlog (not queued)                           | —               | —                          | —          |
+| IF-601        | F-030   | Web app shell, storage upkeep and runs dashboard       | —               | F-019, F-028               | unattended |
+| IF-605        | F-031   | Run detail: stages, claims, scores, report, usage      | —               | F-030                      | unattended |
+| IF-606        | F-032   | Debate, review scores and run comparison in the UI     | —               | F-023, F-031               | unattended |
+| IF-604        | F-033   | Persistent job queue and headless runner               | —               | F-011, F-019, F-023, F-025 | unattended |
+| IF-607        | F-034   | Pipeline control from the UI                           | —               | F-031, F-033               | unattended |
+| IF-608        | F-035   | Settings editor with history                           | —               | F-030                      | unattended |
+| IF-609        | F-036   | Web UI acceptance run                                  | —               | F-032, F-034, F-035        | human      |
+| IF-602–IF-603 | —       | Backlog (not queued)                                   | —               | —                          | —          |
 
 ---
 
@@ -647,11 +663,107 @@ Absorbs IF-102–IF-107. Kept for reference:
 
 ---
 
-## Phase 6: v2 (optional, not queued)
+## Phase 6: Web UI
+
+A local web UI to start and control the pipeline, read its results and edit every pipeline setting, with all state kept in SQLite and `runs/` (D-008, plan note 36). The viewer chain (IF-601 → IF-605 → IF-606), the job runner (IF-604) and the settings editor (IF-608) can be built in parallel. IF-607 joins the viewer and the runner, and IF-609 accepts the whole UI on a real run.
+
+### IF-601 Web app shell, storage upkeep and runs dashboard
+
+- **Mode:** unattended. **Depends on:** F-019, F-028.
+- **Scope:**
+  - **App:** new package `src/ideaforge/web/` with an app factory (`create_app(root)`, so tests point it at a temporary project root via `IDEAFORGE_ROOT`), Jinja2 templates under `web/templates/` and vendored `web/static/htmx.min.js` (pinned version, licence noted). `uv run python -m ideaforge.web [--port 8765]` runs it with uvicorn on `127.0.0.1` only. A shared layout has navigation for Runs, Jobs and Settings (Jobs and Settings are placeholders until IF-607 and IF-608).
+  - **Dashboard:** every run, newest first, from the `runs` and `idea_versions` tables and `meta.json`: idea title, run id, version and parent (lineage grouped by `idea_id`), stage progress (from `stages`), verdict and weighted total when scored, debate state, preset, as-of date, and approximate usage totals. Filters by verdict and by idea. It reuses `ideaforge.status` and `ideaforge.usage` for every figure.
+  - **Storage upkeep:** a `schema_version` table and ordered, idempotent migrations in `db.init()`, so later tickets add tables without touching existing rows. `python -m ideaforge.db backup [--to <dir>]` uses the sqlite backup API (consistent under WAL) to write `backups/ideaforge-<UTC timestamp>.db`. `backups/` is added to `.gitignore`. The dashboard shows a banner when a run directory has no `runs` row or a row has no directory.
+  - **Dependencies** (`uv add`): `fastapi`, `uvicorn`, `python-multipart`, `markdown-it-py`, `ruamel.yaml`; dev group: `httpx` (for `TestClient`).
+- **Docs:** D-008, README "Web UI" section (start, stop, local-only, backups), IMPLEMENTATION_PLAN §1 layout and §2.
+- **Verification:** `L1: pnpm check` · `L1: uv run pytest tests/test_web_dashboard.py` (dashboard rows, lineage and stage progress on synthetic runs; mismatch banner) · `L1: uv run pytest tests/test_db.py` (migrations are idempotent and keep existing rows; the backup copy opens and has the same rows).
+- **Acceptance:** as the verification. A fresh database and one created before this ticket both reach the current `schema_version`.
+
+### IF-605 Run detail: stages, claims, scores, report, usage
+
+- **Mode:** unattended. **Depends on:** F-030.
+- **Scope:** `/runs/<run_id>` with tabs:
+  - **Stages:** each stage's status, attempts and timestamps, plus the `BUDGET_EXCEEDED_*`, `VALIDATION_WARNINGS_*` and `VALIDATION_FAILED_*` markers with their contents.
+  - **Idea:** `idea.md`, `00_spec.json` (including clarifications) and `01_plan.json` per dimension.
+  - **Claims:** the ledger from `03_claims/verified.json` / the `claims` table, filterable by dimension, verification state, source type and flag. Each claim links its source and quote. Conflict groups from `conflicts.json` are shown in preference order.
+  - **Scores:** `04_scores.json`: per-dimension proposed and final score, cap reason, status, justification with claim links, weighted total, verdict, fired kill triggers and overrides.
+  - **Economics:** unit economics, missing inputs, the sensitivity table and the input claims.
+  - **Report:** `05_report.md` rendered with `markdown-it-py` (HTML in the Markdown escaped), plus a download link to the raw file.
+  - **Usage:** the `usage_report` summary per stage and per agent.
+  - **Files:** a read-only listing and viewer of the files under `runs/<run_id>/`. A path that resolves outside the run directory, or a symlink, returns 404.
+  - Tabs for stages that have not run say so instead of failing.
+- **Verification:** `L1: pnpm check` · `L1: uv run pytest tests/test_web_run.py` (every tab on a synthetic finished run and on a run stopped after stage 3; claim filters; artefact browser refuses `..`, absolute paths and symlinks).
+- **Acceptance:** as the verification.
+
+### IF-606 Debate, review scores and run comparison in the UI
+
+- **Mode:** unattended. **Depends on:** F-023, F-031.
+- **Scope:**
+  - **Debate tab:** the next step as `python -m ideaforge.debate status` names it. Per round: the anonymized positions and rebuttals (P-ids, as the judge saw them; role names only after the verdict), rejected and re-prompted turns, mini-research requests and their claims, and the judge's interim scores. Then `verdict.json` with accepted and rejected changes and their claim ids, a prominent conformity-flag banner, `revised_plan.md` rendered, the assumption register, and experiments ordered by `info_value / cost`.
+  - **Reviews:** a form that scores each report section 1–5. It writes the `reviews` table through the same function as `/status --review` (IF-504). The trend view matches `/status --reviews` across prompt and model versions.
+  - **Compare:** pick two runs (versions of one idea, or any two). The diff of final scores per dimension, verdict and kill triggers comes from the IF-504 diff function.
+- **Verification:** `L1: pnpm check` · `L1: uv run pytest tests/test_web_debate.py` (debate tab on a synthetic finished debate and on one stopped mid-round; review scores persist and match `/status --reviews`; the diff matches `/status --diff` on the v1/v2 fixture pair).
+- **Acceptance:** as the verification.
+
+### IF-604 Persistent job queue and headless runner
+
+- **Mode:** unattended. **Depends on:** F-011, F-019, F-023, F-025.
+- **Scope:**
+  - **Table** (migration): `jobs` (`job_id`, `kind`: validate | research | synthesize | debate | eval, `args` JSON, `run_id`, `status`: queued | running | done | failed | cancelled, `reason`, `pid`, `created_at`, `started_at`, `finished_at`, `exit_code`, `log_path`, `next_job_id`).
+  - **CLI** `python -m ideaforge.jobs`: `enqueue <kind> [--run <id>] [--args <json>] [--then <kind>…]`, `list`, `show <job_id>`, `cancel <job_id>` (a queued job is dropped; a running one gets SIGTERM, then is killed after a grace period), `retry <job_id>` (a new job with the same arguments), `worker [--once]`.
+  - **Worker:** takes the oldest queued job and runs one job at a time (§10). It builds the skill command (`/validate <run_id>`, `/research <run_id>`, `/synthesize <run_id>`, `/debate <run_id>`, `/eval [--limit N]`) and runs `claude -p "<command>" --model <roles.orchestrator> --output-format stream-json` in the project root. Output goes to `runs/.jobs/<job_id>.log`. Exit 0 → `done` and the chained job is queued; otherwise `failed` with a reason (`usage_limit` when the output reports a usage or rate limit, else `exit <code>`). A chained job of a failed one is cancelled. The binary is `IDEAFORGE_CLAUDE_BIN` or `claude`.
+  - **Strict guard:** the worker refuses to start while `.ideaforge-dev` exists (it says why) and removes `HARNESS_LOOP` from the child environment.
+  - **Restart safety:** at start, a `running` job whose pid is gone becomes `failed` with reason `interrupted`. Because the stages resume, a retry continues where the run stopped. A lock (pid file plus `BEGIN IMMEDIATE`) keeps a second worker from starting.
+  - **New ideas:** `enqueue validate --idea <text> --intake <json>` calls `scripts/new_run.py` itself (with `--preset`, `--as-of` and the new `--intake`), so the job knows its `run_id` before Claude starts. `--intake` validates against a new `Intake` schema (goal, capital_eur, hours_per_week, geography, free-text answers) and writes `runs/<run_id>/intake.json`. The `/validate` skill's stage 0 then uses `intake.json` as the clarifications, asks no questions and treats the run as "just run it".
+- **Docs:** README (headless runs, usage limits), the validate skill, IMPLEMENTATION_PLAN §6 stage 0.
+- **Verification:** `L1: pnpm check` · `L1: uv run pytest tests/test_jobs.py` (queue order, one at a time, chaining, cancel and retry, restart recovery, usage-limit reason, dev-marker refusal, `HARNESS_LOOP` dropped; a fake `claude` binary) · `L1: uv run pytest tests/test_new_run.py tests/test_skills.py` (`--intake` writes a valid `intake.json` and rejects an invalid one; the validate skill's stage 0 reads it and asks nothing).
+- **Acceptance:** as the verification. The live headless run is IF-609.
+
+### IF-607 Pipeline control from the UI
+
+- **Mode:** unattended. **Depends on:** F-031, F-033.
+- **Scope:**
+  - **New idea:** a form with idea text, goal, capital, hours and skills (defaults from `config/founder.yaml`), geography (default Rääkkylä → North Karelia → Finland → online), preset (from `config/budget.yaml`), optional as-of date, optional kill-trigger overrides, and how far to run: validate, validate + synthesize, or validate + synthesize + debate. It enqueues the matching job chain (IF-604) and redirects to the job.
+  - **Run actions:** on a run page, the buttons that fit its state: resume validate, synthesize, debate, and "new version" (a form with revised idea text → `validate --from`). The dashboard has a "run eval" action with `--limit`. An action that does not fit the run's state is not offered, and the server refuses it too.
+  - **Jobs page:** queued, running and finished jobs with kind, run, status, reason and duration; a live log tail (HTMX polling of a byte offset, no websockets); cancel and retry.
+  - **Worker:** the server starts one worker in the background when none runs, and stops it on shutdown. A banner explains when `.ideaforge-dev` blocks the worker.
+- **Verification:** `L1: pnpm check` · `L1: uv run pytest tests/test_web_control.py` (each form and action enqueues the right job chain; invalid input is rejected with a message and enqueues nothing; actions are refused in the wrong run state; the log tail returns only new bytes; the dev-marker banner; a fake `claude` binary).
+- **Acceptance:** as the verification.
+
+### IF-608 Settings editor with history
+
+- **Mode:** unattended. **Depends on:** F-030.
+- **Scope:**
+  - **Pages:** one form per pipeline config file, built from the `ideaforge.config` models:
+    - `models.yaml`: a role → opus | sonnet | haiku dropdown for each pipeline role, with the downgrade notes. The `harness_*` roles are read-only and labelled as development settings.
+    - `budget.yaml`: each preset's limits and the default preset.
+    - `founder.yaml`.
+    - `report.yaml`: the report and business-plan languages.
+    - `rubric.yaml`: weights (the sum is checked), evidence rules and kill triggers.
+    - `domains.yaml`.
+    - `finland.yaml`: labelled "hints to verify, not facts".
+    - Each page also offers the raw YAML in a text area as a fallback.
+  - **Saving:** the new content is validated by the config model first, and an invalid save leaves the file unchanged and shows the errors. The file is written with `ruamel.yaml` round-trip, so its comments and key order stay. Saving `models.yaml` runs `scripts/gen_agents.py` and shows its output; if that fails, the file is restored. Saving is refused while a job is running (`meta.json` snapshots settings at run start).
+  - **History:** a `settings_history` table (migration): `ts`, `file`, `sha_before`, `sha_after`, `content_before`, `content_after`. Per file, a list of saves with a diff and a revert, which is itself a validated save.
+- **Docs:** README (settings), CLAUDE.md (the UI is another way to edit `config/`, under the same single-source rule).
+- **Verification:** `L1: pnpm check` · `L1: uv run pytest tests/test_web_settings.py` (a round-trip keeps comments; invalid values are rejected and the file is unchanged; a models save runs `gen_agents` and `harness_*` roles cannot be changed; history diff and revert; refusal while a job runs).
+- **Acceptance:** as the verification.
+
+### IF-609 Web UI acceptance run
+
+- **Mode:** human. **Depends on:** F-032, F-034, F-035.
+- **Steps:** with the `.ideaforge-dev` marker removed, start the server and use only the UI.
+- **Verification:** `L1: pnpm check` · `manual:` the acceptance list below, observed on a real idea; results recorded here.
+- **Acceptance:**
+  - a new idea submitted through the form runs validate → synthesize → debate headless, with no question asked
+  - the report, claims, scores and debate are readable in the UI and match `/status`
+  - changing a preset and a model role takes effect on the next run (`meta.json`), and the agents were regenerated
+  - stopping the server mid-job and restarting it shows the job as interrupted; a retry resumes the run without redoing completed stages
+  - jobs, logs, review scores and settings history survive the restart, and a backup made with `python -m ideaforge.db backup` restores a working database
+
+## Backlog: v2 (optional, not queued)
 
 Add these to `feature_list.json` only when the user asks for them.
 
-- **IF-601 Streamlit viewer:** read-only browser over SQLite: runs, claims (filter by verification), score sheets, debates.
 - **IF-602 Local competitor index:** PRH data plus the yc-oss company list, with local embeddings (no paid API), as a `fi`-style CLI the competition and killcause agents can query.
 - **IF-603 Experiment tracker → claims:** record experiment results. A result enters idea version n+1 as a top-confidence claim (`source_type: official`-equivalent "experiment").
-- **IF-604 `claude -p` batch wrapper:** a script that runs `/validate` headless for a list of ideas overnight, sequentially, with the strict guard on (no `.ideaforge-dev`, no `HARNESS_LOOP`).
