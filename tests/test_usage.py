@@ -59,3 +59,17 @@ def test_preset_from_meta(active_run):
     for _ in range(7):
         usage.log(hook("WebSearch", agent="research-gtm"))
     assert (active_run / "BUDGET_EXCEEDED_research-gtm").exists()
+
+
+def test_a_mini_research_task_has_its_own_budget(active_run):
+    from test_guard import open_mini_task
+
+    usage.log(hook("WebSearch", agent="research-pricing"))  # stage 2
+    open_mini_task(active_run)
+    for _ in range(9):
+        usage.log(hook("WebSearch", agent="research-pricing"))
+    counters = json.loads((active_run / ".counters.json").read_text(encoding="utf-8"))
+    assert counters["research-pricing"]["WebSearch"] == 1
+    assert counters["research-pricing.mini-1"]["WebSearch"] == 9
+    assert not (active_run / "BUDGET_EXCEEDED_research-pricing").exists()
+    assert "WebSearch: 9 > 8" in (active_run / "BUDGET_EXCEEDED_research-pricing.mini-1").read_text(encoding="utf-8")

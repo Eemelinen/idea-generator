@@ -365,3 +365,52 @@ def test_judge_output_is_its_latest_interim_until_the_verdict(tmp_path):
     (debate_dir / "verdict.json").write_text("{}", encoding="utf-8")
     assert agents.latest_debate_output(tmp_path, judge) == debate_dir / "verdict.json"
     assert agents.latest_debate_output(tmp_path, agents.get("debate-founder")) == debate_dir / "round2" / "founder.json"
+
+
+def test_auto_research_agent_validates_its_running_mini_research_file(active_run):
+    from test_guard import open_mini_task
+
+    open_mini_task(active_run)
+    hook = {"agent_id": "a", "agent_type": "research-pricing"}
+    with pytest.raises(SystemExit):
+        vf.auto(hook | {"stop_hook_active": False}, stop=False)
+    assert vf.auto(hook | {"stop_hook_active": True}, stop=False) == 0
+    assert "mini-1-pricing.md does not exist" in (active_run / "VALIDATION_FAILED_research-pricing.mini-1").read_text(
+        encoding="utf-8"
+    )
+    shutil.copy(FIXTURES / ".seen_urls.txt", active_run / ".seen_urls.txt")
+    shutil.copy(RESEARCH_FIXTURE, active_run / "02_research" / "mini-1-pricing.md")
+    assert vf.auto(hook, stop=False) == 0  # dimension taken from the name, pricing-001 is still free
+
+
+def test_mini_research_file_may_not_reuse_a_ledger_claim_id(active_run):
+    shutil.copy(FIXTURES / ".seen_urls.txt", active_run / ".seen_urls.txt")
+    mini = active_run / "02_research" / "mini-1-pricing.md"
+    shutil.copy(RESEARCH_FIXTURE, mini)
+    vf.validate_research(mini)
+    shutil.copy(RESEARCH_FIXTURE, active_run / "02_research" / "pricing.md")
+    with pytest.raises(vf.Invalid, match="already in the run's ledger: pricing-001"):
+        vf.validate_research(mini)
+    (active_run / "02_research" / "pricing.md").unlink()
+    (active_run / "03_claims" / "verified.json").write_text('[{"claim_id": "pricing-001"}]', encoding="utf-8")
+    with pytest.raises(vf.Invalid, match="already in the run's ledger: pricing-001"):
+        vf.validate_research(mini)
+    # its own claims, once verified, are not "elsewhere"
+    (active_run / "03_claims" / "mini-1-pricing.json").write_text('[{"claim_id": "pricing-001"}]', encoding="utf-8")
+    vf.validate_research(mini)
+
+
+def test_mini_research_validation_markers_do_not_touch_stage_2_markers(active_run):
+    from test_guard import open_mini_task
+
+    stage2 = active_run / "VALIDATION_FAILED_research-pricing"
+    stage2.write_text("stage-2 failure\n", encoding="utf-8")
+    open_mini_task(active_run)
+    hook = {"agent_id": "a", "agent_type": "research-pricing", "stop_hook_active": True}
+    assert vf.auto(hook, stop=False) == 0  # no mini file: recorded under the task's own name
+    assert "mini-1-pricing.md" in (active_run / "VALIDATION_FAILED_research-pricing.mini-1").read_text(encoding="utf-8")
+    shutil.copy(FIXTURES / ".seen_urls.txt", active_run / ".seen_urls.txt")
+    shutil.copy(RESEARCH_FIXTURE, active_run / "02_research" / "mini-1-pricing.md")
+    assert vf.auto(hook, stop=False) == 0
+    assert not (active_run / "VALIDATION_FAILED_research-pricing.mini-1").exists()
+    assert stage2.read_text(encoding="utf-8") == "stage-2 failure\n"

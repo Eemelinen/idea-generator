@@ -1,6 +1,11 @@
-"""Debate anonymization and rebuttal validation (plan §6 stage 7, IF-402 / IF-403).
+"""Debate anonymization, rebuttal validation and the /debate skill's helpers (plan §6 stage 7,
+IF-402 / IF-403 / IF-407).
 
     uv run python -m ideaforge.debate anonymize <run_id> <round> [--seed N]
+    uv run python -m ideaforge.debate evidence <run_id> [--seed N]
+    uv run python -m ideaforge.debate reprompt <run_id> <round>
+    uv run python -m ideaforge.debate skip-interim <run_id> <round>
+    uv run python -m ideaforge.debate status <run_id>
 
 `anonymize` maps the five persona roles to P1…P5 with a seeded shuffle. The seed is stored in
 the run's `debates` row and, with the mapping, in `debate/.mapping.json`, which no persona or
@@ -18,11 +23,20 @@ turn in `debate_turns`. Rule choices: TICKETS.md plan note 25.
 `check_convergence` (scripts/debate_converged.py), `conformity_flag` and `finalize_verdict`
 (render_report.py --debate) read only the turns that entered the debate: a file's latest
 `debate_turns` row must hold its current text and be accepted. Rule choices: plan note 26.
+
+`evidence` writes each persona's evidence subset (`agents.PERSONA_EVIDENCE`) to
+`debate/evidence/<role>.json`, with its own P-id and every verified mini-research claim; a
+turn may cite only those ids (`allowed_claim_ids`, checked for rebuttals and round-0 positions);
+`reprompt` lists the rejected personas of a round that were not yet sent back (each once); and
+`status` prints the debate's next step, so /debate resumes per round. A mini-research request
+counts against the run preset's `max_mini_research_tasks` here and in `ideaforge.mini_research`.
+Rule choices: plan note 27.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import random
@@ -34,14 +48,18 @@ from typing import Any
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
-from ideaforge import config, db, runs
-from ideaforge.schemas import PERSONAS, Basis, Claim, InterimScores, Position, Rebuttal, ScoreSheet, Verdict
+from ideaforge import agents, config, db, runs
+from ideaforge.schemas import PERSONAS, RESEARCH_DIMENSIONS, Basis, Claim, InterimScores, Position, Rebuttal, ScoreSheet, Verdict
+from ideaforge.validate_file import candidate_claims
 
 MAPPING_NAME = ".mapping.json"
 ANON_NAME = "positions_anon.json"
 REJECTED_PREFIX = "REJECTED_"
 INTERIM_NAME = "interim_scores.json"
 VERDICT_NAME = "verdict.json"
+EVIDENCE_DIR = "evidence"  # debate/evidence/<role>.json: each persona's evidence subset
+REPROMPTED_NAME = ".reprompted"  # round<N>/.reprompted: the roles already sent back once
+INTERIM_SKIPPED_NAME = "interim_scores.skipped"  # round<N>/: the judge's projection, set aside
 
 # Claim ids inside free text (a `basis.computation`); schemas.CLAIM_ID_RE without anchors.
 CLAIM_ID_IN_TEXT_RE = re.compile(r"\b[a-z_]+-\d{3,}\b")
@@ -241,13 +259,14 @@ def anonymize(run_id: str, round_no: int, *, seed: int | None = None) -> AnonRes
     `debate_turns`; later rounds leave roles with a `REJECTED_<role>` marker out."""
     if round_no < 0:
         raise DebateError("round must be 0 or more")
-    _check_run(run_id)
+    run_dir = _check_run(run_id)
     d = round_dir(run_id, round_no)
     if not d.is_dir():
         raise DebateError(f"{d} does not exist")
     mapping = ensure_mapping(run_id, seed)
     model = Position if round_no == 0 else Rebuttal
     excluded = [r for r in rejected_roles(run_id, round_no) if (d / f"{r}.json").exists()] if round_no > 0 else []
+    ledger = load_ledger(run_dir) if round_no == 0 else {}
     turns: dict[str, Position | Rebuttal] = {}
     raws: dict[str, str] = {}
     missing = []
@@ -264,6 +283,12 @@ def anonymize(run_id: str, round_no: int, *, seed: int | None = None) -> AnonRes
             raise DebateError(f"{path} has role {turn.role!r}, expected {role!r}")
         if isinstance(turn, Rebuttal) and turn.round != round_no:
             raise DebateError(f"{path} has round {turn.round}, expected {round_no}")
+        if isinstance(turn, Position) and (
+            problems := check_position(
+                turn, role=role, ledger=ledger, allowed=allowed_claim_ids(run_dir, role, ledger)
+            )
+        ):
+            raise DebateError(f"{path} is not a valid position: {'; '.join(problems)}")
         turns[role] = turn
     if not turns:
         raise DebateError(f"no usable persona files in {d}")
@@ -380,7 +405,9 @@ def _support_problems(basis: Basis | None, where: str, cited_before: set[str]) -
     return problems
 
 
-def _claim_problems(ids: set[str], ledger: dict[str, Claim]) -> list[str]:
+def _claim_problems(ids: set[str], ledger: dict[str, Claim], allowed: set[str]) -> list[str]:
+    """Every cited id must be a verified ledger claim in the persona's evidence subset
+    (`allowed_claim_ids`): persona briefs argue only from their own evidence (plan §6 stage 7)."""
     problems = []
     for cid in sorted(ids):
         claim = ledger.get(cid)
@@ -388,7 +415,32 @@ def _claim_problems(ids: set[str], ledger: dict[str, Claim]) -> list[str]:
             problems.append(f"claim id {cid} does not exist in the ledger")
         elif claim.verification != "verified":
             problems.append(f"claim id {cid} is {claim.verification}, only verified claims may be cited")
+        elif cid not in allowed:
+            problems.append(
+                f"claim id {cid} is not in your evidence file; cite only its claims or mini_research_claims"
+            )
     return problems
+
+
+def check_position(turn: Position, *, role: str, ledger: dict[str, Claim], allowed: set[str]) -> list[str]:
+    """Rejection reasons for one round-0 position (empty: accepted)."""
+    problems = []
+    if turn.role != role:
+        problems.append(f"role is {turn.role!r} but the file belongs to {role!r}")
+    return problems + _claim_problems(turn_claim_ids(turn), ledger, allowed)
+
+
+def position_problems(path: Path) -> list[str]:
+    """`check_position` for `runs/<run_id>/debate/round0/<role>.json`, used by validate_file.
+    A file outside a run with a claim ledger has nothing to check against and passes."""
+    role, run_dir = path.stem, path.parents[2]
+    if role not in PERSONAS or path.parent.name != "round0" or path.parents[1].name != "debate":
+        return []
+    if not (run_dir / "03_claims" / "verified.json").exists():
+        return []
+    ledger = load_ledger(run_dir)
+    turn = _load_model(path, Position)
+    return check_position(turn, role=role, ledger=ledger, allowed=allowed_claim_ids(run_dir, role, ledger))
 
 
 def check_rebuttal(
@@ -400,6 +452,7 @@ def check_rebuttal(
     position_ids: set[str],
     past: History,
     ledger: dict[str, Claim],
+    allowed: set[str],
 ) -> list[str]:
     """Rejection reasons for one rebuttal (empty: accepted). The mini-research limit is per round
     and checked by `validate_round`."""
@@ -422,7 +475,7 @@ def check_rebuttal(
         problems += _support_problems(turn.updated_change_basis, "updated_change", past.cited)
     if turn.mini_research is not None and turn.mini_research.requested_by != role:
         problems.append(f"mini_research.requested_by is {turn.mini_research.requested_by!r}, not {role!r}")
-    problems += _claim_problems(turn_claim_ids(turn), ledger)
+    problems += _claim_problems(turn_claim_ids(turn), ledger, allowed)
     return problems
 
 
@@ -475,13 +528,24 @@ def validate_round(run_id: str, round_no: int) -> RoundResult:
             position_ids=position_ids,
             past=history(run_id, role, round_no),
             ledger=ledger,
+            allowed=allowed_claim_ids(run_dir, role, ledger),
         )
         if reasons:
             result.rejected[role] = reasons
 
     # At most one mini-research request per round: the lowest P-id keeps it, the others are
-    # sent back to drop theirs.
+    # sent back to drop theirs. Once earlier rounds used the preset's `max_mini_research_tasks`,
+    # every request is sent back (IF-404; mini_research.open_task refuses a fourth as well).
     requesting = sorted((r for r, t in turns.items() if t.mini_research), key=lambda r: int(mapping[r][1:]))
+    cap = debate_budget(run_id).max_mini_research_tasks if requesting else 0
+    used = sum(t["round"] < round_no for t in db.mini_research_tasks(run_id)) if requesting else 0
+    if requesting and used >= cap:
+        for role in requesting:
+            result.rejected.setdefault(role, []).append(
+                f"mini_research: this debate already ran {used} mini-research task(s), the limit of the run's "
+                f"budget preset (max_mini_research_tasks: {cap}); drop it"
+            )
+        requesting = []
     for role in requesting[1:]:
         result.rejected.setdefault(role, []).append(
             f"mini_research: {mapping[requesting[0]]} already requested one this round (at most 1 per round); "
@@ -767,6 +831,242 @@ def write_verdict(run_id: str, final: FinalVerdict) -> None:
         _write_json(debate_dir(run_id) / VERDICT_NAME, final.verdict.model_dump(mode="json"))
 
 
+# ---------------------------------------------------------------- persona evidence subsets (IF-401)
+
+
+def mini_claim_ids(run_dir: Path) -> set[str]:
+    """Ids of the claims the debate's mini-research brought in (03_claims/mini-<n>-<dim>.json)."""
+    ids: set[str] = set()
+    for path in (run_dir / "03_claims").glob("mini-*.json"):
+        if agents.parse_mini_stem(path.stem):
+            ids |= {c.claim_id for c in TypeAdapter(list[Claim]).validate_json(path.read_bytes())}
+    return ids
+
+
+def _ledger_digest(run_dir: Path) -> str:
+    return hashlib.sha256((run_dir / "03_claims" / "verified.json").read_bytes()).hexdigest()
+
+
+def evidence_path(run_id: str, role: str) -> Path:
+    return debate_dir(run_id) / EVIDENCE_DIR / f"{role}.json"
+
+
+def _subset(run_dir: Path, role: str, ledger: dict[str, Claim]) -> tuple[list[Claim], list[Claim]]:
+    """(the verified claims of the role's dimensions, every verified mini-research claim)."""
+    dims = agents.PERSONA_EVIDENCE[role] or RESEARCH_DIMENSIONS
+    mini = mini_claim_ids(run_dir)
+    verified = [c for c in ledger.values() if c.verification == "verified"]
+    return (
+        [c for c in verified if c.claim_id not in mini and c.dimension in dims],
+        [c for c in verified if c.claim_id in mini],
+    )
+
+
+def allowed_claim_ids(run_dir: Path, role: str, ledger: dict[str, Claim] | None = None) -> set[str]:
+    """The claim ids a persona may cite: exactly the ids of its evidence file, from the current
+    ledger (the file itself is rewritten whenever the ledger changes, see `stale_evidence`)."""
+    own, mini = _subset(run_dir, role, load_ledger(run_dir) if ledger is None else ledger)
+    return {c.claim_id for c in own + mini}
+
+
+def evidence_subset(run_dir: Path, role: str, position_id: str) -> dict[str, Any]:
+    """A persona's evidence file: the verified claims of its dimensions (`agents.PERSONA_EVIDENCE`,
+    plan §6 stage 7) and every verified mini-research claim, which entered the debate for all."""
+    own, mini = _subset(run_dir, role, load_ledger(run_dir))
+    return {
+        "role": role,
+        "position_id": position_id,
+        "dimensions": list(agents.PERSONA_EVIDENCE[role] or RESEARCH_DIMENSIONS),
+        "ledger_sha256": _ledger_digest(run_dir),
+        "claims": [c.model_dump(mode="json") for c in own],
+        "mini_research_claims": [c.model_dump(mode="json") for c in mini],
+    }
+
+
+def write_evidence(run_id: str, *, seed: int | None = None) -> list[Path]:
+    """Write `debate/evidence/<role>.json` for every persona from the current ledger. Creates the
+    debate's seed and mapping on first use (the file names the persona's own P-id)."""
+    run_dir = _check_run(run_id)
+    mapping = ensure_mapping(run_id, seed)
+    paths = []
+    for role in PERSONAS:
+        path = evidence_path(run_id, role)
+        _write_json(path, evidence_subset(run_dir, role, mapping[role]))
+        paths.append(path)
+    return paths
+
+
+def stale_evidence(run_id: str) -> list[str]:
+    """Personas whose evidence file is missing or was built from another ledger."""
+    digest = _ledger_digest(runs.run_dir(run_id))
+    stale = []
+    for role in PERSONAS:
+        try:
+            ok = json.loads(evidence_path(run_id, role).read_text(encoding="utf-8")).get("ledger_sha256") == digest
+        except (FileNotFoundError, json.JSONDecodeError, AttributeError):
+            ok = False
+        if not ok:
+            stale.append(role)
+    return stale
+
+
+# ---------------------------------------------------------------- re-prompts
+
+
+def reprompted(run_id: str, round_no: int) -> set[str]:
+    path = round_dir(run_id, round_no) / REPROMPTED_NAME
+    return set(path.read_text(encoding="utf-8").split()) if path.exists() else set()
+
+
+def reprompt(run_id: str, round_no: int) -> tuple[list[str], list[str]]:
+    """(roles to re-prompt now, roles whose rejection is final): each rejected persona is sent
+    back once per round. The roles are recorded in `round<N>/.reprompted` before they are
+    returned, so a resumed session never re-prompts one twice."""
+    if round_no < 1:
+        raise DebateError("re-prompts are for rebuttal rounds (1 or more)")
+    _check_run(run_id)
+    done = reprompted(run_id, round_no)
+    rejected = rejected_roles(run_id, round_no)
+    now = [r for r in rejected if r not in done]
+    if now:
+        path = round_dir(run_id, round_no) / REPROMPTED_NAME
+        path.write_text("".join(f"{r}\n" for r in PERSONAS if r in done or r in now), encoding="utf-8")
+    return now, [r for r in rejected if r in done]
+
+
+# ---------------------------------------------------------------- resume
+
+
+# The steps `progress` names, in debate order; the /debate skill's Start section maps each one.
+STEPS = (
+    "report", "evidence", "positions", "anonymize", "rebuttals", "validate", "reprompt",
+    "mini-research", "verify", "interim", "judge", "render", "done",
+)  # fmt: skip
+
+
+@dataclass
+class Progress:
+    """The debate's next step for the /debate skill (resumable per round)."""
+
+    step: str  # one of STEPS
+    round: int | None = None
+    roles: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
+
+    def line(self) -> str:
+        parts = [f"next: {self.step}"]
+        if self.round is not None:
+            parts.append(f"round {self.round}")
+        if self.roles:
+            parts.append(", ".join(self.roles))
+        return " ".join(parts)
+
+
+def _unchecked(run_id: str, round_no: int) -> list[str]:
+    """Roles whose round-N file was not anonymized (round 0) or validated in its current form."""
+    d = round_dir(run_id, round_no)
+    with db.session() as conn:
+        rows = conn.execute(
+            "SELECT role, payload FROM debate_turns WHERE run_id=? AND round=? ORDER BY attempt",
+            (run_id, round_no),
+        ).fetchall()
+    latest = {r["role"]: r["payload"] for r in rows}
+    return [
+        role for role in PERSONAS
+        if (d / f"{role}.json").exists() and latest.get(role) != (d / f"{role}.json").read_text(encoding="utf-8")
+    ]  # fmt: skip
+
+
+def progress(run_id: str) -> Progress:
+    """Where a debate stands, from its files and rows. Every step it names is idempotent, so a
+    crashed session resumes at the step it was in."""
+    run_dir = _check_run(run_id)
+    d = debate_dir(run_id)
+    if (d / "revised_plan.md").exists():
+        return Progress("done")
+    if not (run_dir / "05_report.md").exists():
+        return Progress("report", notes=["no 05_report.md: run /synthesize first"])
+    if (d / VERDICT_NAME).exists():
+        return Progress("render")
+    tasks = db.mini_research_tasks(run_id)
+    ledger_ids = set(load_ledger(run_dir))
+    done_unverified = [
+        t for t in tasks
+        if t["status"] == "done" and not _mini_claim_ids(run_dir, t["n"], t["dimension"]) <= ledger_ids
+    ]  # fmt: skip
+    if done_unverified:
+        t = done_unverified[0]
+        return Progress("verify", t["round"], notes=[f"mini-{t['n']}-{t['dimension']}"])
+    if stale := stale_evidence(run_id):
+        return Progress("evidence", roles=stale)
+
+    r0 = round_dir(run_id, 0)
+    if not (r0 / ANON_NAME).exists():
+        missing = [r for r in PERSONAS if not (r0 / f"{r}.json").exists()]
+        return Progress("positions", 0, missing) if missing else Progress("anonymize", 0)
+    if unchecked := _unchecked(run_id, 0):
+        return Progress("anonymize", 0, unchecked)
+
+    rounds = [n for n in round_numbers(run_id) if n >= 1]
+    if not rounds:
+        return Progress("rebuttals", 1, list(PERSONAS))
+    n = rounds[-1]
+    rd = round_dir(run_id, n)
+    rejected = rejected_roles(run_id, n)
+    missing = [r for r in PERSONAS if not (rd / f"{r}.json").exists() and r not in rejected]
+    if missing:
+        return Progress("rebuttals", n, missing)
+    if (unchecked := _unchecked(run_id, n)) or not any((rd / f"{r}.json").exists() for r in PERSONAS):
+        return Progress("validate", n, unchecked)
+    if again := [r for r in rejected if r not in reprompted(run_id, n)]:
+        return Progress("reprompt", n, again)
+
+    task = next((t for t in tasks if t["round"] == n), None)
+    requested = any(t.mini_research for t in accepted_turns(run_id, n).values())
+    room = len(tasks) < debate_budget(run_id).max_mini_research_tasks
+    if (task is None and requested and room) or (task is not None and task["status"] == "running"):
+        return Progress("mini-research", n, notes=[] if task is None else [f"task {task['n']} is running"])
+    if not (rd / ANON_NAME).exists() or _anon_stale(run_id, n):
+        return Progress("anonymize", n)
+    if load_interim(run_id, n) is None and not (rd / INTERIM_SKIPPED_NAME).exists():
+        return Progress("interim", n)
+    convergence = check_convergence(run_id, n)
+    if convergence.stop:
+        return Progress("judge", n, notes=convergence.met)
+    return Progress("rebuttals", n + 1, list(PERSONAS), notes=convergence.notes)
+
+
+def _mini_claim_ids(run_dir: Path, n: int, dimension: str) -> set[str]:
+    """The candidate claim ids of a mini-research file. `verify_claims.py --only` writes its
+    03_claims/<stem>.json before fetching, so only the ledger shows that verification finished."""
+    md = agents.mini_output(run_dir, n, dimension)
+    return {c.claim_id for c in candidate_claims(md.read_text(encoding="utf-8"))[0]} if md.exists() else set()
+
+
+def skip_interim(run_id: str, round_no: int) -> Path:
+    """Set round N's interim projection aside after the judge failed it twice: an invalid file is
+    renamed (kept for reading), a missing one is recorded. (b) then does not hold for the round,
+    and later rounds compare with the latest valid interim file or the score sheet."""
+    _check_run(run_id)
+    d = round_dir(run_id, round_no)
+    if not d.is_dir():
+        raise DebateError(f"{d} does not exist")
+    path, skipped = d / INTERIM_NAME, d / INTERIM_SKIPPED_NAME
+    if path.exists():
+        path.replace(skipped)
+    else:
+        skipped.write_text("the judge wrote no interim_scores.json\n", encoding="utf-8")
+    return skipped
+
+
+def _anon_stale(run_id: str, round_no: int) -> bool:
+    """positions_anon.json of a rebuttal round lists other P-ids than the round's accepted turns."""
+    path = round_dir(run_id, round_no) / ANON_NAME
+    listed = {e["position_id"] for e in json.loads(path.read_text(encoding="utf-8"))["positions"]}
+    mapping = load_mapping(run_id)
+    return listed != {mapping[r] for r in accepted_turns(run_id, round_no)}
+
+
 # ---------------------------------------------------------------- CLI
 
 
@@ -778,9 +1078,45 @@ def main(argv: list[str] | None = None) -> int:
     anon.add_argument("run_id")
     anon.add_argument("round", type=int)
     anon.add_argument("--seed", type=int, default=None, help="seed for a new debate (must match a stored one)")
+    evidence = sub.add_parser("evidence", help="write debate/evidence/<role>.json from the current ledger")
+    evidence.add_argument("run_id")
+    evidence.add_argument("--seed", type=int, default=None, help="seed for a new debate (must match a stored one)")
+    again = sub.add_parser("reprompt", help="list the rejected personas of round N to send back once")
+    again.add_argument("run_id")
+    again.add_argument("round", type=int)
+    skip = sub.add_parser("skip-interim", help="set round N's interim projection aside after two failures")
+    skip.add_argument("run_id")
+    skip.add_argument("round", type=int)
+    status = sub.add_parser("status", help="print the debate's next step")
+    status.add_argument("run_id")
     args = parser.parse_args(argv)
 
     try:
+        if args.command == "evidence":
+            for path in write_evidence(args.run_id, seed=args.seed):
+                data = json.loads(path.read_text(encoding="utf-8"))
+                print(f"{data['role']}: {len(data['claims'])} claims, {len(data['mini_research_claims'])} mini-research"
+                      f" ({', '.join(data['dimensions'])})")
+            return 0
+        if args.command == "reprompt":
+            now, final = reprompt(args.run_id, args.round)
+            for role in now:
+                print(f"reprompt: {role} (round{args.round}/{REJECTED_PREFIX}{role})")
+            for role in final:
+                print(f"final: {role} was already sent back once; it stays out of round {args.round}")
+            if not now and not final:
+                print("nothing to re-prompt")
+            return 0
+        if args.command == "skip-interim":
+            path = skip_interim(args.run_id, args.round)
+            print(f"set aside: {path.relative_to(runs.run_dir(args.run_id)).as_posix()}; (b) does not hold for round {args.round}")
+            return 0
+        if args.command == "status":
+            result = progress(args.run_id)
+            for note in result.notes:
+                print(note)
+            print(result.line())
+            return 0
         result = anonymize(args.run_id, args.round, seed=args.seed)
     except DebateError as e:
         print(f"error: {e}", file=sys.stderr)

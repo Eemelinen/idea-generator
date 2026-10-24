@@ -1,7 +1,7 @@
 """Revised plan (IF-405, IF-406): `render_report.py --debate` → debate/revised_plan.md.
 
 The run is test_report's `scored` run (score_run fixtures plus synthetic report claims), rendered
-to 05_report.md, with a synthetic debate on top: five round-0 positions citing market-001, one
+to 05_report.md, with a synthetic debate on top: five round-0 positions (`debate_position`), one
 validated rebuttal round and tests/fixtures/debate/verdict.synthetic.json. All synthetic
 (TICKETS.md plan note 14).
 
@@ -17,7 +17,7 @@ from datetime import UTC, datetime
 
 import pytest
 import render_report
-from conftest import FIXTURES, REPO, debate_position
+from conftest import DEBATE_OWN_CLAIM, FIXTURES, REPO, debate_position
 from test_report import RUN, edit_json, render, scored  # noqa: F401  (scored is a fixture)
 
 from ideaforge import db, debate, report, revised_plan
@@ -29,7 +29,11 @@ MAP = debate.mapping_for(SEED)
 VERDICT = FIXTURES / "debate" / "verdict.synthetic.json"
 GOLDEN = REPO / "tests" / "golden" / "revised_plan.synthetic.md"
 GAP = {"evidence_gap": "Synthetic gap."}
-COMPUTATION = {"computation": "market-001 gives 1200 nights x 0.3 = 360"}
+
+
+def computation(role):
+    """A computation over the claim the role's round-0 position already cites: no new claim id."""
+    return {"computation": f"{DEBATE_OWN_CLAIM[role]} gives 1200 nights x 0.3 = 360"}
 
 
 def other(role):
@@ -43,12 +47,14 @@ def write_turn(run_dir, round_no, role, data):
 
 
 def debate_round(run_dir, agreeing=()):
-    """Validated round 1. Without `agreeing`, the founder brings in pricing-001 (a new claim id,
-    so no conformity) and the others disagree with a gap; with it, those roles agree with the
-    founder's position by a computation over market-001 (no new claim id) and the rest disagree."""
+    """Validated round 1. Without `agreeing`, the founder agrees with the investor on pricing-001
+    (new to the founder; the customer's position cited it, so not new to the debate) and the others
+    disagree with a gap, so one backer and no conformity; with it, those roles agree with the
+    founder's position by a computation over their own round-0 claim (no new claim id) and the rest
+    disagree."""
     for role in PERSONAS:
         if role in agreeing:
-            response = {"target_position_id": MAP["founder"], "stance": "agree", "basis": COMPUTATION}
+            response = {"target_position_id": MAP["founder"], "stance": "agree", "basis": computation(role)}
         elif role == "founder" and not agreeing:
             response = {"target_position_id": MAP["investor"], "stance": "agree", "basis": {"new_claim_ids": ["pricing-001"]}}
         else:

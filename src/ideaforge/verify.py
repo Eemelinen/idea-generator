@@ -16,7 +16,7 @@ import hashlib
 import os
 import re
 import unicodedata
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -31,7 +31,7 @@ import trafilatura
 from pydantic import TypeAdapter
 from rapidfuzz import fuzz
 
-from ideaforge import config, db, runs
+from ideaforge import agents, config, db, runs
 from ideaforge.schemas import CandidateClaim, Claim, SourceType
 from ideaforge.validate_file import candidate_claims
 
@@ -352,17 +352,42 @@ def _write_claims(path: Path, claims: list[Claim]) -> None:
     path.write_bytes(_CLAIMS.dump_json(claims, indent=2) + b"\n")
 
 
-def parse_run(run_dir: Path, retrieved_at: datetime) -> tuple[dict[str, list[Claim]], list[str]]:
-    """Candidate claims of every 02_research/*.md, written to 03_claims/<stem>.json (pending)."""
+def parse_run(
+    run_dir: Path, retrieved_at: datetime, only: set[str] | None = None
+) -> tuple[dict[str, list[Claim]], list[str]]:
+    """Candidate claims of every 02_research/*.md (or only the stems in `only`), written to
+    03_claims/<stem>.json (pending)."""
     parsed: dict[str, list[Claim]] = {}
     warnings: list[str] = []
-    for md_path in sorted((run_dir / "02_research").glob("*.md")):
+
+    # Debate mini-research files (mini-<n>-<dim>.md) come after the stage-2 files, in task order,
+    # so a reused claim id never displaces a stage-2 claim (verify_run keeps the first).
+    def order(p: Path) -> tuple[int, str]:
+        mini = agents.parse_mini_stem(p.stem)
+        return (mini[0], p.name) if mini else (0, p.name)
+
+    paths = sorted((run_dir / "02_research").glob("*.md"), key=order)
+    if only is not None:
+        missing = sorted(only - {p.stem for p in paths})
+        if missing:
+            raise FileNotFoundError(f"no 02_research/{missing[0]}.md")
+        paths = [p for p in paths if p.stem in only]
+    for md_path in paths:
         candidates, problems = candidate_claims(md_path.read_text(encoding="utf-8"))
         warnings.extend(f"{md_path.name}: {p}" for p in problems)
         claims = [_fill(c, retrieved_at) for c in candidates]
         parsed[md_path.stem] = claims
         _write_claims(run_dir / "03_claims" / f"{md_path.stem}.json", claims)
     return parsed, warnings
+
+
+def _file_claim_ids(run_dir: Path, stems: Iterable[str]) -> set[str]:
+    ids: set[str] = set()
+    for stem in stems:
+        path = run_dir / "03_claims" / f"{stem}.json"
+        if path.is_file():
+            ids |= {c.claim_id for c in _CLAIMS.validate_json(path.read_bytes())}
+    return ids
 
 
 def _fill(c: CandidateClaim, retrieved_at: datetime) -> Claim:
@@ -373,20 +398,33 @@ def _fill(c: CandidateClaim, retrieved_at: datetime) -> Claim:
     return Claim.model_validate(data)
 
 
-def verify_run(run_id: str, http_get: HttpGet | None = None) -> VerifyResult:
+def verify_run(run_id: str, http_get: HttpGet | None = None, *, only: Iterable[str] | None = None) -> VerifyResult:
     """Parse, fetch, match and persist one run's claims (files first, then the DB).
 
-    `http_get` defaults to the real `requests_get`; tests pass a synthetic one.
+    `http_get` defaults to the real `requests_get`; tests pass a synthetic one. With `only` (file
+    stems such as `mini-1-pricing`, a debate's mini-research), just those files are parsed and
+    verified and added to the existing verified.json; every other claim in it keeps its state and
+    `retrieved_at`, so the evidence under the score sheet does not move during a debate.
     """
     run_dir = runs.run_dir(run_id)
     if not (run_dir / "02_research").is_dir():
         raise FileNotFoundError(f"{run_dir / '02_research'} does not exist")
-    parsed, warnings = parse_run(run_dir, _now())
+    ledger = run_dir / "03_claims" / "verified.json"
+    kept: list[Claim] = []
+    stems = None if only is None else set(only)
+    if stems is not None:
+        if not ledger.is_file():
+            raise FileNotFoundError(f"{ledger} does not exist; verify the whole run first")
+        others = {p.stem for p in (run_dir / "03_claims").glob("*.json")} - stems - {"verified"}
+        # Claims these files contributed last time are replaced; an id another file holds stays.
+        replaced = _file_claim_ids(run_dir, stems) - _file_claim_ids(run_dir, others)
+        kept = [c for c in _CLAIMS.validate_json(ledger.read_bytes()) if c.claim_id not in replaced]
+    parsed, warnings = parse_run(run_dir, _now(), stems)
 
     fetcher = Fetcher(http_get or requests_get)
-    verified: list[Claim] = []
+    verified: list[Claim] = list(kept)
     by_file: dict[str, list[Claim]] = {stem: [] for stem in parsed}
-    seen_ids: set[str] = set()
+    seen_ids: set[str] = {c.claim_id for c in kept}
     for stem, claims in parsed.items():
         for c in claims:
             if c.claim_id in seen_ids:
@@ -399,8 +437,8 @@ def verify_run(run_id: str, http_get: HttpGet | None = None) -> VerifyResult:
             verified.append(verify_claim(c, page))
             by_file[stem].append(verified[-1])
 
-    _write_claims(run_dir / "03_claims" / "verified.json", verified)
-    db.upsert_claims(run_id, verified)
+    _write_claims(ledger, verified)
+    db.upsert_claims(run_id, verified[len(kept):])
     return VerifyResult(verified, by_file, warnings)
 
 

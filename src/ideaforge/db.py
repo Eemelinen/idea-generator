@@ -128,6 +128,25 @@ CREATE TABLE IF NOT EXISTS debate_turns (
     PRIMARY KEY (run_id, round, role, attempt)
 );
 
+-- Debate mini-research tasks (IF-404): at most one per round, `max_mini_research_tasks` per debate.
+CREATE TABLE IF NOT EXISTS mini_research (
+    run_id       TEXT NOT NULL REFERENCES runs(run_id),
+    n            INTEGER NOT NULL,
+    round        INTEGER NOT NULL,
+    role         TEXT NOT NULL,
+    anon_id      TEXT NOT NULL,
+    dimension    TEXT NOT NULL,
+    question     TEXT NOT NULL,
+    claim_start  INTEGER NOT NULL,
+    status       TEXT NOT NULL DEFAULT 'running',
+    attempts     INTEGER NOT NULL DEFAULT 0,
+    reason       TEXT,
+    created_at   TEXT NOT NULL,
+    finished_at  TEXT,
+    PRIMARY KEY (run_id, n),
+    UNIQUE (run_id, round)
+);
+
 CREATE TABLE IF NOT EXISTS assumptions (
     run_id         TEXT NOT NULL REFERENCES runs(run_id),
     idx            INTEGER NOT NULL,
@@ -411,3 +430,18 @@ def log_usage(row: dict) -> None:
             "VALUES (:ts, :run_id, :stage, :agent, :tool, :model, :approx_tokens)",
             {k: row.get(k) for k in ("ts", "run_id", "stage", "agent", "tool", "model", "approx_tokens")},
         )
+
+
+def mini_research_tasks(run_id: str) -> list[sqlite3.Row]:
+    """The debate's mini-research tasks, in the order they were opened. The hooks call this on
+    every research-agent write, so a database not created yet, or one created before the table
+    existed, has no tasks instead of being created here."""
+    if not db_path().exists():
+        return []
+    try:
+        with session() as conn:
+            return conn.execute("SELECT * FROM mini_research WHERE run_id=? ORDER BY n", (run_id,)).fetchall()
+    except sqlite3.OperationalError as e:
+        if "no such table" in str(e):
+            return []
+        raise

@@ -1,6 +1,7 @@
 """Stage 3: extract and verify a run's candidate claims.
 
     uv run python scripts/verify_claims.py <run_id>
+    uv run python scripts/verify_claims.py <run_id> --only mini-<n>-<dim>
 
 Parses the '## Candidate claims' blocks of runs/<run_id>/02_research/*.md into
 03_claims/<dimension>.json, fetches every source (robots.txt respected, 10 s timeout, cached in
@@ -10,6 +11,10 @@ cache/), marks each claim verified or unverified by fuzzy quote match, and write
 Prints one summary line per dimension on stdout and warnings (unparseable claim blocks,
 unfetchable or robots-disallowed sources) on stderr. Exit 0 once verified.json is written,
 1 when the run is unknown (bad id, no directory, no DB row) or has no 02_research/.
+
+--only <stem> (repeatable; a debate's mini-research file) parses and verifies just that file and
+adds its claims to the existing verified.json; every other claim keeps its state and retrieval
+time. Exit 1 also when that file or verified.json is missing.
 """
 
 from __future__ import annotations
@@ -23,6 +28,7 @@ from ideaforge import db, runs, verify
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("run_id")
+    parser.add_argument("--only", action="append", metavar="STEM", help="verify only 02_research/<STEM>.md")
     args = parser.parse_args(argv)
 
     try:
@@ -41,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     try:
-        result = verify.verify_run(args.run_id)
+        result = verify.verify_run(args.run_id, only=args.only)
     except FileNotFoundError as e:
         print(f"error: {e}", file=sys.stderr)
         return 1

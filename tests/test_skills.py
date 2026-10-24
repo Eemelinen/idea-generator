@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from ideaforge import agents, config, guard, runs, validate_file
+from ideaforge import agents, config, debate, guard, runs, validate_file
 
 ROOT = config.ROOT  # captured before the project fixture repoints config.ROOT
 SKILLS_DIR = ROOT / ".claude" / "skills"
@@ -27,6 +27,9 @@ PLACEHOLDERS = {
     "<stage>": "plan",
     "<idea text>": "sauna cabins by the lake",
     "<name>": "economy",
+    "<N>": "1",
+    "<n>": "1",
+    "<role>": "founder",
 }
 STAGE_SECTIONS = {  # validate skill heading → the stage(s) it must wrap
     "Stage 0 — Intake": "intake",
@@ -66,7 +69,7 @@ def fill(command: str) -> str:
 
 
 def test_pipeline_skills_exist():
-    assert {"validate", "research", "status", "synthesize"} <= set(SKILLS)
+    assert {"validate", "research", "status", "synthesize", "debate"} <= set(SKILLS)
 
 
 @pytest.mark.parametrize("skill", SKILLS)
@@ -114,7 +117,7 @@ def test_commands_pass_the_guard_and_allowed_tools(skill, project):
         for script in re.findall(r"scripts/([\w-]+\.py)", pattern):
             assert (ROOT / "scripts" / script).is_file(), pattern
     cited = commands(body)
-    if skill in ("validate", "research", "synthesize"):
+    if skill in ("validate", "research", "synthesize", "debate"):
         assert cited
     for command in cited:
         filled = fill(command)
@@ -304,3 +307,133 @@ def test_synthesizer_prompt_reads_one_file_and_writes_two():
 def test_validate_points_to_synthesize():
     end = sections(split("validate")[1])["End"]
     assert "/synthesize <run_id>" in end
+
+
+# ---------------------------------------------------------------- debate (IF-407)
+
+DEBATE_SECTIONS = [
+    "Start",
+    "Round 0 — Independent positions",
+    "Rounds 1..N — Rebuttals",
+    "Mini-research",
+    "Judge",
+    "Render",
+    "End",
+]
+
+
+def debate_sections() -> dict[str, str]:
+    return sections(split("debate")[1])
+
+
+def in_order(text: str, *needles: str) -> None:
+    pos = -1
+    for needle in needles:
+        found = text.find(needle, pos + 1)
+        assert found > pos, f"{needle!r} missing or out of order"
+        pos = found
+
+
+def test_debate_skill_has_every_section_in_order():
+    _, body = split("debate")
+    assert list(debate_sections()) == DEBATE_SECTIONS
+    in_order(body, *(f"## {title}" for title in DEBATE_SECTIONS))
+
+
+def test_debate_table_matches_the_persona_registry():
+    rows = re.findall(r"^\| `(\w+)`\s*\| `([\w-]+)`\s*\| `([^`]+)`\s*\| `([^`]+)`\s*\|", read("debate"), re.MULTILINE)
+    assert [r[0] for r in rows] == list(agents.PERSONA_EVIDENCE)
+    for persona, name, evidence, round_file in rows:
+        spec = agents.get(name)
+        assert spec is not None and spec.kind == "debate" and spec.persona == persona
+        assert evidence == f"runs/<run_id>/debate/evidence/{persona}.json"
+        assert round_file == f"runs/<run_id>/debate/round<N>/{persona}.json"
+    assert "subagent_type: debate-judge" in read("debate")
+
+
+def test_debate_start_resumes_from_every_status_step():
+    start = debate_sections()["Start"]
+    in_order(start, "run_stage.py <run_id> --resume", "uv run python -m ideaforge.debate status <run_id>")
+    for step in debate.STEPS:
+        assert f"`{step}" in start, f"Start does not handle status step {step!r}"
+
+
+def test_debate_round_0_launches_in_one_message_then_anonymizes():
+    text = debate_sections()["Round 0 — Independent positions"]
+    in_order(
+        text,
+        "uv run python -m ideaforge.debate evidence <run_id>",
+        "**in one message**",
+        "05_report.md",
+        "read no other file",
+        "write no other file",
+        "validate_file --kind position runs/<run_id>/debate/round0/<role>.json",
+        "re-launched once",
+        "uv run python -m ideaforge.debate anonymize <run_id> 0",
+        "usage_report.py <run_id>",
+    )
+
+
+def test_debate_rounds_validate_reprompt_research_project_and_check_convergence():
+    text = debate_sections()["Rounds 1..N — Rebuttals"]
+    in_order(
+        text,
+        "**in one message**",
+        "positions_anon.json",
+        "uv run python scripts/debate_validate.py <run_id> <N>",
+        "uv run python -m ideaforge.debate reprompt <run_id> <N>",
+        "**Re-launch each listed persona once**",
+        "REJECTED_<role>",
+        "uv run python scripts/debate_validate.py <run_id> <N>",
+        "**Mini-research**",
+        "uv run python -m ideaforge.debate anonymize <run_id> <N>",
+        "subagent_type: debate-judge",
+        "**interim**",
+        "round<N>/interim_scores.json",
+        "validate_file --kind interim_scores",
+        "uv run python scripts/debate_converged.py <run_id> <N>",
+        "Exit 0 → **Judge**",
+        "N + 1",
+        "usage_report.py <run_id>",
+    )
+
+
+def test_debate_mini_research_is_opened_finished_verified_and_shared():
+    text = debate_sections()["Mini-research"]
+    in_order(
+        text,
+        "uv run python -m ideaforge.mini_research open <run_id> <N>",
+        "Exit 3",
+        "00_spec.json",
+        "first claim id",
+        "uv run python -m ideaforge.mini_research finish <run_id> <n>",
+        "**re-launch it once**",
+        "uv run python scripts/verify_claims.py <run_id> --only mini-<n>-<dim>",
+        "uv run python -m ideaforge.debate evidence <run_id>",
+        "BUDGET_EXCEEDED_",
+    )
+    assert "max_mini_research_tasks" in text
+
+
+def test_debate_judge_render_and_offer_a_new_version():
+    by_title = debate_sections()
+    in_order(by_title["Judge"], "**verdict**", "runs/<run_id>/debate/verdict.json",
+             "validate_file --kind verdict runs/<run_id>/debate/verdict.json")
+    in_order(by_title["Render"], "uv run python scripts/render_report.py <run_id> --debate", "usage_report.py <run_id>")
+    end = by_title["End"]
+    in_order(end, "conformity_flag", "BUDGET_EXCEEDED_", "/validate --from <run_id>")
+
+
+def test_debate_judge_briefs_never_name_a_persona_file():
+    """The judge is author-blind: its briefs list only anonymized rounds, the ledger and the scores."""
+    by_title = debate_sections()
+    rounds = by_title["Rounds 1..N — Rebuttals"]
+    interim = rounds[rounds.find("subagent_type: debate-judge"): rounds.find("debate_converged.py")]
+    for brief in (interim, by_title["Judge"]):
+        paths = set(re.findall(r"runs/<run_id>/[\w./<>-]+", brief))
+        assert paths, brief
+        for path in paths:
+            assert "evidence" not in path and ".mapping" not in path, path
+            assert not any(f"/{p}.json" in path for p in agents.PERSONA_EVIDENCE), path
+    _, body = split("debate")
+    assert body.count(".mapping.json") == 1 and body.find(".mapping.json") < body.find("## Start")

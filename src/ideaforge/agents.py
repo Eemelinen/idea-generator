@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from ideaforge import db
 from ideaforge.schemas import PERSONAS, RESEARCH_DIMENSIONS
 
 
@@ -63,6 +65,32 @@ def research_agent(dimension: str) -> AgentSpec | None:
 
 def research_output(run_dir: Path, spec: AgentSpec) -> Path:
     return run_dir / "02_research" / f"{spec.dimension}.md"
+
+
+# Debate mini-research (IF-404): task n of a debate is researched by the dimension's research
+# agent into 02_research/mini-<n>-<dimension>.md, which verify_claims.py reads like the others.
+MINI_STEM_RE = re.compile(r"^mini-(\d+)-([a-z_]+)$")
+
+
+def mini_output(run_dir: Path, n: int, dimension: str) -> Path:
+    return run_dir / "02_research" / f"mini-{n}-{dimension}.md"
+
+
+def research_target(run_dir: Path, spec: AgentSpec) -> Path:
+    """The file a research agent writes now: during a debate, the running mini-research task's
+    file for its dimension (`mini_research` table), otherwise its stage-2 file."""
+    for task in db.mini_research_tasks(run_dir.name):
+        if task["status"] == "running" and task["dimension"] == spec.dimension:
+            return mini_output(run_dir, task["n"], spec.dimension)
+    return research_output(run_dir, spec)
+
+
+def parse_mini_stem(stem: str) -> tuple[int, str] | None:
+    """(n, dimension) of a mini-research file stem such as `mini-2-pricing`, else None."""
+    m = MINI_STEM_RE.match(stem)
+    if m is None or m.group(2) not in RESEARCH_DIMENSIONS:
+        return None
+    return int(m.group(1)), m.group(2)
 
 
 SYNTHESIS_INPUT = "04_synthesis_input.json"

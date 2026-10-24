@@ -1,6 +1,6 @@
 ---
 name: {{ agent.name }}
-description: "Ideaforge debate judge. Launched by /debate after the final round with a run_id; writes runs/<run_id>/debate/verdict.json."
+description: "Ideaforge debate judge. Launched by /debate with a run_id: in interim mode after each rebuttal round (writes runs/<run_id>/debate/round<N>/interim_scores.json), in verdict mode after the last round (writes runs/<run_id>/debate/verdict.json)."
 tools: Read, Write
 model: {{ roles[agent.role] }}
 ---

@@ -501,7 +501,7 @@
       "area": "debate",
       "title": "Debate skill, prompts and mini-research",
       "user_visible_behavior": "`/debate <run_id>` runs round 0 with the 5 personas in one message, anonymizes, runs rebuttal rounds with validation, one re-prompt, mini-research (at most 3 per debate, enforced in Python) and the convergence check, then the judge and the render, resumable per round; persona briefs see only their evidence subset.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-011", "F-022"],
       "ticket": "IF-407",
       "spec": "docs/TICKETS.md#if-407-debate-skill-prompts-and-mini-research",
@@ -509,9 +509,18 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_gen_agents.py tests/test_debate.py tests/test_skills.py (evidence subsets; 4th mini-research refused; round-1 claims usable in round 2; skill wires every step)"
       ],
-      "evidence": [],
-      "attempts": 0,
-      "notes": "Absorbs IF-401 (persona and judge prompts) and IF-404 (mini-research). The live debate moved to F-024."
+      "evidence": [
+        "2026-10-24 pnpm check → pass (commit fe1c7c1)",
+        "2026-10-24 uv run pytest tests/test_gen_agents.py tests/test_debate.py tests/test_skills.py → pass (commit fe1c7c1)",
+        "2026-10-24 pnpm check → pass (commit 7474fc0)",
+        "2026-10-24 uv run pytest tests/test_gen_agents.py tests/test_debate.py tests/test_skills.py → pass (commit 7474fc0)",
+        "2026-10-24 pnpm check → pass (commit 24b49f0)",
+        "2026-10-24 uv run pytest tests/test_gen_agents.py tests/test_debate.py tests/test_skills.py → pass (commit 24b49f0)",
+        "2026-10-24 pnpm check → pass (working tree on e0cf9bf)",
+        "2026-10-24 uv run pytest tests/test_gen_agents.py tests/test_debate.py tests/test_skills.py → pass (working tree on e0cf9bf)"
+      ],
+      "attempts": 1,
+      "notes": "Absorbs IF-401 (persona and judge prompts) and IF-404 (mini-research). The live debate moved to F-024. Attempt 1 failed 2026-10-24: evaluator: Revise"
     },
     {
       "id": "F-024",

@@ -1,6 +1,6 @@
 ---
 name: {{ agent.name }}
-description: "Ideaforge debate persona ({{ agent.persona }}). Launched by /debate with a run_id and round number; writes runs/<run_id>/debate/round<N>/{{ agent.persona }}.json."
+description: "Ideaforge debate persona ({{ agent.persona }}). Launched by /debate with a run_id and round number; reads runs/<run_id>/debate/evidence/{{ agent.persona }}.json and writes runs/<run_id>/debate/round<N>/{{ agent.persona }}.json."
 tools: Read, Write
 model: {{ roles[agent.role] }}
 ---
@@ -12,4 +12,4 @@ model: {{ roles[agent.role] }}
 
 {% block lens %}{% endblock %}
 
-Evidence subset you are given: {% if evidence %}{{ evidence | join(", ") }} claims{% else %}all verified claims{% endif %}.
+Your evidence subset (`runs/<run_id>/debate/evidence/{{ agent.persona }}.json`): {% if evidence %}verified {{ evidence | join(", ") }} claims{% else %}all verified claims{% endif %}, plus the debate's verified mini-research claims.

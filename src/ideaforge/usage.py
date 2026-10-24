@@ -66,7 +66,19 @@ def update_counters(run_dir: Path, agent: str, tool: str) -> dict[str, int]:
     return per_agent
 
 
-def check_budget(run_dir: Path, agent: str, per_agent: dict[str, int]) -> str | None:
+def counter_key(run_dir: Path, agent: str) -> str:
+    """A research agent working on a debate's mini-research task has a fresh budget for it
+    (`<agent>.mini-<n>`); otherwise the agent's own name."""
+    spec = agents.get(agent)
+    if spec is not None and spec.kind == "research":
+        target = agents.research_target(run_dir, spec)
+        if target != agents.research_output(run_dir, spec):
+            return f"{agent}.{target.stem.rsplit('-', 1)[0]}"
+    return agent
+
+
+def check_budget(run_dir: Path, agent: str, per_agent: dict[str, int], key: str | None = None) -> str | None:
+    """Write BUDGET_EXCEEDED_<key> (default: the agent) when the agent's counters pass its limits."""
     spec = agents.get(agent)
     if spec is None or spec.budget_key is None:
         return None
@@ -78,7 +90,7 @@ def check_budget(run_dir: Path, agent: str, per_agent: dict[str, int]) -> str | 
     ]
     if not over:
         return None
-    (run_dir / f"BUDGET_EXCEEDED_{agent}").write_text("\n".join(over) + "\n", encoding="utf-8")
+    (run_dir / f"BUDGET_EXCEEDED_{key or agent}").write_text("\n".join(over) + "\n", encoding="utf-8")
     return "; ".join(over)
 
 
@@ -108,7 +120,8 @@ def log(data: dict[str, Any]) -> None:
             f.write("".join(f"{agent}\t{u}\n" for u in urls))
 
     if tool in COUNTED_TOOLS:
-        check_budget(run_dir, agent, update_counters(run_dir, agent, tool))
+        key = counter_key(run_dir, agent)
+        check_budget(run_dir, agent, update_counters(run_dir, key, tool), key)
 
     try:
         db.log_usage(row)

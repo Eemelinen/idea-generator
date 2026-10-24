@@ -1,7 +1,7 @@
 """Rebuttal validation (IF-403): scripts/debate_validate.py and debate.validate_round.
 
-The run, the claim ledger and the round-0 positions (each citing market-001) come from the
-synthetic `debate_run` fixture in conftest.py (TICKETS.md plan note 14).
+The run, the claim ledger and the round-0 positions (each citing `DEBATE_OWN_CLAIM[role]`) come
+from the synthetic `debate_run` fixture in conftest.py (TICKETS.md plan note 14).
 """
 
 import json
@@ -73,7 +73,7 @@ def test_stance_change_with_a_computation_is_accepted(run):
     modify = {
         "target_position_id": other("investor"),
         "stance": "modify",
-        "basis": {"computation": "pricing-001 (90 EUR) - unit_economics-001 (35 EUR) = 55 EUR margin per night"},
+        "basis": {"computation": "pricing-001 (90 EUR) × market-002 (40 nights) = 3 600 EUR per season"},
     }
     write_round(run, investor=rebuttal("investor", modify))
     assert "investor" in debate.validate_round(DEBATE_RUN, 1).accepted
@@ -81,14 +81,14 @@ def test_stance_change_with_a_computation_is_accepted(run):
 
 def test_disagree_with_an_already_cited_claim_is_accepted(run):
     response = {"target_position_id": other("customer"), "stance": "disagree",
-                "basis": GAP, "cited_claim_ids": ["market-001"]}
+                "basis": GAP, "cited_claim_ids": ["pricing-001"]}
     write_round(run, customer=rebuttal("customer", response))
     assert "customer" in debate.validate_round(DEBATE_RUN, 1).accepted
 
 
 def test_disagree_backed_by_cited_claim_without_gap_is_accepted(run):
     response = {"target_position_id": other("customer"), "stance": "disagree",
-                "basis": {"new_claim_ids": ["gtm-001"]}}
+                "basis": {"new_claim_ids": ["pricing-002"]}}
     write_round(run, customer=rebuttal("customer", response))
     assert "customer" in debate.validate_round(DEBATE_RUN, 1).accepted
 
@@ -100,7 +100,7 @@ def test_unchanged_proposal_needs_no_basis(run):
 
 def test_changed_proposal_with_new_claim_is_accepted(run):
     write_round(run, operator=rebuttal(
-        "operator", updated_change="Open in May only.", updated_change_basis={"new_claim_ids": ["gtm-001"]},
+        "operator", updated_change="Open in May only.", updated_change_basis={"new_claim_ids": ["unit_economics-001"]},
     ))
     assert "operator" in debate.validate_round(DEBATE_RUN, 1).accepted
 
@@ -150,9 +150,9 @@ def test_changed_proposal_without_basis_is_rejected(run):
 
 def test_changed_proposal_with_old_claim_is_rejected(run):
     write_round(run, operator=rebuttal(
-        "operator", updated_change="Open in May only.", updated_change_basis={"new_claim_ids": ["market-001"]},
+        "operator", updated_change="Open in May only.", updated_change_basis={"new_claim_ids": ["gtm-001"]},
     ))
-    assert "updated_change: market-001 already cited" in reasons(debate.validate_round(DEBATE_RUN, 1), "operator")
+    assert "updated_change: gtm-001 already cited" in reasons(debate.validate_round(DEBATE_RUN, 1), "operator")
 
 
 def test_disagree_with_only_a_computation_is_rejected(run):
@@ -279,7 +279,7 @@ def test_rejected_turn_does_not_count_as_cited(run):
 
 def test_accepted_updated_change_is_the_next_rounds_proposal(run):
     write_round(run, operator=rebuttal(
-        "operator", updated_change="Open in May only.", updated_change_basis={"new_claim_ids": ["gtm-001"]},
+        "operator", updated_change="Open in May only.", updated_change_basis={"new_claim_ids": ["unit_economics-001"]},
     ))
     assert debate.validate_round(DEBATE_RUN, 1).rejected == {}
     write_round(run, 2, operator=rebuttal("operator", round_no=2, updated_change="Open in May only."))
