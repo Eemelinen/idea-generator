@@ -270,12 +270,17 @@ def _stage_order(stage: str) -> tuple[int, str]:
     return (len(runs.STAGES) + (stage == NO_STAGE), stage)
 
 
-def usage_table(key: str, tallies: Mapping[str, Tally], total: Tally) -> list[str]:
+def ordered(key: str, tallies: Mapping[str, Tally]) -> list[tuple[str, Tally]]:
+    """Per-stage tallies in pipeline order (`(no stage)` last), per-agent ones `main` first."""
     if key == "stage":
         names = sorted(tallies, key=_stage_order)
     else:
         names = sorted(tallies, key=lambda a: (a != "main", a))
-    rows = [(n, t.calls, t.searches, t.fetches, t.tokens) for n, t in ((n, tallies[n]) for n in names)]
+    return [(n, tallies[n]) for n in names]
+
+
+def usage_table(key: str, tallies: Mapping[str, Tally], total: Tally) -> list[str]:
+    rows = [(n, t.calls, t.searches, t.fetches, t.tokens) for n, t in ordered(key, tallies)]
     rows.append(("total", total.calls, total.searches, total.fetches, total.tokens))
     return table((key, "calls", "searches", "fetches", "~tokens"), rows)
 

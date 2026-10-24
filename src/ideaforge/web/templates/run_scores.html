@@ -1,0 +1,44 @@
+{% extends "run_base.html" %}
+{% from "_run_macros.html" import not_run, invalid, claim_link, num %}
+{% block tab %}
+<h2>Scores <span class="muted"><code>04_scores.json</code></span></h2>
+{% set sheet = scores.sheet.value %}
+{% if scores.sheet.error %}{{ invalid(scores.sheet.error) }}
+{% elif scores.sheet.missing %}{{ not_run(stage, stage_status, scores.sheet.path) }}
+{% else %}
+<p class="verdict-line">Verdict <strong class="verdict-{{ sheet.verdict|lower }}" id="verdict">{{ sheet.verdict }}</strong> · weighted total <strong id="weighted-total">{{ num(sheet.weighted_total) }}</strong></p>
+
+<table class="grid scores">
+  <thead><tr><th>Dimension</th><th>Proposed</th><th>Final</th><th>Status</th><th>Cap reason</th><th>Justification</th><th>Supporting claims</th></tr></thead>
+  <tbody>
+    {% for s in sheet.scores %}
+    <tr data-dimension="{{ s.dimension }}">
+      <td>{{ s.dimension }}</td>
+      <td>{{ num(s.proposed_score) }}</td>
+      <td>{{ num(s.final_score) }}</td>
+      <td>{{ s.status }}</td>
+      <td>{{ s.cap_reason or "-" }}</td>
+      <td>{{ link_claims(s.justification, run.run_id, known) }}</td>
+      <td>{% for cid in s.supporting_claim_ids %}{{ claim_link(run.run_id, cid, known) }}{% if not loop.last %}, {% endif %}{% else %}-{% endfor %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>Kill triggers</h2>
+<table class="grid kill-triggers">
+  <thead><tr><th>Trigger</th><th>State</th><th>Evidence (verified claims)</th><th>Flagged, not counted</th></tr></thead>
+  <tbody>
+    {% for k in scores.kill_rows %}
+    <tr data-trigger="{{ k.trigger }}"{% if k.trigger in sheet.kill_triggers_fired %} class="fired"{% endif %}>
+      <td><code>{{ k.trigger }}</code></td>
+      <td>{{ k.state|replace("**", "") }}</td>
+      <td>{{ link_claims(k.evidence, run.run_id, known) if k.evidence else "-" }}</td>
+      <td>{{ k.not_counted or "-" }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p class="muted">Overrides in <code>00_spec.json</code>: {{ scores.overrides|join(", ") if scores.overrides else "none" }}.</p>
+{% endif %}
+{% endblock %}

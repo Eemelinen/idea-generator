@@ -48,7 +48,7 @@
     {% for r in group.runs %}
     <tr class="run" data-run="{{ r.run_id }}">
       <td>{{ r.title }}{% if r.run_status != "active" %} <span class="tag">{{ r.run_status }}</span>{% endif %}</td>
-      <td><code>{{ r.run_id }}</code><br><span class="muted">{{ r.created_at[:16]|replace("T", " ") }}</span>
+      <td><a href="/runs/{{ r.run_id }}"><code>{{ r.run_id }}</code></a><br><span class="muted">{{ r.created_at[:16]|replace("T", " ") }}</span>
         {% if not r.has_dir %}<br><span class="tag warn">no directory</span>{% endif %}</td>
       <td class="version">v{{ r.version }}{% if r.parent %}<br><span class="muted">from <code>{{ r.parent }}</code></span>{% endif %}</td>
       <td class="stages"><progress max="{{ r.stages_total or 1 }}" value="{{ r.stages_done }}"></progress>

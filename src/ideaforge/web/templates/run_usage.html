@@ -1,0 +1,31 @@
+{% extends "run_base.html" %}
+{% block tab %}
+<h2>Usage</h2>
+{% macro tally_table(key, rows, total) %}
+<table class="grid usage" data-by="{{ key }}">
+  <thead><tr><th>{{ key }}</th><th>Calls</th><th>Searches</th><th>Fetches</th><th>~Tokens</th></tr></thead>
+  <tbody>
+    {% for name, t in rows %}<tr><td><code>{{ name }}</code></td><td>{{ t.calls }}</td><td>{{ t.searches }}</td><td>{{ t.fetches }}</td><td>{{ t.tokens }}</td></tr>{% endfor %}
+    <tr class="total"><th>total</th><th>{{ total.calls }}</th><th>{{ total.searches }}</th><th>{{ total.fetches }}</th><th>{{ total.tokens }}</th></tr>
+  </tbody>
+</table>
+{% endmacro %}
+{% if usage is none %}
+<p class="muted">The run has no directory, so no <code>usage.jsonl</code>.</p>
+{% else %}{% set t = usage.summary.total %}
+<p id="usage-total">{{ t.calls }} tool calls, {{ t.searches }} searches, {{ t.fetches }} fetches, ~{{ t.tokens }} tokens <span class="muted">(approximate, from <code>usage.jsonl</code>)</span></p>
+{% if usage.summary.skipped_lines %}<div class="banner warn">Skipped {{ usage.summary.skipped_lines }} malformed line(s) in <code>usage.jsonl</code>.</div>{% endif %}
+{% if t.calls %}
+<h3>Per stage</h3>
+{{ tally_table("stage", usage.by_stage, t) }}
+<h3>Per agent</h3>
+{{ tally_table("agent", usage.by_agent, t) }}
+{% else %}
+<p class="muted">No tool calls logged yet.</p>
+{% endif %}
+<h3>Budget markers</h3>
+{% if usage.summary.budget_markers %}
+<ul>{% for name, text in usage.summary.budget_markers.items() %}<li><code>{{ name }}</code>: {{ text }}</li>{% endfor %}</ul>
+{% else %}<p class="muted">None.</p>{% endif %}
+{% endif %}
+{% endblock %}

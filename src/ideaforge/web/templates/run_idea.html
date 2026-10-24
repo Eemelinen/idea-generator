@@ -1,0 +1,46 @@
+{% extends "run_base.html" %}
+{% from "_run_macros.html" import not_run, invalid %}
+{% block tab %}
+<h2>Idea</h2>
+{% if idea.idea_md is not none %}<pre class="idea-text">{{ idea.idea_md }}</pre>{% else %}<p class="muted"><code>idea.md</code> does not exist.</p>{% endif %}
+
+<h2>Spec <span class="muted"><code>00_spec.json</code></span></h2>
+{% if idea.spec.error %}{{ invalid(idea.spec.error) }}
+{% elif idea.spec.missing %}{{ not_run(stage, stage_status, idea.spec.path) }}
+{% else %}{% set spec = idea.spec.value %}
+<dl class="spec">
+  <dt>Title</dt><dd>{{ spec.title }}</dd>
+  <dt>One-liner</dt><dd>{{ spec.one_liner }}</dd>
+  <dt>Customer</dt><dd>{{ spec.customer }}</dd>
+  <dt>Problem</dt><dd>{{ spec.problem }}</dd>
+  <dt>Solution</dt><dd>{{ spec.solution }}</dd>
+  <dt>Revenue model</dt><dd>{{ spec.revenue_model }}</dd>
+  <dt>Geography</dt><dd>{{ spec.geography|join(", ") }}</dd>
+  <dt>Founder constraints</dt><dd>{{ spec.founder_constraints.hours_per_week|round(1) }} h/week · {{ "%.0f"|format(spec.founder_constraints.capital_eur) }} EUR capital · goal {{ spec.founder_constraints.goal }}{% if spec.founder_constraints.skills %} · skills: {{ spec.founder_constraints.skills|join(", ") }}{% endif %}</dd>
+  <dt>VAT registered</dt><dd>{{ "yes" if spec.vat_registered else "no" }}</dd>
+  <dt>Kill-trigger overrides</dt><dd>{{ spec.kill_trigger_overrides|join(", ") if spec.kill_trigger_overrides else "none" }}</dd>
+  <dt>Idea id / version</dt><dd><code>{{ spec.idea_id }}</code> v{{ spec.version }}</dd>
+</dl>
+<h3>Clarifications</h3>
+{% if spec.clarifications %}
+<ol class="clarifications">
+  {% for c in spec.clarifications %}<li><strong>{{ c.question }}</strong><br>{{ c.answer }}</li>{% endfor %}
+</ol>
+{% else %}<p class="muted">None asked.</p>{% endif %}
+{% endif %}
+
+<h2>Research plan <span class="muted"><code>01_plan.json</code></span></h2>
+{% if idea.plan.error %}{{ invalid(idea.plan.error) }}
+{% elif idea.plan.missing %}{{ not_run("plan", none, idea.plan.path) }}
+{% else %}
+{% for d in idea.plan.value.dimensions %}
+<div class="plan-dimension" data-dimension="{{ d.dimension }}">
+  <h3>{{ d.dimension }}</h3>
+  <ul>{% for q in d.questions %}<li>{{ q }}</li>{% endfor %}</ul>
+  <p><strong>Search strategy:</strong> {{ d.search_strategy }}</p>
+  <p><strong>Evidence needed:</strong> {{ d.evidence_needed }}</p>
+  {% if d.preferred_domains %}<p class="muted">Preferred domains: {{ d.preferred_domains|join(", ") }}</p>{% endif %}
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

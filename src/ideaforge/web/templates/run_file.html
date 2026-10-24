@@ -1,0 +1,9 @@
+{% extends "run_base.html" %}
+{% block tab %}
+<p class="crumbs"><a href="/runs/{{ run.run_id }}/files">Files</a> / <code>{{ path }}</code> · {{ size }} bytes · <a href="/runs/{{ run.run_id }}/raw/{{ path }}" download>download</a></p>
+{% if text is none %}
+<p class="muted">Not shown: the file is larger than 1 MB or not UTF-8 text.</p>
+{% else %}
+<pre class="file-view">{{ text }}</pre>
+{% endif %}
+{% endblock %}
