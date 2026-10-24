@@ -141,7 +141,7 @@ def test_debate_agent_only_debate_dir(active_run):
 @pytest.mark.parametrize(
     "name",
     [".mapping.json", "round0/positions_anon.json", "round1/REJECTED_investor", "round1/.reprompted",
-     "evidence/investor.json", "evidence/founder.json"],
+     "evidence/investor.json", "evidence/founder.json", "round1/interim_scores.skipped"],
 )
 def test_debate_agent_never_writes_debate_py_files(active_run, name):
     judge = {"agent_id": "a3", "agent_type": "debate-judge"}

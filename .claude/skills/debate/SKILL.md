@@ -43,7 +43,7 @@ mini-research task number, `<role>` with a persona and `<dim>` with a dimension;
    - `mini-research` (round N) → **Mini-research** for round N from step 1 (`open` prints a running task
      again), `verify` (round N, it prints the file stem) → **Mini-research** from step 4; then continue
      the round at step 5.
-   - `anonymize` or `interim` (round N) → **Rounds 1..N — Rebuttals**, round N from step 5 or 6.
+   - `anonymize` or `interim` (round N) → **Rounds 1..N — Rebuttals**, round N from step 5 or 6 (`status` lists `interim` again until the file validates or is set aside with `skip-interim`).
    - `judge` → **Judge**. `render` → **Render**. `done` → **End**.
 4. Read `runs/<run_id>/meta.json` (`budget_preset`) and that preset's `debate` entry in
    `config/budget.yaml` (`max_rounds`, `max_mini_research_tasks`) and its `research_subagent`
@@ -104,8 +104,9 @@ Run round N = 1, 2, … until step 7 says stop.
      dimension, and "write no other file"
 
    Then `uv run python -m ideaforge.validate_file --kind interim_scores runs/<run_id>/debate/round<N>/interim_scores.json`;
-   on exit 1 re-launch the judge once with the message. A second failure: go on without the
-   file (convergence condition (b) then does not hold for this round).
+   on exit 1 (or no file) re-launch the judge once with the message. A second failure:
+   `uv run python -m ideaforge.debate skip-interim <run_id> <N>` sets the file aside (convergence
+   condition (b) then does not hold for this round), and go on.
 
 7. `uv run python scripts/debate_converged.py <run_id> <N>`: it prints which stop conditions
    hold ((a) nothing new, (b) projected scores moved less than `convergence_score_delta`,
@@ -123,7 +124,8 @@ per debate, enforced in Python.
 1. `uv run python -m ideaforge.mini_research open <run_id> <N>`. "requested no mini-research" →
    this section is done. Exit 3 (`refused:`, the debate's limit is used up) → tell the user and
    this section is done. Exit 1 → report the error and stop. Otherwise it prints the task's
-   brief: `task`, `subagent_type`, `question`, `dimension`, `output` and `first claim id`.
+   brief: `task`, `subagent_type`, `question`, `dimension`, `output` and `first claim id`. After a
+   resume it may print a running task's `last errors`: append them to the brief as in step 3.
 2. Launch one `Agent` with that `subagent_type` (the dimension's `research-*` agent). The brief
    contains exactly:
    - `run_id: <run_id>`, the spec path `runs/<run_id>/00_spec.json` and "This is a debate mini-research task."

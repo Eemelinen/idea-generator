@@ -4,6 +4,7 @@ IF-402 / IF-403 / IF-407).
     uv run python -m ideaforge.debate anonymize <run_id> <round> [--seed N]
     uv run python -m ideaforge.debate evidence <run_id> [--seed N]
     uv run python -m ideaforge.debate reprompt <run_id> <round>
+    uv run python -m ideaforge.debate skip-interim <run_id> <round>
     uv run python -m ideaforge.debate status <run_id>
 
 `anonymize` maps the five persona roles to P1…P5 with a seeded shuffle. The seed is stored in
@@ -48,6 +49,7 @@ from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from ideaforge import agents, config, db, runs
 from ideaforge.schemas import PERSONAS, RESEARCH_DIMENSIONS, Basis, Claim, InterimScores, Position, Rebuttal, ScoreSheet, Verdict
+from ideaforge.validate_file import candidate_claims
 
 MAPPING_NAME = ".mapping.json"
 ANON_NAME = "positions_anon.json"
@@ -56,6 +58,7 @@ INTERIM_NAME = "interim_scores.json"
 VERDICT_NAME = "verdict.json"
 EVIDENCE_DIR = "evidence"  # debate/evidence/<role>.json: each persona's evidence subset
 REPROMPTED_NAME = ".reprompted"  # round<N>/.reprompted: the roles already sent back once
+INTERIM_SKIPPED_NAME = "interim_scores.skipped"  # round<N>/: the judge's projection, set aside
 
 # Claim ids inside free text (a `basis.computation`); schemas.CLAIM_ID_RE without anchors.
 CLAIM_ID_IN_TEXT_RE = re.compile(r"\b[a-z_]+-\d{3,}\b")
@@ -934,9 +937,10 @@ def progress(run_id: str) -> Progress:
     if (d / VERDICT_NAME).exists():
         return Progress("render")
     tasks = db.mini_research_tasks(run_id)
+    ledger_ids = set(load_ledger(run_dir))
     done_unverified = [
         t for t in tasks
-        if t["status"] == "done" and not (run_dir / "03_claims" / f"mini-{t['n']}-{t['dimension']}.json").exists()
+        if t["status"] == "done" and not _mini_claim_ids(run_dir, t["n"], t["dimension"]) <= ledger_ids
     ]  # fmt: skip
     if done_unverified:
         t = done_unverified[0]
@@ -972,12 +976,35 @@ def progress(run_id: str) -> Progress:
         return Progress("mini-research", n, notes=[] if task is None else [f"task {task['n']} is running"])
     if not (rd / ANON_NAME).exists() or _anon_stale(run_id, n):
         return Progress("anonymize", n)
-    if load_interim(run_id, n) is None:
+    if load_interim(run_id, n) is None and not (rd / INTERIM_SKIPPED_NAME).exists():
         return Progress("interim", n)
     convergence = check_convergence(run_id, n)
     if convergence.stop:
         return Progress("judge", n, notes=convergence.met)
     return Progress("rebuttals", n + 1, list(PERSONAS), notes=convergence.notes)
+
+
+def _mini_claim_ids(run_dir: Path, n: int, dimension: str) -> set[str]:
+    """The candidate claim ids of a mini-research file. `verify_claims.py --only` writes its
+    03_claims/<stem>.json before fetching, so only the ledger shows that verification finished."""
+    md = agents.mini_output(run_dir, n, dimension)
+    return {c.claim_id for c in candidate_claims(md.read_text(encoding="utf-8"))[0]} if md.exists() else set()
+
+
+def skip_interim(run_id: str, round_no: int) -> Path:
+    """Set round N's interim projection aside after the judge failed it twice: an invalid file is
+    renamed (kept for reading), a missing one is recorded. (b) then does not hold for the round,
+    and later rounds compare with the latest valid interim file or the score sheet."""
+    _check_run(run_id)
+    d = round_dir(run_id, round_no)
+    if not d.is_dir():
+        raise DebateError(f"{d} does not exist")
+    path, skipped = d / INTERIM_NAME, d / INTERIM_SKIPPED_NAME
+    if path.exists():
+        path.replace(skipped)
+    else:
+        skipped.write_text("the judge wrote no interim_scores.json\n", encoding="utf-8")
+    return skipped
 
 
 def _anon_stale(run_id: str, round_no: int) -> bool:
@@ -1005,6 +1032,9 @@ def main(argv: list[str] | None = None) -> int:
     again = sub.add_parser("reprompt", help="list the rejected personas of round N to send back once")
     again.add_argument("run_id")
     again.add_argument("round", type=int)
+    skip = sub.add_parser("skip-interim", help="set round N's interim projection aside after two failures")
+    skip.add_argument("run_id")
+    skip.add_argument("round", type=int)
     status = sub.add_parser("status", help="print the debate's next step")
     status.add_argument("run_id")
     args = parser.parse_args(argv)
@@ -1024,6 +1054,10 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"final: {role} was already sent back once; it stays out of round {args.round}")
             if not now and not final:
                 print("nothing to re-prompt")
+            return 0
+        if args.command == "skip-interim":
+            path = skip_interim(args.run_id, args.round)
+            print(f"set aside: {path.relative_to(runs.run_dir(args.run_id)).as_posix()}; (b) does not hold for round {args.round}")
             return 0
         if args.command == "status":
             result = progress(args.run_id)

@@ -147,7 +147,7 @@ def check_write(data: dict[str, Any]) -> str | None:
                 return "write denied: no active run (runs/.active) for this debate agent"
             if not _within(target, (runs_dir / run_id / "debate").resolve()):
                 return f"write denied: {spec.name} may only write under runs/{run_id}/debate/"
-            if target.name in (debate.MAPPING_NAME, debate.ANON_NAME, debate.REPROMPTED_NAME) or target.name.startswith(
+            if target.name in (debate.MAPPING_NAME, debate.ANON_NAME, debate.REPROMPTED_NAME, debate.INTERIM_SKIPPED_NAME) or target.name.startswith(
                 debate.REJECTED_PREFIX
             ):
                 return f"write denied: {target.name} is written only by ideaforge.debate"

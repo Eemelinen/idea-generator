@@ -194,6 +194,8 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             print("\n".join(brief(args.run_id, task)))
             print(f"status: {task.status}")
+            if task.status == "running" and task.reason:
+                print(f"last errors (append them to the re-launch brief):\n{task.reason}")
             return 0
         result = finish_task(args.run_id, args.n)
     except Refused as e:

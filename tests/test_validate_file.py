@@ -375,7 +375,7 @@ def test_auto_research_agent_validates_its_running_mini_research_file(active_run
     with pytest.raises(SystemExit):
         vf.auto(hook | {"stop_hook_active": False}, stop=False)
     assert vf.auto(hook | {"stop_hook_active": True}, stop=False) == 0
-    assert "mini-1-pricing.md does not exist" in (active_run / "VALIDATION_FAILED_research-pricing").read_text(
+    assert "mini-1-pricing.md does not exist" in (active_run / "VALIDATION_FAILED_research-pricing.mini-1").read_text(
         encoding="utf-8"
     )
     shutil.copy(FIXTURES / ".seen_urls.txt", active_run / ".seen_urls.txt")
@@ -398,3 +398,19 @@ def test_mini_research_file_may_not_reuse_a_ledger_claim_id(active_run):
     # its own claims, once verified, are not "elsewhere"
     (active_run / "03_claims" / "mini-1-pricing.json").write_text('[{"claim_id": "pricing-001"}]', encoding="utf-8")
     vf.validate_research(mini)
+
+
+def test_mini_research_validation_markers_do_not_touch_stage_2_markers(active_run):
+    from test_guard import open_mini_task
+
+    stage2 = active_run / "VALIDATION_FAILED_research-pricing"
+    stage2.write_text("stage-2 failure\n", encoding="utf-8")
+    open_mini_task(active_run)
+    hook = {"agent_id": "a", "agent_type": "research-pricing", "stop_hook_active": True}
+    assert vf.auto(hook, stop=False) == 0  # no mini file: recorded under the task's own name
+    assert "mini-1-pricing.md" in (active_run / "VALIDATION_FAILED_research-pricing.mini-1").read_text(encoding="utf-8")
+    shutil.copy(FIXTURES / ".seen_urls.txt", active_run / ".seen_urls.txt")
+    shutil.copy(RESEARCH_FIXTURE, active_run / "02_research" / "mini-1-pricing.md")
+    assert vf.auto(hook, stop=False) == 0
+    assert not (active_run / "VALIDATION_FAILED_research-pricing.mini-1").exists()
+    assert stage2.read_text(encoding="utf-8") == "stage-2 failure\n"

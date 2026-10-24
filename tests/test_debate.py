@@ -731,3 +731,53 @@ def test_status_walks_the_debate_step_by_step(debate_run, capsys):
     assert status().step == "done"
     assert debate.main(["status", DEBATE_RUN]) == 0
     assert capsys.readouterr().out.strip().endswith("next: done")
+
+
+# ---------------------------------------------------------------- review fixes (IF-407)
+
+
+def test_an_interrupted_mini_research_verification_is_resumed(debating):
+    (debating / "05_report.md").write_text("# Synthetic report\n", encoding="utf-8")
+    debate.write_evidence(DEBATE_RUN)
+    task = open_round(debating, 1)
+    write_mini(debating, task)
+    mini_research.finish_task(DEBATE_RUN, 1)
+    # verify_claims.py --only wrote the pending claims file, then died before the ledger
+    verify.parse_run(debating, verify._now(), {task.stem})
+    assert (debating / "03_claims" / f"{task.stem}.json").exists()
+    assert (status().step, status().notes) == ("verify", [task.stem])
+    verify.verify_run(DEBATE_RUN, FakeWeb({MINI_URL: html(MINI_QUOTE)}), only=[task.stem])
+    assert status().step == "evidence"
+
+
+def test_an_interim_projection_the_judge_failed_twice_is_set_aside(debating, capsys):
+    (debating / "05_report.md").write_text("# Synthetic report\n", encoding="utf-8")
+    debate.write_evidence(DEBATE_RUN)
+    rebuttal_round(debating, 1)
+    debate.anonymize(DEBATE_RUN, 1)
+    interim = debating / "debate" / "round1" / debate.INTERIM_NAME
+    interim.write_text('{"round": 1, "projected_scores": {"market": 9}}', encoding="utf-8")
+    with pytest.raises(debate.DebateError):
+        debate.check_convergence(DEBATE_RUN, 1)
+    assert debate.main(["skip-interim", DEBATE_RUN, "1"]) == 0
+    assert "set aside" in capsys.readouterr().out
+    assert not interim.exists() and (interim.parent / debate.INTERIM_SKIPPED_NAME).exists()
+    result = debate.check_convergence(DEBATE_RUN, 1)
+    assert any(n.startswith("(b) not met: no round1/") for n in result.notes)
+    assert status().step in ("judge", "rebuttals")  # past `interim`
+    # a judge that wrote nothing in round 2 is recorded the same way
+    rebuttal_round(debating, 2)
+    debate.anonymize(DEBATE_RUN, 2)
+    assert status().step == "interim"
+    debate.skip_interim(DEBATE_RUN, 2)
+    assert status().step != "interim"
+
+
+def test_open_repeats_the_last_errors_of_a_running_task(debating, capsys):
+    task = open_round(debating, 1)
+    write_mini(debating, task, "# market\n\nNo claims.\n")
+    mini_research.finish_task(DEBATE_RUN, 1)
+    capsys.readouterr()
+    assert mini_research.main(["open", DEBATE_RUN, "1"]) == 0
+    out = capsys.readouterr().out
+    assert "last errors" in out and "Candidate claims" in out

@@ -401,7 +401,8 @@ def auto(data: dict[str, Any], stop: bool) -> int:
         spec = agents.get(hookio.agent_name(data))
         if spec is None or spec.kind == "harness":
             return hookio.OK  # not one of our pipeline agents
-        agent = spec.name
+        # A mini-research task has its own markers, so it neither clears nor fakes a stage-2 failure.
+        agent = usage.counter_key(run_dir, spec.name)
         if spec.kind == "research":
             targets = [(agents.research_target(run_dir, spec), "research")]
         elif spec.kind == "synthesizer":
