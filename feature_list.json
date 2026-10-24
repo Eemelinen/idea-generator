@@ -740,7 +740,7 @@
       "area": "ui",
       "title": "Persistent job queue and headless runner",
       "user_visible_behavior": "`python -m ideaforge.jobs enqueue|list|cancel|retry|worker` keeps pipeline jobs (validate, research, synthesize, debate, eval) in a `jobs` table; the worker runs one job at a time as `claude -p` with the strict guard, logs to `runs/.jobs/<job_id>.log`, chains follow-up jobs, marks a job interrupted by a restart or stopped by a usage limit as failed with that reason, and a new idea is created with `new_run.py --intake` so `/validate` takes its clarifications from `intake.json` and asks nothing.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-011", "F-019", "F-023", "F-025"],
       "ticket": "IF-604",
       "spec": "docs/TICKETS.md#if-604-persistent-job-queue-and-headless-runner",
@@ -749,7 +749,11 @@
         "L1: uv run pytest tests/test_jobs.py (queue order, one job at a time, chaining, cancel/retry, restart recovery, usage-limit reason, dev-marker refusal and HARNESS_LOOP dropped; fake claude binary)",
         "L1: uv run pytest tests/test_new_run.py tests/test_skills.py (--intake writes a valid intake.json; validate stage 0 reads it and asks no questions)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-24 pnpm check → pass (working tree on 1461a56)",
+        "2026-10-24 uv run pytest tests/test_jobs.py → pass (working tree on 1461a56)",
+        "2026-10-24 uv run pytest tests/test_new_run.py tests/test_skills.py → pass (working tree on 1461a56)"
+      ],
       "attempts": 0,
       "notes": "Promotes and widens the Phase 6 backlog item IF-604 (`claude -p` batch wrapper)."
     },

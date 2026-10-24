@@ -234,8 +234,31 @@ CREATE TABLE IF NOT EXISTS schema_version (
 # Ordered migrations: version n is MIGRATIONS[n - 1]. Never edit or reorder an applied one;
 # append a new one. Each must be idempotent (CREATE … IF NOT EXISTS), because a database made
 # before IF-601 already has the version-1 tables, and two processes may migrate at once.
+JOBS_SCHEMA = """
+-- Headless pipeline jobs (IF-604, ideaforge.jobs). A job with a predecessor (the job whose
+-- next_job_id points at it) waits while that one is not done.
+CREATE TABLE IF NOT EXISTS jobs (
+    job_id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind        TEXT NOT NULL CHECK (kind IN ('validate','research','synthesize','debate','eval')),
+    args        TEXT NOT NULL DEFAULT '{}',
+    run_id      TEXT,
+    status      TEXT NOT NULL DEFAULT 'queued'
+                CHECK (status IN ('queued','running','done','failed','cancelled')),
+    reason      TEXT,
+    pid         INTEGER,
+    created_at  TEXT NOT NULL,
+    started_at  TEXT,
+    finished_at TEXT,
+    exit_code   INTEGER,
+    log_path    TEXT,
+    next_job_id INTEGER REFERENCES jobs(job_id)
+);
+CREATE INDEX IF NOT EXISTS jobs_status ON jobs(status, job_id);
+"""
+
 MIGRATIONS: list[str] = [
     SCHEMA,  # 1: the pipeline schema as it stood before versioning
+    JOBS_SCHEMA,  # 2: the job queue (IF-604)
 ]
 
 

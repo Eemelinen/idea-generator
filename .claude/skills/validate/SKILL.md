@@ -55,7 +55,10 @@ Arguments: `$ARGUMENTS`
   2. Continue with Stage 0.
 
 "Just run it": if the user says so (in the arguments or a reply), ask no clarifying questions,
-use the defaults, and do not ask for approval of the plan.
+use the defaults, and do not ask for approval of the plan. A run whose directory has an
+`intake.json` (written by `new_run.py --intake`, e.g. for a headless job of
+`python -m ideaforge.jobs`) is always "just run it": nobody is there to answer, so never use
+`AskUserQuestion` for it.
 
 Before each stage, `uv run python scripts/run_stage.py <run_id> --next` tells you whether it
 still has to run. A `--begin` that exits 1 prints why (an earlier stage is incomplete); fix
@@ -65,7 +68,17 @@ that first, never work around it.
 
 1. `uv run python scripts/run_stage.py <run_id> intake --begin`
 2. Read `runs/<run_id>/idea.md`, `runs/<run_id>/meta.json` and `config/founder.yaml` (for a
-   new version also the parent's files listed under Start).
+   new version also the parent's files listed under Start). `ls runs/<run_id>/` shows whether
+   the run has an `intake.json`.
+   - **With `runs/<run_id>/intake.json`** (schema `Intake`): read it and
+     `uv run python -m ideaforge.validate_file --kind intake runs/<run_id>/intake.json` (on
+     exit 1 report the error and stop: it is the job's input, never edit it). It holds the
+     answers: ask no questions (skip step 3) and write `00_spec.json` from it in step 4:
+     `founder_constraints` gets `goal`, `capital_eur` and `hours_per_week` from it and
+     `skills` from it unless it is `null` (then `config/founder.yaml`'s); `geography` is its
+     `geography`; `clarifications` are its `answers`, verbatim; `kill_trigger_overrides` are
+     its `kill_trigger_overrides`. The run is "just run it" from here on.
+   - Without it, continue with step 3.
 3. Ask **at most 5** clarifying questions with `AskUserQuestion`, and only where the answer
    changes the research direction: geography (local service vs. online), the founder's goal
    (`side_income` | `full_time` | `starttiraha`), capital, hours per week, the paying customer.
@@ -118,7 +131,8 @@ that first, never work around it.
 5. `uv run python scripts/run_stage.py <run_id> plan --finish`
 6. Show a short plan summary (one line per dimension: its idea-specific questions) and ask
    with one `AskUserQuestion` whether to proceed or change the plan (it is not one of the 5
-   clarifying questions). After "just run it", show the summary and proceed without asking.
+   clarifying questions). After "just run it" (or with an `intake.json`), show the summary and
+   proceed without asking.
    If the user asks for changes, edit `01_plan.json`, validate it again and repeat this step.
 7. `uv run python scripts/usage_report.py <run_id>`: report it to the user.
 

@@ -13,6 +13,7 @@ import pytest
 import yaml
 
 from ideaforge import agents, config, debate, golden, guard, runs, validate_file
+from ideaforge.schemas import Intake
 
 ROOT = config.ROOT  # captured before the project fixture repoints config.ROOT
 SKILLS_DIR = ROOT / ".claude" / "skills"
@@ -181,6 +182,26 @@ def test_validate_stage0_intake_rules():
     assert "AskUserQuestion" in text and "at most 5" in text
     assert "config/founder.yaml" in text
     assert "00_spec.json" in text
+
+
+def test_validate_stage0_takes_the_clarifications_from_intake_json():
+    """IF-604: a run created with `new_run.py --intake` (a headless job) asks nothing."""
+    body = split("validate")[1]
+    text = sections(body)["Stage 0 — Intake"]
+    branch = text[text.find("**With `runs/<run_id>/intake.json`**") : text.find("3. Ask **at most 5**")]
+    assert branch, "no intake.json branch before the clarifying questions"
+    assert "ask no questions (skip step 3)" in branch
+    assert "uv run python -m ideaforge.validate_file --kind intake runs/<run_id>/intake.json" in branch
+    assert "never edit it" in branch
+    for field in Intake.model_fields:  # every intake field is mapped into 00_spec.json
+        assert f"`{field}`" in branch, field
+    assert "`clarifications` are its `answers`, verbatim" in branch
+    assert "AskUserQuestion" not in branch
+    # "just run it" for the rest of the run, including the plan approval in stage 1
+    assert "intake.json" in sections(body)["Start: new run or resume"].split("Before each stage")[0]
+    assert "never use\n`AskUserQuestion` for it" in body
+    assert "(or with an `intake.json`)" in sections(body)["Stage 1 — Research plan"]
+    assert '"--intake"' in (ROOT / "scripts" / "new_run.py").read_text(encoding="utf-8")
 
 
 def test_validate_stage1_plan_has_killcause_and_local_questions():
