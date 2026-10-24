@@ -5,6 +5,8 @@
 cached in cache/<sha256(url)>.txt and recorded in the `sources` table), marks a claim `verified`
 only when its quote matches the page text at rapidfuzz partial_ratio ≥ 90, types allow-listed
 official domains as `official`, and writes 03_claims/verified.json plus the `claims` rows.
+In a back-test run (`new_run.py --as-of`), a claim whose `published_date` is after the as-of date
+is `unverified` with the flag `after_as_of`, and its source is not fetched.
 
 The HTTP layer is a plain callable (`HttpGet`) so tests inject synthetic pages and never touch
 the network. API re-query and conflict detection (IF-209) build on this module.
@@ -18,7 +20,7 @@ import re
 import unicodedata
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
@@ -40,6 +42,8 @@ TIMEOUT_S = 10
 MATCH_THRESHOLD = 90.0
 # Flags this module owns: recomputed on every run, never taken from a research agent.
 FETCH_FLAGS = ("unfetchable", "robots_disallowed")
+AS_OF_FLAG = "after_as_of"
+OWNED_FLAGS = (*FETCH_FLAGS, AS_OF_FLAG)
 # HTML is reduced to its text; other text types (text/*, JSON, XML) are matched as they are;
 # anything else (PDF, images) is unfetchable.
 HTML_TYPES = ("", "text/html", "application/xhtml+xml")
@@ -316,9 +320,28 @@ def _source_known(url: str) -> bool:
 # ---------------------------------------------------------------- claims
 
 
+def after_as_of(claim: Claim, as_of: date | None) -> bool:
+    """A back-test claim from a source published after the as-of date. An undated source passes:
+    the date is unknown, not later (the back-test header asks the agent for dated sources)."""
+    return as_of is not None and claim.published_date is not None and claim.published_date > as_of
+
+
+def reject_after_as_of(claim: Claim, retrieved_at: datetime) -> Claim:
+    """The claim `unverified` with `after_as_of`, without fetching its source."""
+    flags = [f for f in claim.flags if f not in OWNED_FLAGS]
+    return claim.model_copy(
+        update={
+            "source_type": source_type(claim),
+            "retrieved_at": retrieved_at,
+            "flags": [*flags, AS_OF_FLAG],
+            "verification": "unverified",
+        }
+    )
+
+
 def verify_claim(claim: Claim, page: Page) -> Claim:
     """The claim with source_type, retrieved_at, flags and verification set from the page."""
-    flags = [f for f in claim.flags if f not in FETCH_FLAGS]
+    flags = [f for f in claim.flags if f not in OWNED_FLAGS]
     if page.status == "ok" and page.text is not None and quote_matches(claim.quote, page.text):
         verification = "verified"
     else:
@@ -393,9 +416,16 @@ def _file_claim_ids(run_dir: Path, stems: Iterable[str]) -> set[str]:
 def _fill(c: CandidateClaim, retrieved_at: datetime) -> Claim:
     data = c.model_dump()
     data["retrieved_at"] = data["retrieved_at"] or retrieved_at
-    data["flags"] = [f for f in data["flags"] if f not in FETCH_FLAGS]
+    data["flags"] = [f for f in data["flags"] if f not in OWNED_FLAGS]
     data["verification"] = "pending"
     return Claim.model_validate(data)
+
+
+def run_as_of(run_id: str) -> date | None:
+    """The back-test date of the run's `runs` row (`new_run.py --as-of`), or None."""
+    with db.session() as conn:
+        row = conn.execute("SELECT as_of FROM runs WHERE run_id=?", (run_id,)).fetchone()
+    return date.fromisoformat(row["as_of"]) if row is not None and row["as_of"] else None
 
 
 def verify_run(run_id: str, http_get: HttpGet | None = None, *, only: Iterable[str] | None = None) -> VerifyResult:
@@ -405,6 +435,7 @@ def verify_run(run_id: str, http_get: HttpGet | None = None, *, only: Iterable[s
     stems such as `mini-1-pricing`, a debate's mini-research), just those files are parsed and
     verified and added to the existing verified.json; every other claim in it keeps its state and
     `retrieved_at`, so the evidence under the score sheet does not move during a debate.
+    In a back-test run a claim published after the as-of date is rejected before any fetch.
     """
     run_dir = runs.run_dir(run_id)
     if not (run_dir / "02_research").is_dir():
@@ -420,6 +451,7 @@ def verify_run(run_id: str, http_get: HttpGet | None = None, *, only: Iterable[s
         replaced = _file_claim_ids(run_dir, stems) - _file_claim_ids(run_dir, others)
         kept = [c for c in _CLAIMS.validate_json(ledger.read_bytes()) if c.claim_id not in replaced]
     parsed, warnings = parse_run(run_dir, _now(), stems)
+    as_of = run_as_of(run_id)
 
     fetcher = Fetcher(http_get or requests_get)
     verified: list[Claim] = list(kept)
@@ -431,6 +463,11 @@ def verify_run(run_id: str, http_get: HttpGet | None = None, *, only: Iterable[s
                 warnings.append(f"{stem}.md: duplicate claim id {c.claim_id} skipped")
                 continue
             seen_ids.add(c.claim_id)
+            if after_as_of(c, as_of):
+                warnings.append(f"{c.claim_id}: {AS_OF_FLAG} (published {c.published_date}, as of {as_of})")
+                verified.append(reject_after_as_of(c, c.retrieved_at))
+                by_file[stem].append(verified[-1])
+                continue
             page = fetcher.get(c.source_url)
             if page.status != "ok":
                 warnings.append(f"{c.claim_id}: {page.status} {c.source_url} ({page.detail})")
@@ -451,10 +488,11 @@ def summary(result: VerifyResult) -> str:
             lines.append(f"{stem}: 0 claims")
             continue
         n = {s: sum(c.verification == s for c in cs) for s in ("verified", "unverified")}
-        f = {fl: sum(fl in c.flags for c in cs) for fl in FETCH_FLAGS}
+        f = {fl: sum(fl in c.flags for c in cs) for fl in OWNED_FLAGS}
+        late = f", {f[AS_OF_FLAG]} after as-of" if f[AS_OF_FLAG] else ""
         lines.append(
             f"{stem}: {n['verified']} verified, {n['unverified']} unverified"
-            f" ({f['unfetchable']} unfetchable, {f['robots_disallowed']} robots-disallowed)"
+            f" ({f['unfetchable']} unfetchable, {f['robots_disallowed']} robots-disallowed{late})"
         )
     total = len(result.claims)
     ok = sum(c.verification == "verified" for c in result.claims)

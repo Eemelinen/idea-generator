@@ -199,6 +199,33 @@ def test_validate_stage2_launch_retry_and_markers():
         assert item in text, item
 
 
+def test_research_briefs_pass_the_preset_budget_lines_and_as_of_header():
+    """IF-503/IF-506: the agent files carry the default preset, so every research brief (stage 2
+    and debate mini-research) gets the run's budget line and back-test header from research_brief.py."""
+    front, body = split("validate")
+    assert "[--as-of YYYY-MM-DD]" in front["argument-hint"]
+    start = sections(body)["Start: new run or resume"]
+    assert start.count("`--as-of <date>` if given") == 2
+    assert '"--as-of"' in (ROOT / "scripts" / "new_run.py").read_text(encoding="utf-8")
+    stage2 = sections(body)["Stage 2 — Parallel research"]
+    assert "uv run python scripts/research_brief.py <run_id> <dim>" in stage2
+    assert stage2.find("research_brief.py") < stage2.find("in one message")
+    for item in ("budget line", "back-test", "--preset", "--as-of", "verbatim"):
+        assert item in stage2, item
+    mini = sections(split("debate")[1])["Mini-research"]
+    assert "uv run python scripts/research_brief.py <run_id> <dim>" in mini
+    assert "back-test" in mini
+    # /research and /eval run validate's Stage 2, so they may run the script too.
+    for skill in ("validate", "research", "eval", "debate"):
+        assert "Bash(uv run python scripts/research_brief.py*)" in split(skill)[0]["allowed-tools"], skill
+
+
+def test_research_prompt_honours_the_brief_lines():
+    prompt = (ROOT / "prompts" / "research_base.md").read_text(encoding="utf-8")
+    assert "Back-test as of YYYY-MM-DD" in prompt and "after_as_of" in prompt
+    assert "replaces the numbers above" in prompt
+
+
 def test_validate_stage3_runs_the_verifier():
     text = sections(split("validate")[1])["Stage 3 — Claim verification"]
     assert "verify_claims.py <run_id>" in text

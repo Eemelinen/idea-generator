@@ -1,8 +1,8 @@
 ---
 name: validate
 description: Validate a business idea with the Ideaforge pipeline, stages 0–3. Creates a run (or, with --from <run_id>, the next version of an earlier run), writes the idea spec (at most 5 clarifying questions), the research plan, launches the 11 research subagents in parallel and verifies their claims; given an existing run id it resumes that run and skips completed stages and dimensions. Use when the user types /validate with an idea or a run id.
-argument-hint: '[--preset economy|standard|deep] <idea text> | <run_id> | --from <run_id> [<revised idea text>]'
-allowed-tools: Read Write Agent AskUserQuestion Bash(uv run python scripts/new_run.py*) Bash(uv run python scripts/run_stage.py*) Bash(uv run python scripts/verify_claims.py*) Bash(uv run python scripts/usage_report.py*) Bash(uv run python scripts/status.py*) Bash(uv run python -m ideaforge.validate_file*) Bash(ls*) Bash(cat*)
+argument-hint: '[--preset economy|standard|deep] [--as-of YYYY-MM-DD] <idea text> | <run_id> | --from <run_id> [<revised idea text>]'
+allowed-tools: Read Write Agent AskUserQuestion Bash(uv run python scripts/new_run.py*) Bash(uv run python scripts/run_stage.py*) Bash(uv run python scripts/research_brief.py*) Bash(uv run python scripts/verify_claims.py*) Bash(uv run python scripts/usage_report.py*) Bash(uv run python scripts/status.py*) Bash(uv run python -m ideaforge.validate_file*) Bash(ls*) Bash(cat*)
 ---
 
 You are the orchestrator of an Ideaforge run. You write only the two planning files
@@ -29,21 +29,26 @@ Arguments: `$ARGUMENTS`
   parent's next idea version, a new run `<parent_run_id>-vN` (the parent's `-vN` suffix is
   replaced) linked through `idea_versions.parent`. The parent run stays immutable: never write,
   re-run or resume anything under `runs/<parent_run_id>/`.
-  1. `uv run python scripts/new_run.py --from <parent_run_id>` (add `--preset <name>` if
-     given), or `uv run python scripts/new_run.py --from <parent_run_id> '<idea text>'` when
+  1. `uv run python scripts/new_run.py --from <parent_run_id>` (add `--preset <name>` and
+     `--as-of <date>` if given), or `uv run python scripts/new_run.py --from <parent_run_id> '<idea text>'` when
      the user gave a revised idea text after the run id (same quoting rules as a new run).
      Without a text the new version keeps the parent's idea text. It prints only the new run
      id and makes it the active run. The new version keeps the parent's budget preset and
-     `--as-of` date unless `--preset` is given. Exit 2 prints why (unknown parent, empty idea
-     text, unknown preset): tell the user and stop.
+     `--as-of` date unless `--preset` or `--as-of` is given. Exit 2 prints why (unknown
+     parent, empty idea text, unknown preset, a bad date): tell the user and stop.
   2. Read-only context for Stage 0: `runs/<parent_run_id>/00_spec.json`, and when they exist
      `runs/<parent_run_id>/05_report.md` and `runs/<parent_run_id>/debate/revised_plan.md`.
      Ask only about what the revision changes; reuse the parent's answers otherwise.
   3. Continue with Stage 0 for the new run id. Every stage runs again: no file is copied from
      the parent, because its claims and scores belong to the parent's version.
-- **New run** otherwise. Take `--preset <name>` out of the arguments if present; the rest is
-  the idea text. If the text is empty, ask the user for the idea and stop.
-  1. `uv run python scripts/new_run.py '<idea text>'` (add `--preset <name>` if given). Put
+- **New run** otherwise. Take `--preset <name>` and `--as-of <date>` out of the arguments if
+  present; the rest is the idea text. If the text is empty, ask the user for the idea and stop.
+  `--preset` picks the budget preset in `config/budget.yaml` (economy, standard or deep; the
+  default is `default_preset`). `--as-of YYYY-MM-DD` makes the run a back-test: research as of
+  that date, with every brief carrying the header from `research_brief.py` and
+  `verify_claims.py` rejecting claims published after it (`after_as_of`).
+  1. `uv run python scripts/new_run.py '<idea text>'` (add `--preset <name>` and
+     `--as-of <date>` if given). Put
      the idea in single quotes and leave out what the guard refuses inside a command: single
      and double quotes, backticks, dollar signs, `#` and backslashes (replace them with spaces).
      It prints only the run id; use it verbatim from here on. It also makes the run active.
@@ -142,15 +147,19 @@ that first, never work around it.
    not launch it.
 2. For each dimension to launch: `uv run python scripts/run_stage.py <run_id> research:<dim> --begin`
    (chain them with `&&` in one command).
-3. Read `runs/<run_id>/meta.json` (`budget_preset`) and that preset in `config/budget.yaml`.
-   Then launch **all** the dimensions to research **in one message** (one `Agent` call each,
-   `subagent_type` from the table) so they run in parallel. Each brief contains:
+3. For each dimension to launch, `uv run python scripts/research_brief.py <run_id> <dim>`
+   prints its run-specific brief lines: the budget line of the run's preset (`--preset`; the
+   `research_subagent` entry of `config/budget.yaml`, or `killcause_scout` for killcause) and,
+   in a back-test run (`--as-of`), the header that forbids sources published after that date.
+   The agent files carry the default preset's numbers and no date, so these lines are what
+   sets the agent's budget. Then launch **all** the dimensions to research **in one message**
+   (one `Agent` call each, `subagent_type` from the table) so they run in parallel. Each brief
+   contains:
    - `run_id: <run_id>` and the spec path `runs/<run_id>/00_spec.json`
    - the dimension's entry of `01_plan.json`, verbatim (questions, search strategy,
      preferred domains, evidence needed)
-   - the budget line: `max_web_searches`, `max_web_fetches` and `max_output_words` from the
-     preset's `research_subagent` entry, or its `killcause_scout` entry for killcause (a key
-     that entry omits keeps the value in the agent's own prompt)
+   - the lines `research_brief.py` printed, verbatim (the budget line, and the back-test
+     header when there is one)
    - the output path from the table, and "write no other file"
 4. When all have returned, finish each launched dimension:
    `uv run python scripts/run_stage.py <run_id> research:<dim> --finish`. Exit 0 → `done`.

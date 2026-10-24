@@ -1,4 +1,5 @@
 import math
+import re
 
 import pytest
 from pydantic import ValidationError
@@ -47,3 +48,26 @@ def test_finland_hints_are_flagged_for_verification():
 def test_official_domains_include_core_sources():
     official = set(config.domains().official)
     assert {"vero.fi", "prh.fi", "finlex.fi", "stat.fi", "raakkyla.fi"} <= official
+
+
+def test_readme_usage_section_matches_config():
+    """IF-508: the README's preset table and downgrade order are what config/ says."""
+    readme = (config.ROOT / "README.md").read_text(encoding="utf-8")
+    section = readme.split("## Usage limits, presets and model downgrades", 1)[1].split("\n## ", 1)[0]
+    budget = config.budget()
+    rows = re.findall(r"^\s*\| `(\w+)`\s*\|(.+)\|\s*$", section, re.MULTILINE)
+    assert [name for name, _ in rows] == list(budget.presets)
+    for name, cells in rows:
+        p = budget.preset(name)
+        r, k = p.research_subagent, p.killcause_scout
+        expected = [
+            f"{r.max_web_searches} / {r.max_web_fetches}", str(r.max_output_words),
+            f"{k.max_web_searches} / {k.max_web_fetches}", str(p.debate.max_rounds), str(p.debate.max_mini_research_tasks),
+        ]
+        assert [c.strip() for c in cells.split("|")] == expected, name
+    assert f"the default is `{budget.default_preset}`" in section
+    order = re.search(r"Downgrade order[^:]*: ([\w →]+)\.", config.models().notes).group(1).split(" → ")
+    positions = [section.find(f"`{role}`") for role in order]
+    assert -1 not in positions and positions == sorted(positions), order
+    for item in ("/usage", "gen_agents.py", "/eval --limit 3", "/status --diff", "Fable", "50 %", "/model"):
+        assert item in section, item

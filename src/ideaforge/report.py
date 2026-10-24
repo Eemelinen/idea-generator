@@ -310,7 +310,7 @@ def source_rows(claims: list[Claim]) -> list[dict[str, Any]]:
         states: dict[str, int] = {}
         for c in group:
             states[c.verification] = states.get(c.verification, 0) + 1
-        flags = sorted({f for c in group for f in c.flags if f in verify.FETCH_FLAGS})
+        flags = sorted({f for c in group for f in c.flags if f in verify.OWNED_FLAGS})
         rows.append(
             {
                 "url": url,

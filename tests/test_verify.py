@@ -3,6 +3,7 @@
 import hashlib
 import json
 import shutil
+from datetime import date
 
 import pytest
 
@@ -417,3 +418,91 @@ def test_script_rejects_unknown_runs(project, capsys):
     assert verify_claims.main(["not a run id"]) == 1
     assert verify_claims.main(["20261023-120000-missing"]) == 1
     assert "does not exist" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------- back-test (IF-503)
+
+# Synthetic back-test research file: one claim published before the as-of date, one after it,
+# one undated; all three quotes are on their (synthetic) pages.
+AS_OF_MD = """# pricing
+
+## Candidate claims
+
+```json
+[
+  {"claim_id": "pricing-001", "dimension": "pricing", "statement": "Synthetic early price.",
+   "value": 650, "unit": "EUR/week", "source_url": "https://example.fi/mokki-123", "source_title": "Synthetic",
+   "quote": "Hinta 650 € / viikko, sisältää liinavaatteet ja loppusiivouksen.", "published_date": "2024-06-01",
+   "source_type": "vendor", "confidence": 0.8, "flags": []},
+  {"claim_id": "pricing-002", "dimension": "pricing", "statement": "Synthetic later price.",
+   "value": 650, "unit": "EUR/week", "source_url": "https://example.fi/mokki-456", "source_title": "Synthetic",
+   "quote": "Hinta 650 € / viikko, sisältää liinavaatteet ja loppusiivouksen.", "published_date": "2024-07-01",
+   "source_type": "vendor", "confidence": 0.8, "flags": ["after_as_of"]},
+  {"claim_id": "pricing-003", "dimension": "pricing", "statement": "Synthetic undated price.",
+   "value": 650, "unit": "EUR/week", "source_url": "https://example.fi/mokki-789", "source_title": "Synthetic",
+   "quote": "Hinta 650 € / viikko, sisältää liinavaatteet ja loppusiivouksen.",
+   "source_type": "vendor", "confidence": 0.8, "flags": ["after_as_of"]}
+]
+```
+
+## Gaps
+
+- None.
+"""
+
+
+def as_of_web():
+    page = html("<p>Hinta 650 € / viikko, sisältää liinavaatteet ja loppusiivouksen.</p>")
+    return FakeWeb({f"https://example.fi/mokki-{n}": page for n in (123, 456, 789)})
+
+
+@pytest.fixture
+def as_of_run(active_run):
+    db.init()
+    db.create_run(RUN_ID, "test idea", idea_id="test-idea", as_of="2024-06-30")
+    (active_run / "02_research" / "pricing.md").write_text(AS_OF_MD, encoding="utf-8")
+    return active_run
+
+
+def test_claim_after_the_as_of_date_is_unverified(as_of_run):
+    web = as_of_web()
+    result = verify.verify_run(RUN_ID, web)
+    claims = {c["claim_id"]: c for c in json.loads((as_of_run / "03_claims" / "verified.json").read_text(encoding="utf-8"))}
+    assert (claims["pricing-001"]["verification"], claims["pricing-001"]["flags"]) == ("verified", [])
+    # The quote is on its page, but the page is later than the back-test: rejected, never fetched.
+    assert (claims["pricing-002"]["verification"], claims["pricing-002"]["flags"]) == ("unverified", ["after_as_of"])
+    assert claims["pricing-002"]["retrieved_at"] and claims["pricing-002"]["source_type"] == "vendor"
+    assert "https://example.fi/mokki-456" not in web.calls
+    # Undated: not known to be later, so verified, and an agent-set after_as_of flag is dropped.
+    assert (claims["pricing-003"]["verification"], claims["pricing-003"]["flags"]) == ("verified", [])
+    assert "pricing-002: after_as_of (published 2024-07-01, as of 2024-06-30)" in result.warnings
+    assert "pricing: 2 verified, 1 unverified (0 unfetchable, 0 robots-disallowed, 1 after as-of)" in verify.summary(result)
+    with db.session() as conn:
+        row = conn.execute("SELECT verification, flags FROM claims WHERE claim_id='pricing-002'").fetchone()
+    assert (row["verification"], json.loads(row["flags"])) == ("unverified", ["after_as_of"])
+
+
+def test_claim_on_the_as_of_date_passes():
+    claim = verify.Claim.model_validate(
+        json.loads(AS_OF_MD.split("```json")[1].split("```")[0])[0] | {"retrieved_at": "2026-10-23T12:00:00+00:00"}
+    )
+    assert claim.published_date == date(2024, 6, 1)
+    assert not verify.after_as_of(claim, date(2024, 6, 1))
+    assert verify.after_as_of(claim, date(2024, 5, 31))
+    assert not verify.after_as_of(claim, None)
+
+
+def test_without_as_of_a_later_claim_verifies(active_run):
+    db.init()
+    db.create_run(RUN_ID, "test idea", idea_id="test-idea")
+    (active_run / "02_research" / "pricing.md").write_text(AS_OF_MD, encoding="utf-8")
+    result = verify.verify_run(RUN_ID, as_of_web())
+    assert all(c.verification == "verified" and c.flags == [] for c in result.claims)
+
+
+def test_script_main_back_test(as_of_run, monkeypatch, capsys):
+    monkeypatch.setattr(verify, "requests_get", as_of_web())
+    assert verify_claims.main([RUN_ID]) == 0
+    out, err = capsys.readouterr()
+    assert "1 after as-of" in out and "total: 2/3 verified" in out
+    assert "warning: pricing-002: after_as_of" in err
