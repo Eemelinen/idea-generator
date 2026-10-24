@@ -193,10 +193,8 @@ def test_broken_debate_files_show_an_error_instead_of_failing(runs_set):
     assert lake.debate.startswith("error: ") and "verified.json does not exist" in lake.debate
 
 
-def test_placeholders_and_static(client):
-    # /jobs is built by IF-607 (tests/test_web_control.py); Settings is still a placeholder
-    resp = client.get("/settings")
-    assert resp.status_code == 200 and "IF-608" in resp.text
+def test_static(client):
+    # /jobs and /settings are tested in tests/test_web_control.py and tests/test_web_settings.py
     css = client.get("/static/app.css")
     assert css.status_code == 200 and "text/css" in css.headers["content-type"]
 

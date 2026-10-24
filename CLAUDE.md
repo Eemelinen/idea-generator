@@ -55,6 +55,6 @@ How to run: `uv sync`, `uv run python scripts/gen_agents.py`, then `/validate <i
 - `scripts/`: stage entry points (`new_run.py`, `gen_agents.py`, …).
 - `runs/<run_id>/`: all outputs of one run. `runs/.active` holds the active run id, which hooks read. `IDEAFORGE_RUN_ID` overrides it.
 
-**Model policy.** All roles default to `opus` per `config/models.yaml`. Do not change models in agent files; change the config and run `gen_agents.py`.
+**Model policy.** All roles default to `opus` per `config/models.yaml`. Do not change models in agent files; change the config and run `gen_agents.py`. The web UI's Settings pages (`/settings`) are another way to edit `config/` under the same single-source rule: a save validates the file, regenerates the agents when they depend on it and is refused while a job runs; the `harness_*` roles stay hand-edited.
 
 **Finland policy.** Regulatory, tax and grant claims must cite an allow-listed official domain from `config/domains.yaml` (vero.fi, prh.fi, ytj.fi, suomi.fi, tyomarkkinatori.fi, finlex.fi, elinvoimakeskus.fi, finnvera.fi, businessfinland.fi, luotsipohjoiskarjala.fi, jetina.fi, maaseutu.fi, raakkyla.fi, stat.fi, luke.fi, ec.europa.eu/eurostat). Values in `config/finland.yaml` are _hints to verify_, not facts.

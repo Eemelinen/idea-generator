@@ -784,7 +784,7 @@
       "area": "ui",
       "title": "Settings editor with history",
       "user_visible_behavior": "A settings page edits every `config/*.yaml` file (models, budget presets, founder, report, rubric, domains, Finland hints) through forms validated by the `ideaforge.config` models, keeps the files' comments, regenerates the agents after a model change, refuses to save while a job runs, and records every save in a `settings_history` table with a diff and a revert.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-030"],
       "ticket": "IF-608",
       "spec": "docs/TICKETS.md#if-608-settings-editor-with-history",
@@ -792,7 +792,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_web_settings.py (round-trip keeps comments; invalid values rejected unchanged; models save runs gen_agents and keeps harness_* roles read-only; history diff and revert; refusal while a job runs)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-24 pnpm check → pass (working tree on 539b45a)",
+        "2026-10-24 uv run pytest tests/test_web_settings.py → pass (working tree on 539b45a)"
+      ],
       "attempts": 0,
       "notes": "Pipeline settings only: `harness.config.json` stays out of the UI."
     },

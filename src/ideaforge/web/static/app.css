@@ -368,3 +368,45 @@ pre.log {
   white-space: pre-wrap;
   word-break: break-all;
 }
+
+table.settings td {
+  vertical-align: top;
+}
+
+table.settings textarea {
+  width: 32rem;
+  max-width: 100%;
+}
+
+table.settings input[type='text'] {
+  width: 32rem;
+  max-width: 100%;
+}
+
+table.settings input.number {
+  width: 8rem;
+}
+
+textarea.raw {
+  display: block;
+  width: 100%;
+  font-family: ui-monospace, monospace;
+}
+
+pre.yaml-header {
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+pre.diff .add {
+  color: var(--go);
+}
+
+pre.diff .del {
+  color: var(--no-go);
+}
+
+pre.diff .hunk,
+pre.diff .meta {
+  color: var(--muted);
+}
