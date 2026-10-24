@@ -47,8 +47,9 @@ def write_turn(run_dir, round_no, role, data):
 
 
 def debate_round(run_dir, agreeing=()):
-    """Validated round 1. Without `agreeing`, the founder brings in pricing-001 (a new claim id,
-    so no conformity) and the others disagree with a gap; with it, those roles agree with the
+    """Validated round 1. Without `agreeing`, the founder agrees with the investor on pricing-001
+    (new to the founder; the customer's position cited it, so not new to the debate) and the others
+    disagree with a gap, so one backer and no conformity; with it, those roles agree with the
     founder's position by a computation over their own round-0 claim (no new claim id) and the rest
     disagree."""
     for role in PERSONAS:
