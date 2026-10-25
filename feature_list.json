@@ -1,6 +1,6 @@
 {
   "project": "idea-generator",
-  "last_updated": "2026-10-24",
+  "last_updated": "2026-10-25",
   "rules": {
     "single_active_feature": true,
     "passing_requires_evidence": true,
@@ -812,6 +812,96 @@
       "verification": [
         "L1: pnpm check",
         "manual: every IF-609 acceptance item observed through the UI on a real idea; results recorded under the ticket"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "F-037",
+      "priority": 37,
+      "area": "pipeline",
+      "title": "Idea scope: business mode and base location",
+      "user_visible_behavior": "The New idea and New version forms ask for a business mode (online, local or hybrid) and a base location (municipality and region with their statistics codes, nearby towns, official domains, optional Leader group) next to the target-market ladder, prefilled from `config/founder.yaml` (editable on the Settings page, Rääkkylä by default). The values are stored in `intake.json` and `00_spec.json`, shown on the run's Idea tab, and runs created before the change still load as Rääkkylä / local.",
+      "status": "not_started",
+      "depends_on": [],
+      "ticket": "IF-701",
+      "spec": "docs/TICKETS.md#if-701-idea-scope-business-mode-and-base-location",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_schemas.py tests/test_new_run.py tests/test_web_control.py tests/test_web_settings.py tests/test_config.py tests/test_skills.py (new fields validate and default to Rääkkylä / local; an old spec without them still loads; the forms prefill from founder.yaml and from the parent spec and reject an invalid mode; the Settings founder form shows the new fields; validate Stage 0 maps them from intake.json)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": "From the 2026-10-25 audit of hardcoded Rääkkylä assumptions (TICKETS.md Phase 7). The later scope features build on these fields."
+    },
+    {
+      "id": "F-038",
+      "priority": 38,
+      "area": "research",
+      "title": "Research and debate briefs follow the run's scope",
+      "user_visible_behavior": "Every research, mini-research and debate brief carries a scope line from the run's spec (mode, base location with codes, target markets), and the research and debate prompts no longer name Rääkkylä: local-only steps (premises, zoning, catchment population, local networks) apply to local and hybrid ideas, and online ideas get online steps (national and EU e-commerce demand, webshops and marketplaces, shipping and fulfilment costs, platform and payment fees, distance-selling and consumer rules, EU VAT OSS, digital channels).",
+      "status": "not_started",
+      "depends_on": ["F-037"],
+      "ticket": "IF-702",
+      "spec": "docs/TICKETS.md#if-702-research-and-debate-briefs-follow-the-runs-scope",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_brief.py tests/test_gen_agents.py tests/test_skills.py (scope lines for an online, a local and a hybrid spec; the generated agents contain no fixed place names or codes and are up to date; validate Stage 1 and the debate skill pass the scope lines)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "F-039",
+      "priority": 39,
+      "area": "scoring",
+      "title": "Rubric and official sources follow the run's scope",
+      "user_visible_behavior": "The rubric names no place: the location dimension becomes \"Location fit\" (catchment area for local ideas, operating base and logistics for online ones, weight unchanged), the market, gtm, regulation, financing and killcause questions refer to the spec's base and markets, and a claim from one of the run's own official domains (the base municipality's site, its Leader group) counts as official while those domains leave the global allow-list.",
+      "status": "not_started",
+      "depends_on": ["F-037"],
+      "ticket": "IF-703",
+      "spec": "docs/TICKETS.md#if-703-rubric-and-official-sources-follow-the-runs-scope",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_scoring.py tests/test_verify.py tests/test_config.py tests/test_gen_agents.py (a run-level official domain satisfies has_official_source for that run only; the rubric has no fixed place names; weights still sum to 1)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "F-040",
+      "priority": 40,
+      "area": "report",
+      "title": "Report and business plan follow the run's scope",
+      "user_visible_behavior": "The report's \"Location notes\" section (formerly \"Rääkkylä location notes\") collects claims about the run's own base location and nearby towns, the Leader programme shows the run's Leader group or is left out, and section 8 of the starttiraha business-plan draft asks for premises for local ideas and for storage, fulfilment and the webshop platform for online ones.",
+      "status": "not_started",
+      "depends_on": ["F-037"],
+      "ticket": "IF-704",
+      "spec": "docs/TICKETS.md#if-704-report-and-business-plan-follow-the-runs-scope",
+      "verification": [
+        "L1: pnpm check",
+        "L1: uv run pytest tests/test_report.py tests/test_status.py tests/test_revised_plan.py (location notes match a non-Rääkkylä spec; review sections equal the template headings; the business-plan fill-in text depends on the mode; the golden snapshot is regenerated)"
+      ],
+      "evidence": [],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "F-041",
+      "priority": 41,
+      "area": "acceptance",
+      "title": "Scope acceptance: an online idea from the UI",
+      "user_visible_behavior": "An online-store idea submitted through the UI with mode online and markets Finland → EU runs validate → synthesize, and its plan, research and report size the market and competition nationally and in the EU, with Rääkkylä appearing only as the operating base; a local idea with the default scope still gets the Rääkkylä research.",
+      "status": "not_started",
+      "depends_on": ["F-038", "F-039", "F-040"],
+      "ticket": "IF-705",
+      "spec": "docs/TICKETS.md#if-705-scope-acceptance-an-online-idea-from-the-ui",
+      "verification": [
+        "L1: pnpm check",
+        "manual: an online idea and a local idea run validate → synthesize from the UI; every IF-705 acceptance item observed and recorded under the ticket"
       ],
       "evidence": [],
       "attempts": 0,
