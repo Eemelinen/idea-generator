@@ -333,6 +333,7 @@ These came out of reviewing the plan. Phase 1 already applies them; later ticket
 | IF-703        | F-039   | Rubric and official sources follow the run's scope     | —               | F-037                      | unattended |
 | IF-704        | F-040   | Report and business plan follow the run's scope        | —               | F-037                      | unattended |
 | IF-705        | F-041   | Scope acceptance: an online idea from the UI           | —               | F-038, F-039, F-040        | human      |
+| IF-217        | F-042   | Conflict detection compares like with like             | —               | —                          | unattended |
 | IF-602–IF-603 | —       | Backlog (not queued)                                   | —               | —                          | —          |
 
 ---
@@ -538,6 +539,25 @@ Absorbs IF-102–IF-107. Kept for reference:
 - Record the results under this ticket.
 
 ---
+
+### IF-217 Conflict detection compares like with like
+
+- **Mode:** unattended. **Depends on:** —.
+- **Why:** on the F-041 acceptance run (`20261025-172428-an-online-store-selling-dried`) every one of the 9 conflict groups (30 claims) was false. `conflict` claims never count toward a score, so the run lost its core Statistics Finland and Eurostat demand figures. `verify.statements_similar` compares whole statements (token_sort_ratio ≥ 80), and statements read from one table share almost every word. The groups, by pattern (a group can show several):
+  - **Same source, different cells (7 of 9):** 61 % bought anything online vs 14 % bought food or drinks vs 11 % bought medicines (one StatFin query); Shopify Basic billed yearly vs monthly (one page).
+  - **Different place (3):** Finland 16.24 % vs Netherlands 24.45 % vs EU-27 10.98 % (one Eurostat query); 0 companies in Kitee vs 2 in Joensuu (one PRH query per municipality).
+  - **Different period (4):** 2024 vs 2020, 2022 vs 2012, "last 3 months" vs "last 12 months".
+  - **Different measure (4):** trade enterprises closed vs started; dried fruit vs fresh berries.
+  - **Chaining:** `detect_conflicts` joins pairs transitively, so one group grew to 8 claims.
+- **Scope:**
+  - **Same source never conflicts:** two claims with the same `source_url` never conflict, nor do two `api` claims: verification re-runs each query and checks the exact figure, so two such values are two cells of the source, not a disagreement.
+  - **Like with like:** mask each claim's own value in its statement and compare what is left. When the remaining tokens differ by a year or period (`2024`, `2025Q4`, `12 months`), a place or other proper name, or a content word (`closed`/`started`, `yearly`/`monthly`, `dried fruit`/`fresh berries`), the claims measure different things and do not conflict. Two sources giving different figures for the same statement still do.
+  - **No chaining:** a group forms only where every pair of its claims conflicts.
+  - **Re-check a ledger:** `scripts/verify_claims.py <run_id> --conflicts-only` recomputes `03_claims/conflicts.json` and the `verified`/`conflict` states from `03_claims/verified.json` alone, fetching nothing, for runs whose report is not yet written (reports stay immutable).
+  - Keep the rule deterministic (no model call) and record the interpretations in a plan note.
+- **Docs:** the module docstring of `verify.py`, IMPLEMENTATION_PLAN.md (claim verification), `prompts/synthesizer.md` only if its description of `conflicts` changes.
+- **Verification:** `L1: pnpm check` · `L1: uv run pytest tests/test_verify.py` (each pattern above, built from those statements and labelled synthetic, is not a conflict; a group needs every pair to conflict; two sources with different figures for the same statement still conflict; `--conflicts-only` rewrites `conflicts.json` and the claim states without fetching).
+- **Acceptance:** as the verification.
 
 ## Phase 3: Scoring and report
 
