@@ -12,6 +12,7 @@ import verify_claims
 from ideaforge import db, validate_file, verify
 from ideaforge.fi import prh, requery
 from ideaforge.fi.http import FiDataError
+from ideaforge.schemas import BaseLocation, default_base_location
 from ideaforge.verify import Fetcher, FetchError, HttpResponse
 
 from conftest import FIXTURES
@@ -106,6 +107,55 @@ def test_source_typing():
     assert verify.source_type(_claim(source_url="https://www.vero.fi/a", source_type="news")) == "official"
     assert verify.source_type(_claim(source_url="https://pxdata.stat.fi/PXWeb/api/v1/x", source_type="api")) == "api"
     assert verify.source_type(_claim(source_url="https://example.fi/a", source_type="vendor")) == "vendor"
+
+
+def test_run_official_domains_add_the_base_location_sites():
+    """IF-703: the base's sites and Leader group are official through the run's list only."""
+    base = BaseLocation(municipality="Esimerkki", region="Synthetic region",
+                        official_domains=["example-kunta.fi"], leader_group={"name": "Synthetic", "domain": "leader.example.fi"})  # fmt: skip
+    official = verify.official_domains(base)
+    assert official[: len(verify.config.domains().official)] == verify.config.domains().official
+    assert official[-2:] == ["example-kunta.fi", "leader.example.fi"]
+    assert verify.official_domains() == verify.config.domains().official
+    town = _claim(source_url="https://www.example-kunta.fi/palvelut", source_type="news")
+    assert verify.source_type(town) == "news"
+    assert verify.source_type(town, official) == "official"
+    assert verify.is_official("https://leader.example.fi/hanke", official)
+    assert not verify.is_official("https://www.raakkyla.fi/", official)
+
+
+def test_run_base_location_reads_the_spec(active_run):
+    assert verify.run_base_location(active_run) is None  # no spec: the global list only
+    spec = json.loads((FIXTURES / "spec.json").read_text(encoding="utf-8"))
+    (active_run / "00_spec.json").write_text(json.dumps(spec), encoding="utf-8")
+    # a spec written before D-009 loads with the schema default, like IdeaSpec
+    assert verify.run_base_location(active_run) == default_base_location()
+    base = {"municipality": "Esimerkki", "region": "Synthetic region", "official_domains": ["example-kunta.fi"]}
+    (active_run / "00_spec.json").write_text(json.dumps(spec | {"base_location": base}), encoding="utf-8")
+    assert verify.run_base_location(active_run) == BaseLocation.model_validate(base)
+
+
+def test_verify_run_types_the_run_base_domains_official(active_run):
+    """A claim on the base's own site is typed official in the run based there, and the same
+    domain in another run's base (the founder default's raakkyla.fi) is not."""
+    db.init()
+    db.create_run(RUN_ID, "test idea", idea_id="test-idea")
+    spec = json.loads((FIXTURES / "spec.json").read_text(encoding="utf-8"))
+    base = {"municipality": "Esimerkki", "region": "Synthetic region", "official_domains": ["example-kunta.fi"]}
+    (active_run / "00_spec.json").write_text(json.dumps(spec | {"base_location": base}), encoding="utf-8")
+    md = research_md(
+        "regulation",
+        [{"claim_id": "regulation-001", "statement": "Synthetic zoning claim.", "source_url": "https://www.example-kunta.fi/kaava",
+          "quote": "Synthetic zoning rule text.", "source_type": "news"},
+         {"claim_id": "regulation-002", "statement": "Synthetic other-town claim.", "source_url": "https://www.raakkyla.fi/kaava",
+          "quote": "Synthetic zoning rule text.", "source_type": "news"}],
+    )  # fmt: skip
+    (active_run / "02_research" / "regulation.md").write_text(md, encoding="utf-8")
+    page = html("<p>Synthetic zoning rule text.</p>")
+    web = FakeWeb({"https://www.example-kunta.fi/kaava": page, "https://www.raakkyla.fi/kaava": page})
+    claims = {c.claim_id: c for c in verify.verify_run(RUN_ID, web).claims}
+    assert (claims["regulation-001"].verification, claims["regulation-001"].source_type) == ("verified", "official")
+    assert (claims["regulation-002"].verification, claims["regulation-002"].source_type) == ("verified", "news")
 
 
 # ---------------------------------------------------------------- fetching

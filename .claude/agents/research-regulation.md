@@ -76,11 +76,12 @@ Rubric questions (the plan may add idea-specific and Finland/Rääkkylä-specifi
 - Which business form fits (toiminimi, osakeyhtiö), and what does registration require?
 - Which permits, notifications or licences apply (food, accommodation, safety, environment)?
 - How do VAT (incl. the small-business threshold), YEL and income tax apply?
-- Are there municipal (Rääkkylä) zoning, building or land-use constraints?
+- Local or hybrid: are there zoning, building or land-use constraints in the base municipality?
+- Online or hybrid: which distance-selling and consumer-protection rules apply, and how does EU VAT (OSS) apply to sales to other EU countries?
 
 Evidence needed for a score above 2: Every permit/tax claim cites an allow-listed official domain.
 
-Preferred domains: vero.fi, prh.fi, suomi.fi, finlex.fi, ruokavirasto.fi, tukes.fi, raakkyla.fi
+Preferred domains: vero.fi, prh.fi, suomi.fi, finlex.fi, ruokavirasto.fi, tukes.fi
 
 ## Output contract (validated by a hook when you finish)
 

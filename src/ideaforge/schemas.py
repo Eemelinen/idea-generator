@@ -110,6 +110,11 @@ class BaseLocation(Strict):
     official_domains: list[Annotated[str, Field(pattern=DOMAIN_PATTERN)]] = []
     leader_group: LeaderGroup | None = None
 
+    def official_sources(self) -> list[str]:
+        """The run's own official domains (D-009): the base's sites plus its Leader group's."""
+        leader = [self.leader_group.domain] if self.leader_group else []
+        return list(dict.fromkeys([*self.official_domains, *leader]))
+
     @field_validator("municipality_code", "region_code", mode="before")
     @classmethod
     def _blank_code(cls, v: object) -> object:

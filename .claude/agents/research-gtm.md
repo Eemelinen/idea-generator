@@ -75,7 +75,8 @@ Finnish data tools for this dimension: `pxweb` (tourism and seasonality), `euros
 Rubric questions (the plan may add idea-specific and Finland/Rääkkylä-specific ones):
 - Through which channels do target customers currently discover and buy similar offers?
 - What do those channels cost (ads, marketplace commission, fairs, partners)?
-- Which local partners or networks (associations, tourism, municipalities) could distribute it?
+- Local or hybrid: which partners or networks near the base (associations, tourism, the municipality) could distribute it?
+- Online or hybrid: which marketplaces and digital channels reach the target markets, and what does a customer cost through them?
 
 Evidence needed for a score above 2: At least 3 verified sources describing concrete channels and their costs.
 

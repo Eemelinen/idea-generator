@@ -1,4 +1,7 @@
-# Official-source allow-list. Regulatory, tax and grant claims must cite one of these.
+# Official-source allow-list. Regulatory, tax and grant claims must cite one of these or one of
+# the run's own official domains: its base location's `official_domains` and Leader group domain
+# (00_spec.json; the default is config/founder.yaml), which count as official for that run only
+# (D-009). Place-specific domains belong there, not here.
 # Matching is by registrable suffix: "vero.fi" also matches "www.vero.fi".
 # Entries with a path (ec.europa.eu/eurostat) match only URLs under that path.
 official:
@@ -12,10 +15,7 @@ official:
   - elinvoimakeskus.fi
   - finnvera.fi
   - businessfinland.fi
-  - luotsipohjoiskarjala.fi
-  - jetina.fi
   - maaseutu.fi
-  - raakkyla.fi
   - stat.fi
   - pxdata.stat.fi
   - luke.fi
@@ -32,8 +32,8 @@ preferred:
   pricing: []
   unit_economics: [stat.fi, vero.fi]
   gtm: []
-  regulation: [vero.fi, prh.fi, suomi.fi, finlex.fi, ruokavirasto.fi, tukes.fi, raakkyla.fi]
-  financing: [tyomarkkinatori.fi, elinvoimakeskus.fi, finnvera.fi, businessfinland.fi, jetina.fi, maaseutu.fi]
-  location: [raakkyla.fi, luotsipohjoiskarjala.fi, stat.fi, pohjois-karjala.fi]
+  regulation: [vero.fi, prh.fi, suomi.fi, finlex.fi, ruokavirasto.fi, tukes.fi]
+  financing: [tyomarkkinatori.fi, elinvoimakeskus.fi, finnvera.fi, businessfinland.fi, maaseutu.fi]
+  location: [stat.fi]
   founder_risk: []
   killcause: [ytj.fi, avoindata.prh.fi]

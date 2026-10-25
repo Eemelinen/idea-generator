@@ -5,7 +5,13 @@
 #   final_score = min(proposed_score, 2), with cap_reason and status = insufficient_data.
 #   - {rule: min_sources, n: 3, independent: true}  ≥ n verified claims from distinct domains
 #   - {rule: has_official_source}                   ≥ 1 verified claim on an allow-listed domain
+#                                                    (domains.yaml's official list plus the run's
+#                                                    base-location domains, D-009)
 #   - {rule: has_numeric, field: price}              ≥ 1 verified claim with value and matching unit/field
+#
+# Questions name no place: they refer to the spec's base location and target markets
+# (`geography`, nearest first). "Local or hybrid:" / "Online or hybrid:" questions apply only to
+# those business modes (D-009).
 #
 # kill_triggers: claim flags the research agents/extractor may set. Any verified claim
 #   carrying one of these fires the trigger and forces verdict NO_GO (unless overridden in the spec).
@@ -20,7 +26,7 @@ dimensions:
     name: Customer & problem (JTBD)
     weight: 0.15
     research_questions:
-      - Who exactly has this problem, and how many of them are reachable from the founder's geography?
+      - Who exactly has this problem, and how many of them are reachable in the spec's target markets?
       - What job are they trying to get done, and how do they do it today?
       - How painful and frequent is the problem (evidence of complaints, workarounds, spend)?
       - Is there evidence that anyone pays to solve it today?
@@ -34,10 +40,11 @@ dimensions:
     name: Market size (bottom-up beachhead)
     weight: 0.10
     research_questions:
-      - How many target customers exist in Rääkkylä, Keski-Karjala, North Karelia and Finland?
+      - How many target customers exist at each step of the spec's target markets, nearest first?
       - What is a realistic annual spend per customer on this category?
       - What is the bottom-up beachhead revenue (count × spend × reachable share)?
       - Is the category growing or shrinking (official statistics)?
+      - "Online or hybrid: how large is national and EU online demand for the category (e-commerce statistics)?"
     min_evidence_for_3: A bottom-up beachhead estimate built from at least one official or API count and one spend figure.
     evidence_rule:
       - {rule: min_sources, n: 3, independent: true}
@@ -49,10 +56,10 @@ dimensions:
     name: Competition & substitutes
     weight: 0.15
     research_questions:
-      - Which companies offer this or a close substitute locally, regionally and online?
+      - Which companies offer this or a close substitute in the target markets, near the base and online (webshops, marketplaces)?
       - What free or DIY substitutes exist, and are they good enough?
       - Which similar businesses have closed, and why?
-      - How many registered companies operate in this industry in the area (PRH data)?
+      - How many registered companies operate in this industry in the base municipality and region (PRH data)?
     min_evidence_for_3: At least 3 verified sources naming concrete competitors or substitutes, including a PRH count.
     evidence_rule:
       - {rule: min_sources, n: 3, independent: true}
@@ -78,7 +85,8 @@ dimensions:
     weight: 0.15
     research_questions:
       - What are the variable costs per unit (materials, delivery, platform fees, VAT effects)?
-      - What are the fixed monthly costs (premises, insurance, software, accounting, YEL)?
+      - What are the fixed monthly costs (insurance, software, accounting, YEL; premises for a local or hybrid business)?
+      - "Online or hybrid: what do shipping, fulfilment, marketplace and payment fees cost per order?"
       - What does it cost to acquire a customer through the likely channels?
       - What is the contribution margin per unit and the break-even volume?
     min_evidence_for_3: Verified figures for price and at least two cost components.
@@ -95,7 +103,8 @@ dimensions:
     research_questions:
       - Through which channels do target customers currently discover and buy similar offers?
       - What do those channels cost (ads, marketplace commission, fairs, partners)?
-      - Which local partners or networks (associations, tourism, municipalities) could distribute it?
+      - "Local or hybrid: which partners or networks near the base (associations, tourism, the municipality) could distribute it?"
+      - "Online or hybrid: which marketplaces and digital channels reach the target markets, and what does a customer cost through them?"
     min_evidence_for_3: At least 3 verified sources describing concrete channels and their costs.
     evidence_rule:
       - {rule: min_sources, n: 3, independent: true}
@@ -109,7 +118,8 @@ dimensions:
       - Which business form fits (toiminimi, osakeyhtiö), and what does registration require?
       - Which permits, notifications or licences apply (food, accommodation, safety, environment)?
       - How do VAT (incl. the small-business threshold), YEL and income tax apply?
-      - Are there municipal (Rääkkylä) zoning, building or land-use constraints?
+      - "Local or hybrid: are there zoning, building or land-use constraints in the base municipality?"
+      - "Online or hybrid: which distance-selling and consumer-protection rules apply, and how does EU VAT (OSS) apply to sales to other EU countries?"
     min_evidence_for_3: Every permit/tax claim cites an allow-listed official domain.
     evidence_rule:
       - {rule: min_sources, n: 2, independent: true}
@@ -122,28 +132,30 @@ dimensions:
     weight: 0.05
     research_questions:
       - Is the founder eligible for starttiraha, and under what conditions?
-      - Which Leader (Jetina) or elinvoimakeskus grants apply, and what are their rules?
+      - Which grants of the base's Leader group (if the spec names one) or the elinvoimakeskus apply, and what are their rules?
       - Are Finnvera loans or guarantees relevant at this scale?
     min_evidence_for_3: Eligibility rules cited from the official funder's own site.
     evidence_rule:
       - {rule: min_sources, n: 2, independent: true}
       - {rule: has_official_source}
     kill_triggers: []
-    preferred_domains: [tyomarkkinatori.fi, elinvoimakeskus.fi, finnvera.fi, jetina.fi]
+    preferred_domains: [tyomarkkinatori.fi, elinvoimakeskus.fi, finnvera.fi]
 
   - id: location
-    name: Location fit (Rääkkylä / North Karelia)
+    name: Location fit
     weight: 0.05
     research_questions:
-      - What do population, age structure and tourism statistics say about local demand?
-      - What logistics constraints apply (distances, delivery services, seasonality, roads)?
-      - Which local assets (lake, nature, events, existing businesses) help or hurt the idea?
-    min_evidence_for_3: At least 2 verified sources, one official or API statistic about the area.
+      - "Local or hybrid: what do population, age structure and tourism statistics of the base and nearby towns say about demand in the catchment area?"
+      - "Local or hybrid: what logistics constraints apply to customers and suppliers (distances, roads, delivery services, seasonality)?"
+      - "Local or hybrid: which local assets (nature, events, existing businesses) help or hurt the idea?"
+      - "Online or hybrid: how well does the base work as an operating base (parcel services and delivery times to the target markets, connectivity)?"
+      - "Online or hybrid: what do storage, premises and services cost at the base?"
+    min_evidence_for_3: At least 2 verified sources, one official or API statistic about the base location.
     evidence_rule:
       - {rule: min_sources, n: 2, independent: true}
       - {rule: has_official_source}
     kill_triggers: []
-    preferred_domains: [raakkyla.fi, stat.fi, luotsipohjoiskarjala.fi]
+    preferred_domains: [stat.fi]
 
   - id: founder_risk
     name: Founder fit & risk register
@@ -165,5 +177,5 @@ killcause:
     - Which businesses doing this (or close to it) in Finland have closed, and what do sources say about why?
     - What free or substitute options make paying unnecessary?
     - Which regulatory blockers could make the idea impossible here?
-    - Why hasn't this already been done in Rääkkylä / North Karelia?
+    - Why hasn't this already been done at the base location or in the target markets?
   kill_triggers: [free_good_enough_substitute, permit_impossible, negative_contribution_margin, beachhead_below_founder_income, no_evidence_anyone_pays]

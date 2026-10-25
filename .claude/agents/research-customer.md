@@ -72,7 +72,7 @@ Finnish search terms: `kokemuksia`, `suosittelen`, `kannattaako`, `ongelma`, `et
 Finnish data tools for this dimension: `pxweb` (target-group size and spend); `prh` only when the customers are businesses (count them by industry).
 
 Rubric questions (the plan may add idea-specific and Finland/Rääkkylä-specific ones):
-- Who exactly has this problem, and how many of them are reachable from the founder's geography?
+- Who exactly has this problem, and how many of them are reachable in the spec's target markets?
 - What job are they trying to get done, and how do they do it today?
 - How painful and frequent is the problem (evidence of complaints, workarounds, spend)?
 - Is there evidence that anyone pays to solve it today?

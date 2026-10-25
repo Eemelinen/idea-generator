@@ -208,7 +208,7 @@ Contents, in this order:
    - If a subagent fails validation twice, mark that dimension `INSUFFICIENT_DATA` and continue; never fabricate.
 4. **Where things are**: config, prompts, runs, scripts (one line each).
 5. **Model policy**: "All roles default to `opus` per `config/models.yaml`. Do not change models in agent files; change the config and run `gen_agents.py`."
-6. **Finland policy**: regulatory, tax and grant claims must cite an allow-listed official domain from `config/domains.yaml` (vero.fi, prh.fi, ytj.fi, suomi.fi, tyomarkkinatori.fi, finlex.fi, elinvoimakeskus.fi, finnvera.fi, businessfinland.fi, luotsipohjoiskarjala.fi, jetina.fi, maaseutu.fi, raakkyla.fi, stat.fi, luke.fi, ec.europa.eu/eurostat). Values in `config/finland.yaml` are _hints to verify_, not facts.
+6. **Finland policy**: regulatory, tax and grant claims must cite an allow-listed official domain from `config/domains.yaml` (vero.fi, prh.fi, ytj.fi, suomi.fi, tyomarkkinatori.fi, finlex.fi, elinvoimakeskus.fi, finnvera.fi, businessfinland.fi, maaseutu.fi, stat.fi, luke.fi, ec.europa.eu/eurostat) or one of the run's own official domains (the spec's `base_location.official_domains` and Leader group domain, which count for that run only; D-009, IF-703). Values in `config/finland.yaml` are _hints to verify_, not facts.
 
 ---
 
@@ -235,25 +235,25 @@ notes: |
 
 ### 4.2 `config/rubric.yaml`
 
-Ten dimensions. For each: `id`, `name`, `weight`, `research_questions` (3–6), `min_evidence_for_3` (plain-language rule), `evidence_rule` (machine rule, see below), `kill_triggers` (list of boolean checks the extractor can set), `preferred_domains`.
+Ten dimensions. For each: `id`, `name`, `weight`, `research_questions` (3–6), `min_evidence_for_3` (plain-language rule), `evidence_rule` (machine rule, see below), `kill_triggers` (list of boolean checks the extractor can set), `preferred_domains`. The questions name no place: they refer to the spec's base location and target markets, and a question prefixed "Local or hybrid:" or "Online or hybrid:" applies only to those business modes (D-009, IF-703); `location` asks about the catchment area for a local idea and the operating base (shipping, connectivity, costs) for an online one.
 
-| id             | name                                    | weight |
-| -------------- | --------------------------------------- | ------ |
-| customer       | Customer & problem (JTBD)               | 0.15   |
-| market         | Market size (bottom-up beachhead)       | 0.10   |
-| competition    | Competition & substitutes               | 0.15   |
-| pricing        | Pricing & willingness to pay            | 0.10   |
-| unit_economics | Unit economics & costs                  | 0.15   |
-| gtm            | Go-to-market & channels                 | 0.10   |
-| regulation     | Regulation, permits, tax                | 0.10   |
-| financing      | Financing & funding fit                 | 0.05   |
-| location       | Location fit (Rääkkylä / North Karelia) | 0.05   |
-| founder_risk   | Founder fit & risk register             | 0.05   |
+| id             | name                              | weight |
+| -------------- | --------------------------------- | ------ |
+| customer       | Customer & problem (JTBD)         | 0.15   |
+| market         | Market size (bottom-up beachhead) | 0.10   |
+| competition    | Competition & substitutes         | 0.15   |
+| pricing        | Pricing & willingness to pay      | 0.10   |
+| unit_economics | Unit economics & costs            | 0.15   |
+| gtm            | Go-to-market & channels           | 0.10   |
+| regulation     | Regulation, permits, tax          | 0.10   |
+| financing      | Financing & funding fit           | 0.05   |
+| location       | Location fit                      | 0.05   |
+| founder_risk   | Founder fit & risk register       | 0.05   |
 
 Machine evidence rules (examples; implement as small named functions in `scoring.py`):
 
 - `min_sources(n=3, independent=True)` — ≥ n verified claims from distinct domains.
-- `has_official_source()` — ≥1 verified claim whose domain is in the allow-list.
+- `has_official_source()` — ≥1 verified claim whose domain is in the allow-list or among the run's base-location official domains (`verify.official_domains`).
 - `has_numeric(field="price")`, `has_numeric(field="unit_count")`.
 
 Kill triggers (set by extractor as flags on claims, enforced in Python): `free_good_enough_substitute`, `permit_impossible`, `negative_contribution_margin`, `beachhead_below_founder_income`, `no_evidence_anyone_pays`.

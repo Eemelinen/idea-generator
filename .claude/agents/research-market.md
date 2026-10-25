@@ -73,10 +73,11 @@ Finnish search terms: `väkiluku`, `väestöennuste`, `asuntokunnat`, `kesämök
 Finnish data tools for this dimension: `pxweb` (customer counts and trends), `prh` (business customers), `eurostat` (Finland and EU comparisons).
 
 Rubric questions (the plan may add idea-specific and Finland/Rääkkylä-specific ones):
-- How many target customers exist in Rääkkylä, Keski-Karjala, North Karelia and Finland?
+- How many target customers exist at each step of the spec's target markets, nearest first?
 - What is a realistic annual spend per customer on this category?
 - What is the bottom-up beachhead revenue (count × spend × reachable share)?
 - Is the category growing or shrinking (official statistics)?
+- Online or hybrid: how large is national and EU online demand for the category (e-commerce statistics)?
 
 Evidence needed for a score above 2: A bottom-up beachhead estimate built from at least one official or API count and one spend figure.
 

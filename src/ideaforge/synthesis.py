@@ -239,7 +239,13 @@ def score_run(run_id: str) -> ScoreRunResult:
     if guard_notes:
         ue = ue.model_copy(update={"notes": [*ue.notes, *guard_notes]})
     sheet = scoring.score(
-        scores, claims, spec.kill_trigger_overrides, unit_economics=ue, computed_triggers=triggers, rubric=rubric
+        scores,
+        claims,
+        spec.kill_trigger_overrides,
+        unit_economics=ue,
+        computed_triggers=triggers,
+        rubric=rubric,
+        official=verify.official_domains(spec.base_location),
     )
 
     warnings = []

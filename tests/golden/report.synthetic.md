@@ -210,7 +210,7 @@ Gaps:
 - No official page found on Leader (Jetina) funding for this kind of business.
 - Elinvoimakeskus grant conditions for side businesses not found.
 
-### Location fit (Rääkkylä / North Karelia) (`location`)
+### Location fit (`location`)
 
 Score: 4 of 5 (proposed 4).
 

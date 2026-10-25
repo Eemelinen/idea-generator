@@ -4,7 +4,8 @@
 03_claims/<dimension>.json, fetches every cited page (robots.txt respected, 10 s timeout, text
 cached in cache/<sha256(url)>.txt and recorded in the `sources` table), marks a claim `verified`
 only when its quote matches the page text at rapidfuzz partial_ratio ≥ 90, types allow-listed
-official domains as `official`, and writes 03_claims/verified.json plus the `claims` rows.
+official domains as `official` (the global allow-list plus the official domains of the spec's base
+location, D-009), and writes 03_claims/verified.json plus the `claims` rows.
 In a back-test run (`new_run.py --as-of`), a claim whose `published_date` is after the as-of date
 is `unverified` with the flag `after_as_of`, and its source is not fetched.
 
@@ -32,6 +33,7 @@ synthetic pages and the IF-200 recordings and never touch the network.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
 import unicodedata
@@ -53,7 +55,14 @@ from rapidfuzz import fuzz
 from ideaforge import config, db, extract, runs
 from ideaforge.fi import requery
 from ideaforge.fi.http import Transport
-from ideaforge.schemas import CandidateClaim, Claim, ConflictGroup, SourceType
+from ideaforge.schemas import (
+    BaseLocation,
+    CandidateClaim,
+    Claim,
+    ConflictGroup,
+    SourceType,
+    default_base_location,
+)
 from ideaforge.validate_file import candidate_claims
 
 USER_AGENT = "ideaforge/0.1 (local business-idea validator; claim quote verification)"
@@ -174,13 +183,32 @@ def domain_matches(url: str, entry: str) -> bool:
 
 
 def is_official(url: str, official: list[str] | None = None) -> bool:
+    """On the global allow-list, or on `official` (a run's list, `official_domains`) if given."""
     entries = config.domains().official if official is None else official
     return any(domain_matches(url, e) for e in entries)
 
 
-def source_type(claim: Claim) -> SourceType:
+def official_domains(base: BaseLocation | None = None) -> list[str]:
+    """The global allow-list plus the base location's own official domains (D-009), which count
+    as official only in a run based there."""
+    return list(dict.fromkeys([*config.domains().official, *(base.official_sources() if base else [])]))
+
+
+def run_base_location(run_dir: Path) -> BaseLocation | None:
+    """The base location of the run's 00_spec.json; a spec written before D-009 has none and
+    loads with the schema default, like `IdeaSpec`. None without a spec."""
+    path = run_dir / "00_spec.json"
+    if not path.is_file():
+        return None
+    spec = json.loads(path.read_text(encoding="utf-8"))
+    if "base_location" not in spec:
+        return default_base_location()
+    return BaseLocation.model_validate(spec["base_location"])
+
+
+def source_type(claim: Claim, official: list[str] | None = None) -> SourceType:
     """Allow-listed official domain → `official`; `api` stays `api` (IF-209 re-queries it)."""
-    if claim.source_type != "api" and is_official(claim.source_url):
+    if claim.source_type != "api" and is_official(claim.source_url, official):
         return "official"
     return claim.source_type
 
@@ -408,7 +436,7 @@ def api_confirms(claim: Claim, answer: requery.Answer) -> bool:
     return any(value_matches(claim.value, v) for v in answer.values)
 
 
-def verify_api_claim(claim: Claim, result: ApiResult) -> Claim:
+def verify_api_claim(claim: Claim, result: ApiResult, official: list[str] | None = None) -> Claim:
     """The claim with retrieved_at, flags and verification set from the re-queried answer."""
     flags = [f for f in claim.flags if f not in OWNED_FLAGS]
     if result.answer is not None and api_confirms(claim, result.answer):
@@ -418,7 +446,7 @@ def verify_api_claim(claim: Claim, result: ApiResult) -> Claim:
         flags.append("unfetchable" if result.status == "unfetchable" else API_FLAG)
     return claim.model_copy(
         update={
-            "source_type": source_type(claim),
+            "source_type": source_type(claim, official),
             "retrieved_at": result.retrieved_at,
             "flags": flags,
             "verification": verification,
@@ -525,12 +553,12 @@ def after_as_of(claim: Claim, as_of: date | None) -> bool:
     return as_of is not None and claim.published_date is not None and claim.published_date > as_of
 
 
-def reject_after_as_of(claim: Claim, retrieved_at: datetime) -> Claim:
+def reject_after_as_of(claim: Claim, retrieved_at: datetime, official: list[str] | None = None) -> Claim:
     """The claim `unverified` with `after_as_of`, without fetching its source."""
     flags = [f for f in claim.flags if f not in OWNED_FLAGS]
     return claim.model_copy(
         update={
-            "source_type": source_type(claim),
+            "source_type": source_type(claim, official),
             "retrieved_at": retrieved_at,
             "flags": [*flags, AS_OF_FLAG],
             "verification": "unverified",
@@ -538,8 +566,9 @@ def reject_after_as_of(claim: Claim, retrieved_at: datetime) -> Claim:
     )
 
 
-def verify_claim(claim: Claim, page: Page) -> Claim:
-    """The claim with source_type, retrieved_at, flags and verification set from the page."""
+def verify_claim(claim: Claim, page: Page, official: list[str] | None = None) -> Claim:
+    """The claim with source_type, retrieved_at, flags and verification set from the page;
+    `official` is the run's allow-list (`official_domains`), the global one by default."""
     flags = [f for f in claim.flags if f not in OWNED_FLAGS]
     if page.status == "ok" and page.text is not None and quote_matches(claim.quote, page.text):
         verification = "verified"
@@ -549,7 +578,7 @@ def verify_claim(claim: Claim, page: Page) -> Claim:
             flags.append(page.status)
     return claim.model_copy(
         update={
-            "source_type": source_type(claim),
+            "source_type": source_type(claim, official),
             "retrieved_at": page.retrieved_at,
             "flags": flags,
             "verification": verification,
@@ -666,6 +695,7 @@ def verify_run(
         kept = [c for c in _CLAIMS.validate_json(ledger.read_bytes()) if c.claim_id not in replaced]
     parsed, warnings = parse_run(run_dir, _now(), stems)
     as_of = run_as_of(run_id)
+    official = official_domains(run_base_location(run_dir))
 
     fetcher = Fetcher(http_get or requests_get)
     requerier = Requerier(fi_transport)
@@ -680,20 +710,20 @@ def verify_run(
             seen_ids.add(c.claim_id)
             if after_as_of(c, as_of):
                 warnings.append(f"{c.claim_id}: {AS_OF_FLAG} (published {c.published_date}, as of {as_of})")
-                verified.append(reject_after_as_of(c, c.retrieved_at))
+                verified.append(reject_after_as_of(c, c.retrieved_at, official))
                 by_file[stem].append(verified[-1])
                 continue
             if c.source_type == "api" and requery.api_of(c.source_url):
                 result = requerier.get(c.source_url)
                 if (warning := requery_warning(c, result)) is not None:
                     warnings.append(warning)
-                verified.append(verify_api_claim(c, result))
+                verified.append(verify_api_claim(c, result, official))
                 by_file[stem].append(verified[-1])
                 continue
             page = fetcher.get(c.source_url)
             if page.status != "ok":
                 warnings.append(f"{c.claim_id}: {page.status} {c.source_url} ({page.detail})")
-            verified.append(verify_claim(c, page))
+            verified.append(verify_claim(c, page, official))
             by_file[stem].append(verified[-1])
 
     conflicts = detect_conflicts(verified)

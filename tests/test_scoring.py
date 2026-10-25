@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from ideaforge import config, scoring
+from ideaforge import config, scoring, verify
 from ideaforge.config import EvidenceRule, VerdictThresholds
 from ideaforge.schemas import RUBRIC_DIMENSIONS, Claim, DimensionScore, ScoreSheet, UnitEconomics
 
@@ -143,6 +143,34 @@ def test_min_sources(evidence, n, independent, expected):
 def test_has_official_source(url, source_type, passes):
     result = scoring.has_official_source([claim("regulation-001", url, source_type=source_type)])
     assert (result is None) is passes
+
+
+def test_a_base_location_domain_is_official_for_its_run_only():
+    """IF-703: a municipality's site counts as official only through the run's own list."""
+    evidence = [claim("financing-001", "https://www.raakkyla.fi/synthetic-grant", source_type="official")]
+    assert scoring.has_official_source(evidence) is not None
+    base = config.founder().base_location
+    run_official = verify.official_domains(base)
+    assert scoring.has_official_source(evidence, run_official) is None
+    leader = [claim("financing-002", "https://jetina.fi/synthetic", source_type="official")]
+    assert scoring.has_official_source(leader, run_official) is None
+    other_base = base.model_copy(update={"official_domains": ["example-kunta.fi"], "leader_group": None})
+    assert scoring.has_official_source(evidence + leader, verify.official_domains(other_base)) is not None
+    # the global list still counts in every run
+    assert scoring.has_official_source([claim("financing-003", "https://vero.fi/x")], run_official) is None
+
+
+def test_score_applies_the_run_official_list():
+    proposed, claims = full_run(4.0)
+    claims = [
+        c.model_copy(update={"source_url": "https://www.raakkyla.fi/synthetic"}) if c.claim_id == "regulation-001" else c
+        for c in claims
+    ]
+    assert scoring.score(proposed, claims).scores[RUBRIC_DIMENSIONS.index("regulation")].status == "insufficient_data"
+    official = verify.official_domains(config.founder().base_location)
+    sheet = scoring.score(proposed, claims, official=official)
+    assert sheet.scores[RUBRIC_DIMENSIONS.index("regulation")].status == "scored"
+    assert sheet.verdict == "GO"
 
 
 def test_has_numeric():
