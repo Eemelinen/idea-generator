@@ -844,7 +844,7 @@
       "area": "research",
       "title": "Research and debate briefs follow the run's scope",
       "user_visible_behavior": "Every research, mini-research and debate brief carries a scope line from the run's spec (mode, base location with codes, target markets), and the research and debate prompts no longer name Rääkkylä: local-only steps (premises, zoning, catchment population, local networks) apply to local and hybrid ideas, and online ideas get online steps (national and EU e-commerce demand, webshops and marketplaces, shipping and fulfilment costs, platform and payment fees, distance-selling and consumer rules, EU VAT OSS, digital channels).",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-037"],
       "ticket": "IF-702",
       "spec": "docs/TICKETS.md#if-702-research-and-debate-briefs-follow-the-runs-scope",
@@ -852,7 +852,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_brief.py tests/test_gen_agents.py tests/test_skills.py (scope lines for an online, a local and a hybrid spec; the generated agents contain no fixed place names or codes and are up to date; validate Stage 1 and the debate skill pass the scope lines)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-25 pnpm check → pass (working tree on ca44555)",
+        "2026-10-25 uv run pytest tests/test_brief.py tests/test_gen_agents.py tests/test_skills.py → pass (working tree on ca44555)"
+      ],
       "attempts": 0,
       "notes": ""
     },

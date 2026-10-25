@@ -1,14 +1,15 @@
 {% extends "_research_base.md.j2" %}
 {% block focus %}
-Build a bottom-up beachhead: count of reachable customers (official statistics or PxWeb tables) × realistic annual spend × reachable share, at each step of the geography ladder. Report the trend, not just the level. Top-down 'the market is worth €X billion' figures don't count.
+Build a bottom-up beachhead: count of reachable customers (official statistics or PxWeb tables) × realistic annual spend × reachable share, at each step of the run's target markets, nearest first. Report the trend, not just the level. Top-down 'the market is worth €X billion' figures don't count.
 
 Search strategy:
-1. Customer counts from `pxweb`: population (`statfin/vaerak/11ra.px`, `11re.px` by age), households, summer cottages or overnight stays (`pxweb search "majoitus"`) for `KU707`, `MK12` and `SSS`, over at least five years for the trend.
-2. Business customers from `prh`: `search --industry <prefix> --municipality <municipality>` per municipality of the beachhead.
-3. Spend per customer from published prices or the household consumption survey; the Finland/EU step from `eurostat` (e.g. `tour_occ_ninat` for tourism).
-4. Show each multiplication's inputs as claims; Python does the arithmetic.
+1. Local or hybrid: customer counts from `pxweb`: population (`statfin/vaerak/11ra.px`, `11re.px` by age), households, summer cottages or overnight stays (`pxweb search "majoitus"`) for `<municipality_code>`, `<region_code>` and `SSS`, over at least five years for the trend.
+2. Online or hybrid: national and EU e-commerce demand: Statistics Finland's use of the internet and online purchases (`pxweb search "verkkokauppa"`, `pxweb search "tieto- ja viestintätekniikan käyttö"`) and Eurostat's `isoc_*` datasets for Finland and the other target markets (`--geo FI,SE,EU27_2020`); the category's online share from a sector report.
+3. Business customers from `prh`: `search --industry <prefix> --municipality <municipality>` per municipality of a local beachhead, or without `--municipality` for Finland.
+4. Spend per customer from published prices or the household consumption survey; the Finland/EU step from `eurostat` (e.g. `tour_occ_ninat` for tourism).
+5. Show each multiplication's inputs as claims; Python does the arithmetic.
 
-Finnish search terms: `väkiluku`, `väestöennuste`, `asuntokunnat`, `kesämökit`, `yöpymiset`, `toimiala`, `markkinan koko`, `kysyntä`.
+Finnish search terms: `väkiluku`, `väestöennuste`, `asuntokunnat`, `kesämökit`, `yöpymiset`, `verkkokauppa`, `verkko-ostokset`, `toimiala`, `markkinan koko`, `kysyntä`.
 
 Finnish data tools for this dimension: `pxweb` (customer counts and trends), `prh` (business customers), `eurostat` (Finland and EU comparisons).
 {% endblock %}

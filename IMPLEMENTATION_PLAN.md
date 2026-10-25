@@ -96,7 +96,7 @@ ideaforge/
 │   ├── debate.py                  # anonymization (P1…P5, seeded), rebuttal validation, evidence subsets, resume status
 │   ├── mini_research.py           # debate mini-research tasks: open (≤ max per debate) and finish
 │   ├── usage.py                   # JSONL log of tool calls; per-run tallies
-│   ├── brief.py                   # run-specific research-brief lines: preset budget line, back-test header
+│   ├── brief.py                   # run-specific brief lines: scope lines from the spec, preset budget line, back-test header
 │   ├── status.py                  # /status text: recent runs, one run's claims, flags, markers, usage; score-sheet diff (also the UI's compare)
 │   ├── review.py                  # /status --review / --reviews: report-section scores 1–5, trend by prompt/model version
 │   ├── golden.py                  # eval golden set: load + validate, find each idea's run, the three checks
@@ -122,7 +122,7 @@ ideaforge/
 │   ├── gen_agents.py              # render agent_templates/* with config/models.yaml → .claude/agents/
 │   ├── new_run.py                 # create run dir + db row + meta.json, print run_id; --from = next version; --intake → intake.json
 │   ├── run_stage.py               # stage state machine: --begin/--finish/--insufficient-data/--resume/--next
-│   ├── research_brief.py          # print a research brief's budget line and back-test header for <run_id> <dim>
+│   ├── research_brief.py          # print a research brief's scope, budget and back-test lines for <run_id> <dim>; --scope: scope lines only
 │   ├── extract_claims.py          # stage 3: list the research sentences no candidate claim covers (request.json)
 │   ├── verify_claims.py           # stage 3 verification over a run
 │   ├── synthesis_input.py         # stage 5: the synthesizer's only input file
@@ -318,7 +318,7 @@ SQLite tables mirror these: `runs`, `idea_versions`, `stages` (run_id, stage, st
 
 ### Stage 2 — Parallel research (subagents)
 
-- Orchestrator launches all 11 research subagents **in one message** (parallel). Each subagent brief contains: the IdeaSpec, its dimension's section of the plan, its budget line, the preferred-domain list, and the output contract.
+- Orchestrator launches all 11 research subagents **in one message** (parallel). Each subagent brief contains: the IdeaSpec, its dimension's section of the plan, the run's scope lines (business mode, base location, target markets; the prompts name no place and mark their steps "Local or hybrid:" / "Online or hybrid:", IF-702), its budget line, the preferred-domain list, and the output contract.
 - Subagent tools: `WebSearch`, `WebFetch`, `Bash(uv run python -m ideaforge.fi.*)`, `Read`, `Write` (only to its own `runs/<run_id>/02_research/<dimension>.md`).
 - **Output contract** (in every research agent prompt):
   - Markdown, ≤ `max_output_words`.
@@ -379,7 +379,7 @@ Already written by stage 3. `/status <run_id>` prints: claims per dimension (ver
 
 **Protocol**
 
-1. **Round 0 (independent).** `uv run python -m ideaforge.debate evidence <run_id>` writes each persona's evidence subset (`agents.PERSONA_EVIDENCE`: the verified claims of its dimensions, every verified mini-research claim and its own P-id) to `debate/evidence/<role>.json`. Launch the 5 personas in one message. Each gets: the report, its evidence file, and the `Position` schema (in its prompt). Writes `debate/round0/<role>.json`. Hook validates (schema; every claim id verified and in the persona's evidence file, as for rebuttals).
+1. **Round 0 (independent).** `uv run python -m ideaforge.debate evidence <run_id>` writes each persona's evidence subset (`agents.PERSONA_EVIDENCE`: the verified claims of its dimensions, every verified mini-research claim and its own P-id) to `debate/evidence/<role>.json`. Launch the 5 personas in one message. Each gets: the report, its evidence file, the run's scope lines (`scripts/research_brief.py <run_id> --scope`, IF-702) and the `Position` schema (in its prompt). Writes `debate/round0/<role>.json`. Hook validates (schema; every claim id verified and in the persona's evidence file, as for rebuttals).
 2. **Anonymize.** `uv run python -m ideaforge.debate anonymize <run_id> 0` → `debate/round0/positions_anon.json` (role names replaced with P1…P5, order shuffled with a seeded RNG; seed in the `debates` table, mapping in `debate/.mapping.json`; one mapping for the whole debate). Later rounds are anonymized the same way for the judge. Rules: TICKETS.md plan note 25.
 3. **Rounds 1..N.** Each persona receives all anonymized positions and writes a `Rebuttal`. Rules enforced by `scripts/debate_validate.py`:
    - `stance: modify|agree` on another position, or any change to its own `proposed_change`, **must** carry `basis.new_claim_ids` (ids that were _not_ cited in any of that role's earlier turns) **or** `basis.computation` (a number derived from existing claims, shown); otherwise the response is rejected and the persona is re-prompted once with the rejection reason (`python -m ideaforge.debate reprompt <run_id> <N>` records who was sent back; a second rejection leaves the turn out of the round). `disagree` needs only a claim id or an explicit `evidence_gap`.
