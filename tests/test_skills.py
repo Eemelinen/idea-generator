@@ -219,11 +219,46 @@ def test_validate_stage0_settles_the_scope_from_founder_yaml():
         assert place not in text
 
 
-def test_validate_stage1_plan_has_killcause_and_local_questions():
+def test_validate_stage1_plan_has_killcause_and_scope_questions():
+    """IF-702: the plan's place-specific questions follow the spec's mode, base and markets."""
     text = sections(split("validate")[1])["Stage 1 — Research plan"]
     assert "01_plan.json" in text and "config/rubric.yaml" in text
-    assert "killcause" in text and "Finland/Rääkkylä" in text
+    assert "killcause" in text
     assert "just run it" in text
+    questions = " ".join(text[text.find("- `questions`") : text.find("- `search_strategy`")].split())
+    for item in ("`business_mode`", "`base_location`", "`geography`", "naming the spec's places, never others"):
+        assert item in questions, item
+    for mode in ("for `local`", "for `online`", "for `hybrid`"):
+        assert mode in questions, mode
+    for online in ("webshops, marketplaces", "shipping", "platform fees", "distance-selling", "EU VAT OSS"):
+        assert online in questions, online
+
+
+def test_skills_name_no_fixed_place():
+    base = config.founder().base_location
+    places = {base.municipality, base.region, *base.nearby, "Pohjois-Karjala", "Keski-Karjala"}
+    for skill in ("validate", "research", "synthesize", "debate"):
+        text = read(skill)
+        for place in places:
+            assert place not in text, (skill, place)
+        assert not re.search(r"\b(KU\d{3}|MK\d{2})\b", text), skill
+
+
+def test_research_and_debate_briefs_carry_the_scope_lines():
+    """IF-702: stage 2 and mini-research briefs get the scope lines with the rest of
+    research_brief.py's output; every persona brief gets `research_brief.py --scope`."""
+    stage2 = sections(split("validate")[1])["Stage 2 — Parallel research"]
+    assert "the scope lines from `00_spec.json`" in stage2
+    assert "(the scope lines, the budget line, and\n     the back-test header" in stage2
+    body = split("debate")[1]
+    assert "the run's scope lines, the budget line" in sections(body)["Mini-research"]
+    start = sections(body)["Start"]
+    assert "5. `uv run python scripts/research_brief.py <run_id> --scope`" in start
+    assert "After steps 4 and 5, go to the section" in start
+    for title in ("Round 0 — Independent positions", "Rounds 1..N — Rebuttals"):
+        launch = sections(body)[title].split("\n2. " if title.startswith("Rounds") else "\n3. ", 1)[0]
+        assert "- the scope lines from Start step 5, verbatim" in launch, title
+    assert "--scope" in (ROOT / "scripts" / "research_brief.py").read_text(encoding="utf-8")
 
 
 def test_validate_stage2_launch_retry_and_markers():

@@ -96,7 +96,7 @@ ideaforge/
 │   ├── debate.py                  # anonymization (P1…P5, seeded), rebuttal validation, evidence subsets, resume status
 │   ├── mini_research.py           # debate mini-research tasks: open (≤ max per debate) and finish
 │   ├── usage.py                   # JSONL log of tool calls; per-run tallies
-│   ├── brief.py                   # run-specific research-brief lines: preset budget line, back-test header
+│   ├── brief.py                   # run-specific brief lines: scope lines from the spec, preset budget line, back-test header
 │   ├── status.py                  # /status text: recent runs, one run's claims, flags, markers, usage; score-sheet diff (also the UI's compare)
 │   ├── review.py                  # /status --review / --reviews: report-section scores 1–5, trend by prompt/model version
 │   ├── golden.py                  # eval golden set: load + validate, find each idea's run, the three checks
@@ -122,7 +122,7 @@ ideaforge/
 │   ├── gen_agents.py              # render agent_templates/* with config/models.yaml → .claude/agents/
 │   ├── new_run.py                 # create run dir + db row + meta.json, print run_id; --from = next version; --intake → intake.json
 │   ├── run_stage.py               # stage state machine: --begin/--finish/--insufficient-data/--resume/--next
-│   ├── research_brief.py          # print a research brief's budget line and back-test header for <run_id> <dim>
+│   ├── research_brief.py          # print a research brief's scope, budget and back-test lines for <run_id> <dim>; --scope: scope lines only
 │   ├── extract_claims.py          # stage 3: list the research sentences no candidate claim covers (request.json)
 │   ├── verify_claims.py           # stage 3 verification over a run
 │   ├── synthesis_input.py         # stage 5: the synthesizer's only input file
@@ -318,7 +318,7 @@ SQLite tables mirror these: `runs`, `idea_versions`, `stages` (run_id, stage, st
 
 ### Stage 2 — Parallel research (subagents)
 
-- Orchestrator launches all 11 research subagents **in one message** (parallel). Each subagent brief contains: the IdeaSpec, its dimension's section of the plan, its budget line, the preferred-domain list, and the output contract.
+- Orchestrator launches all 11 research subagents **in one message** (parallel). Each subagent brief contains: the IdeaSpec, its dimension's section of the plan, the run's scope lines (business mode, base location, target markets; the prompts name no place and mark their steps "Local or hybrid:" / "Online or hybrid:", IF-702), its budget line, the preferred-domain list, and the output contract.
 - Subagent tools: `WebSearch`, `WebFetch`, `Bash(uv run python -m ideaforge.fi.*)`, `Read`, `Write` (only to its own `runs/<run_id>/02_research/<dimension>.md`).
 - **Output contract** (in every research agent prompt):
   - Markdown, ≤ `max_output_words`.
@@ -356,7 +356,7 @@ Already written by stage 3. `/status <run_id>` prints: claims per dimension (ver
    - Computes `weighted_total` (0–5) and verdict: ≥3.5 GO, 2.5–3.5 PIVOT, <2.5 NO_GO; if ≥3 dimensions are `insufficient_data` → `INSUFFICIENT_DATA`.
    - Runs `economics.py` on numeric claims (price, COGS, CAC proxy, fixed costs, volume assumptions) → contribution margin, break-even units/month, payback months, and a sensitivity table (±30% on price and volume). Missing inputs are listed, not guessed. The inputs are the synthesizer's `unit_economics_inputs`; a negative margin fires `negative_contribution_margin` only when they were assigned and every assigned per-unit cost reads as per unit sold (otherwise economics.py's automatic pick or an odd unit is reported but cannot force NO_GO).
    - Writes `04_scores.json`.
-3. `scripts/render_report.py <run_id>` (`ideaforge.report`, run by `/synthesize` as stage `report`) → `05_report.md` with sections: Verdict & one-paragraph why · Score table (cap labels) · Kill triggers · Unit economics + sensitivity · Dimension sections (findings, cited claim ids, gaps from the research file's `## Gaps`) · Finland funding fit (starttiraha / Leader / elinvoimakeskus / Finnvera eligibility notes, each with its verified official-source claim, or "unverified – see gaps"; never a `config/finland.yaml` value) · Rääkkylä location notes · Risk register · Sources (url, title, retrieved_at, verification state) · Usage summary. It stores a `reports` row and refuses to overwrite an existing report. It ends with the starttiraha-format business plan draft (IF-307, `ideaforge.business_plan`): a liiketoimintasuunnitelma skeleton + a kannattavuuslaskelma from `economics.py`, in `config/report.yaml: business_plan_language`, every figure tracing to claim ids (`UnitEconomics.input_claims`) or marked as an assumption. Rules: TICKETS.md plan notes 23 and 34.
+3. `scripts/render_report.py <run_id>` (`ideaforge.report`, run by `/synthesize` as stage `report`) → `05_report.md` with sections: Verdict & one-paragraph why · Score table (cap labels) · Kill triggers · Unit economics + sensitivity · Dimension sections (findings, cited claim ids, gaps from the research file's `## Gaps`) · Finland funding fit (starttiraha / the spec's Leader group, left out when the base location names none / elinvoimakeskus / Finnvera eligibility notes, each with its verified official-source claim, or "unverified – see gaps"; never a `config/finland.yaml` value) · Location notes (the location claims plus the claims naming the spec's base municipality, region or a nearby town) · Risk register · Sources (url, title, retrieved_at, verification state) · Usage summary. It stores a `reports` row and refuses to overwrite an existing report. It ends with the starttiraha-format business plan draft (IF-307, `ideaforge.business_plan`): a liiketoimintasuunnitelma skeleton + a kannattavuuslaskelma from `economics.py`, in `config/report.yaml: business_plan_language`, every figure tracing to claim ids (`UnitEconomics.input_claims`) or marked as an assumption; its section 8 asks for premises (`local`), storage, fulfilment and the webshop platform (`online`) or both (`hybrid`). Rules: TICKETS.md plan notes 23, 34 and 46.
 4. Orchestrator shows the verdict and offers `/debate <run_id>`.
 
 ### Stage 6 — Persistence/versioning
@@ -379,7 +379,7 @@ Already written by stage 3. `/status <run_id>` prints: claims per dimension (ver
 
 **Protocol**
 
-1. **Round 0 (independent).** `uv run python -m ideaforge.debate evidence <run_id>` writes each persona's evidence subset (`agents.PERSONA_EVIDENCE`: the verified claims of its dimensions, every verified mini-research claim and its own P-id) to `debate/evidence/<role>.json`. Launch the 5 personas in one message. Each gets: the report, its evidence file, and the `Position` schema (in its prompt). Writes `debate/round0/<role>.json`. Hook validates (schema; every claim id verified and in the persona's evidence file, as for rebuttals).
+1. **Round 0 (independent).** `uv run python -m ideaforge.debate evidence <run_id>` writes each persona's evidence subset (`agents.PERSONA_EVIDENCE`: the verified claims of its dimensions, every verified mini-research claim and its own P-id) to `debate/evidence/<role>.json`. Launch the 5 personas in one message. Each gets: the report, its evidence file, the run's scope lines (`scripts/research_brief.py <run_id> --scope`, IF-702) and the `Position` schema (in its prompt). Writes `debate/round0/<role>.json`. Hook validates (schema; every claim id verified and in the persona's evidence file, as for rebuttals).
 2. **Anonymize.** `uv run python -m ideaforge.debate anonymize <run_id> 0` → `debate/round0/positions_anon.json` (role names replaced with P1…P5, order shuffled with a seeded RNG; seed in the `debates` table, mapping in `debate/.mapping.json`; one mapping for the whole debate). Later rounds are anonymized the same way for the judge. Rules: TICKETS.md plan note 25.
 3. **Rounds 1..N.** Each persona receives all anonymized positions and writes a `Rebuttal`. Rules enforced by `scripts/debate_validate.py`:
    - `stance: modify|agree` on another position, or any change to its own `proposed_change`, **must** carry `basis.new_claim_ids` (ids that were _not_ cited in any of that role's earlier turns) **or** `basis.computation` (a number derived from existing claims, shown); otherwise the response is rejected and the persona is re-prompted once with the rejection reason (`python -m ideaforge.debate reprompt <run_id> <N>` records who was sent back; a second rejection leaves the turn out of the round). `disagree` needs only a claim id or an explicit `evidence_gap`.

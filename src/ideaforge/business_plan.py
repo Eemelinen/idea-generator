@@ -82,7 +82,12 @@ TEXT: dict[str, dict[str, Any]] = {
         "competition_fill": "tärkeimmät kilpailijat ja oma erottautuminen",
         "pricing_fill": "hinnaston perusteet, alennukset ja lisäpalvelut",
         "marketing_fill": "kanavat, budjetti ja ensimmäiset asiakkaat",
-        "location_fill": "toimitilat ja niiden kustannukset",
+        # by business mode (D-009): premises for a local business, logistics for an online one
+        "location_fill": {
+            "local": "toimitilat ja niiden kustannukset",
+            "online": "varastointi, tilausten toimitus ja verkkokauppa-alusta sekä niiden kustannukset",
+            "hybrid": "toimitilat, varastointi, tilausten toimitus ja verkkokauppa-alusta sekä niiden kustannukset",
+        },
         "regulation_fill": "yritysmuoto, vakuutukset, YEL-työtulo",
         "risks_none": "Riskirekisteri on tyhjä.",
         "risk_cols": ("Riski", "Todennäköisyys", "Vaikutus", "Varautuminen", "Väitteet"),
@@ -200,7 +205,11 @@ TEXT: dict[str, dict[str, Any]] = {
         "competition_fill": "the main competitors and how you differ",
         "pricing_fill": "how the prices are set, discounts and add-ons",
         "marketing_fill": "channels, budget and the first customers",
-        "location_fill": "premises and their costs",
+        "location_fill": {
+            "local": "premises and their costs",
+            "online": "storage, order fulfilment and the webshop platform, and their costs",
+            "hybrid": "premises, storage, order fulfilment and the webshop platform, and their costs",
+        },
         "regulation_fill": "company form, insurance, YEL income",
         "risks_none": "The risk register is empty.",
         "risk_cols": ("Risk", "Likelihood", "Impact", "Mitigation", "Claims"),
@@ -396,6 +405,7 @@ def context(
             for key, dims in SECTIONS
         },
         "weighted_total": number(sheet.weighted_total, 2, language),
+        "location_fill": t["location_fill"][spec.business_mode],
         "skills": ", ".join(fc.skills) or t["fill"],
         "hours": number(fc.hours_per_week, 0 if fc.hours_per_week % 1 == 0 else 1, language),
         "goal": t["goals"].get(fc.goal, fc.goal),

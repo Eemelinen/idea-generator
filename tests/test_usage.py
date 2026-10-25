@@ -1,6 +1,10 @@
 import json
+import shutil
+from pathlib import Path
 
 from ideaforge import usage
+
+FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def hook(tool, agent=None, **tool_io):
@@ -85,6 +89,8 @@ def economy_run(project, *extra):
 
     assert new_run.main(["sauna cabins by the lake", "--preset", "economy", *extra]) == 0
     run_id = runs.active_run_id()
+    # the brief's scope lines read the spec (IF-702); tests/test_brief.py covers them
+    shutil.copy(FIXTURES / "spec.json", project / "runs" / run_id / "00_spec.json")
     return run_id, project / "runs" / run_id
 
 
@@ -109,7 +115,7 @@ def test_brief_budget_line_is_the_hooks_limit(project, capsys):
     assert research_brief.main([run_id, "pricing"]) == 0
     economy = config.budget().preset("economy")
     r = economy.research_subagent
-    assert capsys.readouterr().out.strip() == (
+    assert capsys.readouterr().out.strip().splitlines()[-1] == (
         f"Budget (preset economy): at most {r.max_web_searches} web searches, {r.max_web_fetches} web fetches"
         f" and {r.max_output_words} words of prose. These replace the numbers in your own prompt."
     )
@@ -127,9 +133,10 @@ def test_brief_has_the_back_test_header(project, capsys):
     capsys.readouterr()
     assert research_brief.main([run_id, "market"]) == 0
     lines = capsys.readouterr().out.splitlines()
-    assert len(lines) == 2 and lines[0].startswith("Budget (preset economy)")
-    assert lines[1].startswith("Back-test as of 2024-06-30:")
-    assert "published on or before 2024-06-30" in lines[1] and "after_as_of" in lines[1]
+    assert lines[0].startswith("Scope: local business.")
+    assert lines[-2].startswith("Budget (preset economy)")
+    assert lines[-1].startswith("Back-test as of 2024-06-30:")
+    assert "published on or before 2024-06-30" in lines[-1] and "after_as_of" in lines[-1]
 
 
 def test_brief_rejects_unknown_runs_and_dimensions(project, capsys):

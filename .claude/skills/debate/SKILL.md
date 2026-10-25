@@ -34,7 +34,7 @@ mini-research task number, `<role>` with a persona and `<dim>` with a dimension;
    with `/validate <run_id>` or `/synthesize <run_id>` first, and stop.
 3. `uv run python -m ideaforge.debate status <run_id>` prints the debate's next step as
    `next: <step> [round <N>] [roles]`. Every step is idempotent, so a crashed debate resumes
-   where it stopped. Go to the section for the step:
+   where it stopped. After steps 4 and 5, go to the section for the step:
    - `report` → as step 2: the report is missing; stop.
    - `evidence` → run `uv run python -m ideaforge.debate evidence <run_id>` (the ledger changed since the
      evidence files were written), then `status` again.
@@ -48,6 +48,10 @@ mini-research task number, `<role>` with a persona and `<dim>` with a dimension;
 4. Read `runs/<run_id>/meta.json` (`budget_preset`) and that preset's `debate` entry in
    `config/budget.yaml` (`max_rounds`, `max_mini_research_tasks`) and its `research_subagent`
    and `killcause_scout` entries (the mini-research budget). Tell the user the limits.
+5. `uv run python scripts/research_brief.py <run_id> --scope` prints the run's scope lines
+   from `00_spec.json` (the business mode, the base location, the target markets and the mode's
+   guidance). Every persona brief carries them verbatim, so the personas judge the plan for the
+   run's own base and markets. Exit 1 → report the error and stop.
 
 ## Round 0 — Independent positions
 
@@ -58,6 +62,7 @@ mini-research task number, `<role>` with a persona and `<dim>` with a dimension;
 2. Launch the five personas **in one message** (one `Agent` call each, `subagent_type` from the
    table; after a resume only the roles `status` listed). Each brief contains exactly:
    - `run_id: <run_id>` and `round: 0`
+   - the scope lines from Start step 5, verbatim
    - the inputs: `runs/<run_id>/05_report.md` and the persona's evidence file from the table, and "read no other file"
    - the output: the persona's round file with `<N>` = 0, and "write no other file"
 3. `uv run python -m ideaforge.validate_file --kind position runs/<run_id>/debate/round0/<role>.json`
@@ -78,6 +83,7 @@ Run round N = 1, 2, … until step 7 says stop.
 1. Launch the five personas **in one message** (after a resume only the roles `status`
    listed). Each brief contains exactly:
    - `run_id: <run_id>` and `round: <N>`
+   - the scope lines from Start step 5, verbatim
    - the inputs: `runs/<run_id>/05_report.md`, the persona's evidence file, and
      `runs/<run_id>/debate/round<k>/positions_anon.json` for every k from 0 to N − 1, and "read no other file"
    - the output: the persona's round file, and "write no other file"
@@ -132,8 +138,8 @@ per debate, enforced in Python.
    - `run_id: <run_id>`, the spec path `runs/<run_id>/00_spec.json` and "This is a debate mini-research task."
    - the printed `question`, `dimension`, `output` and `first claim id`
    - the lines `uv run python scripts/research_brief.py <run_id> <dim>` prints for the task's
-     dimension, verbatim: the budget line of the run's preset and, in a back-test run, the
-     header that forbids sources published after the as-of date
+     dimension, verbatim: the run's scope lines, the budget line of the run's preset and, in a
+     back-test run, the header that forbids sources published after the as-of date
    - "write no other file"
 3. `uv run python -m ideaforge.mini_research finish <run_id> <n>`: it validates the file
    against the research output contract. Exit 0 → step 4. Exit 2 → **re-launch it once** with

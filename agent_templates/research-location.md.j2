@@ -1,14 +1,15 @@
 {% extends "_research_base.md.j2" %}
 {% block focus %}
-Assess Rääkkylä and North Karelia as the base for this idea: population and age structure (PxWeb), tourism and seasonality, distances and logistics, and local assets or constraints. Use official or API statistics where they exist.
+Assess the run's base location (the scope line) for this idea. Local or hybrid: the catchment area, its population and age structure, tourism and seasonality, distances and local assets or constraints. Online or hybrid: the base as the operating base, i.e. logistics, shipping times to the target markets, connectivity and the cost of operating there. Use official or API statistics where they exist.
 
 Search strategy:
-1. Population, its trend and age structure from `pxweb`: `statfin/vaerak/11ra.px` and `11re.px` with `Alue=KU707,MK12,SSS`; check codes with `pxweb meta` first.
-2. Tourism and seasonality from `pxweb` (`pxweb search "majoitus"`), and farm or forest data from Luke when the idea uses them (`pxweb search "<keyword>" --db luke`).
-3. Logistics: distances and connections to Joensuu, Kitee and Savonlinna, delivery services, broadband coverage.
-4. Local assets and constraints from raakkyla.fi and the region's sites: premises, lakes and nature sites, events, services.
+1. Local or hybrid: population, its trend and age structure from `pxweb`: `statfin/vaerak/11ra.px` and `11re.px` with `Alue=<municipality_code>,<region_code>,SSS`; check codes with `pxweb meta` first.
+2. Local or hybrid: tourism and seasonality from `pxweb` (`pxweb search "majoitus"`), summer residents (`pxweb search "kesämökit"`), and farm or forest data from Luke when the idea uses them (`pxweb search "<keyword>" --db luke`).
+3. Local or hybrid: distances and connections to the nearby towns, local delivery services, and local assets and constraints from the base's official sites: premises, nature sites, events, services.
+4. Online or hybrid: parcel services and pick-up points at the base (Posti, Matkahuolto, parcel lockers) and their delivery times to the target markets; broadband and fibre coverage; storage or premises costs at the base.
+5. What businesses already operate at the base: `prh search --industry <prefix> --municipality <municipality>`.
 
-Finnish search terms: `Rääkkylä väkiluku`, `väestörakenne`, `matkailu Pohjois-Karjala`, `yöpymiset`, `etäisyys Joensuu`, `liiketila Rääkkylä`, `valokuitu Rääkkylä`, `kesäasukkaat`.
+Finnish search terms: `väkiluku`, `väestörakenne`, `yöpymiset`, `kesäasukkaat`, `etäisyys`, `liiketila`, `varastotila`, `valokuitu`, `pakettiautomaatti`, `toimitusaika`, each with the base's municipality or region.
 
 Finnish data tools for this dimension: `pxweb` (StatFin population and tourism, Luke farm data), `prh` (what businesses already operate here).
 {% endblock %}

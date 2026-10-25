@@ -120,10 +120,15 @@ that first, never work around it.
    (the id from the Stage 2 table), `questions`, `search_strategy`, `preferred_domains` and
    `evidence_needed`:
    - `questions`: the rubric's `research_questions` adapted to this idea, plus 1–2
-     Finland/Rääkkylä-specific questions (local demand, North Karelia competitors, Finnish
-     rules or grants that apply to this idea).
+     questions for the spec's `business_mode`, `base_location` and `geography` (the target
+     markets), naming the spec's places, never others: for `local`, demand and competitors
+     around the base municipality, its region and nearby towns, premises and local rules; for
+     `online`, demand and competitors (webshops, marketplaces) in the target markets, shipping
+     and platform fees, distance-selling rules and EU VAT OSS, with the base only as the
+     operating base; for `hybrid`, both; and the Finnish rules or grants that apply to this
+     idea at that base.
    - `search_strategy`: where to look first for this idea (official and API sources, then
-     industry and news, then forums).
+     industry and news, then forums), following the mode's steps in the agent's brief.
    - `preferred_domains`: the rubric's `preferred_domains` plus the dimension's list under
      `preferred` in `config/domains.yaml`; regulation and financing also get the `official` list.
      Regulation, financing and location also get the spec's `base_location.official_domains`
@@ -170,18 +175,20 @@ that first, never work around it.
 2. For each dimension to launch: `uv run python scripts/run_stage.py <run_id> research:<dim> --begin`
    (chain them with `&&` in one command).
 3. For each dimension to launch, `uv run python scripts/research_brief.py <run_id> <dim>`
-   prints its run-specific brief lines: the budget line of the run's preset (`--preset`; the
+   prints its run-specific brief lines: the scope lines from `00_spec.json` (`Scope:` with the
+   business mode, the base location and its codes and the target markets, the base's official
+   sites and Leader group, and the mode's guidance), the budget line of the run's preset (`--preset`; the
    `research_subagent` entry of `config/budget.yaml`, or `killcause_scout` for killcause) and,
    in a back-test run (`--as-of`), the header that forbids sources published after that date.
-   The agent files carry the default preset's numbers and no date, so these lines are what
-   sets the agent's budget. Then launch **all** the dimensions to research **in one message**
+   The agent files carry the default preset's numbers, no date and no place, so these lines
+   are what sets the agent's scope and budget. Then launch **all** the dimensions to research **in one message**
    (one `Agent` call each, `subagent_type` from the table) so they run in parallel. Each brief
    contains:
    - `run_id: <run_id>` and the spec path `runs/<run_id>/00_spec.json`
    - the dimension's entry of `01_plan.json`, verbatim (questions, search strategy,
      preferred domains, evidence needed)
-   - the lines `research_brief.py` printed, verbatim (the budget line, and the back-test
-     header when there is one)
+   - the lines `research_brief.py` printed, verbatim (the scope lines, the budget line, and
+     the back-test header when there is one)
    - the output path from the table, and "write no other file"
 4. When all have returned, finish each launched dimension:
    `uv run python scripts/run_stage.py <run_id> research:<dim> --finish`. Exit 0 → `done`.
