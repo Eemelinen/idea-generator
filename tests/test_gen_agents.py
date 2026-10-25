@@ -198,18 +198,6 @@ def fixed_places() -> set[str]:
     return places | {"Rääkkylä", "Pohjois-Karjala", "Keski-Karjala", "Karelia", "Savonlinna", "Liperi", "Luotsi"}
 
 
-def without_config_text(text: str) -> str:
-    """Drop what gen_agents renders from config/rubric.yaml and config/domains.yaml (the dimension
-    title, rubric questions, evidence rule and preferred domains): IF-703 makes those place-neutral."""
-    rubric = config.rubric()
-    parts = [*rubric.killcause.research_questions]
-    for d in rubric.dimensions:
-        parts += [d.name, d.min_evidence_for_3, *d.research_questions]
-    for part in sorted(parts, key=len, reverse=True):
-        text = text.replace(part, "")
-    return "\n".join(ln for ln in text.splitlines() if not ln.startswith("Preferred domains:"))
-
-
 def test_prompts_and_templates_name_no_fixed_place_or_code():
     for path in [*PROMPTS.glob("*.md"), *TEMPLATES.glob("*.j2")]:
         text = path.read_text(encoding="utf-8")
@@ -219,8 +207,8 @@ def test_prompts_and_templates_name_no_fixed_place_or_code():
 
 
 def test_generated_agents_name_no_fixed_place_or_code():
+    """In full, including what gen_agents renders from config/rubric.yaml and config/domains.yaml."""
     for path, text in gen_agents.render_all().items():
-        text = without_config_text(text)
         for place in fixed_places():
             assert place not in text, (path.stem, place)
         assert not CODE_RE.search(text), (path.stem, CODE_RE.search(text))

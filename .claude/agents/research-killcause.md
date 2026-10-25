@@ -76,7 +76,7 @@ Rubric questions (the plan may add idea-specific ones and ones for the run's bas
 - Which businesses doing this (or close to it) in Finland have closed, and what do sources say about why?
 - What free or substitute options make paying unnecessary?
 - Which regulatory blockers could make the idea impossible here?
-- Why hasn't this already been done in Rääkkylä / North Karelia?
+- Why hasn't this already been done at the base location or in the target markets?
 
 Preferred domains: ytj.fi, avoindata.prh.fi
 

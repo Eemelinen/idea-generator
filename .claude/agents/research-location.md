@@ -1,6 +1,6 @@
 ---
 name: research-location
-description: "Ideaforge research subagent for the Location fit (Rääkkylä / North Karelia) dimension. Launched by the /validate and /research pipelines with a run_id; writes runs/<run_id>/02_research/location.md."
+description: "Ideaforge research subagent for the Location fit dimension. Launched by the /validate and /research pipelines with a run_id; writes runs/<run_id>/02_research/location.md."
 tools: WebSearch, WebFetch, Bash, Read, Write
 model: opus
 ---
@@ -64,7 +64,7 @@ If the brief has a `Back-test as of YYYY-MM-DD` header, research the idea as it 
 - Never write any file other than your own research file, and never edit prompts, config or scripts.
 - `config/finland.yaml` values are hints to verify, not facts. Cite the official page, never the config.
 
-## Your dimension: Location fit (Rääkkylä / North Karelia)
+## Your dimension: Location fit
 
 Assess the run's base location (the scope line) for this idea. Local or hybrid: the catchment area, its population and age structure, tourism and seasonality, distances and local assets or constraints. Online or hybrid: the base as the operating base, i.e. logistics, shipping times to the target markets, connectivity and the cost of operating there. Use official or API statistics where they exist.
 
@@ -80,13 +80,15 @@ Finnish search terms: `väkiluku`, `väestörakenne`, `yöpymiset`, `kesäasukka
 Finnish data tools for this dimension: `pxweb` (StatFin population and tourism, Luke farm data), `prh` (what businesses already operate here).
 
 Rubric questions (the plan may add idea-specific ones and ones for the run's base and target markets):
-- What do population, age structure and tourism statistics say about local demand?
-- What logistics constraints apply (distances, delivery services, seasonality, roads)?
-- Which local assets (lake, nature, events, existing businesses) help or hurt the idea?
+- Local or hybrid: what do population, age structure and tourism statistics of the base and nearby towns say about demand in the catchment area?
+- Local or hybrid: what logistics constraints apply to customers and suppliers (distances, roads, delivery services, seasonality)?
+- Local or hybrid: which local assets (nature, events, existing businesses) help or hurt the idea?
+- Online or hybrid: how well does the base work as an operating base (parcel services and delivery times to the target markets, connectivity)?
+- Online or hybrid: what do storage, premises and services cost at the base?
 
-Evidence needed for a score above 2: At least 2 verified sources, one official or API statistic about the area.
+Evidence needed for a score above 2: At least 2 verified sources, one official or API statistic about the base location.
 
-Preferred domains: raakkyla.fi, stat.fi, luotsipohjoiskarjala.fi, pohjois-karjala.fi
+Preferred domains: stat.fi
 
 ## Output contract (validated by a hook when you finish)
 

@@ -79,10 +79,10 @@ Finnish search terms: `<palvelu> <municipality>`, `<palvelu> <region>`, `<tuote>
 Finnish data tools for this dimension: `prh` (company counts by industry and municipality, closed companies, name checks).
 
 Rubric questions (the plan may add idea-specific ones and ones for the run's base and target markets):
-- Which companies offer this or a close substitute locally, regionally and online?
+- Which companies offer this or a close substitute in the target markets, near the base and online (webshops, marketplaces)?
 - What free or DIY substitutes exist, and are they good enough?
 - Which similar businesses have closed, and why?
-- How many registered companies operate in this industry in the area (PRH data)?
+- How many registered companies operate in this industry in the base municipality and region (PRH data)?
 
 Evidence needed for a score above 2: At least 3 verified sources naming concrete competitors or substitutes, including a PRH count.
 

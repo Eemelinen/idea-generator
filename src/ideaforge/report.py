@@ -9,10 +9,11 @@ scores, caps, kill triggers, the verdict and the unit economics come from 04_sco
 usage.jsonl (`usage.render_summary`).
 
 Finland funding fit: each programme (starttiraha, the spec's Leader group if it names one,
-elinvoimakeskus, Finnvera) is backed by the verified claims on an allow-listed official domain
-(`verify.is_official`) that name it, or shown as "unverified – see gaps". `config/finland.yaml` is
-never read here: its values are hints to verify, never facts. The location notes are the location
-claims plus the claims that name the spec's base municipality, region or a nearby town (D-009).
+elinvoimakeskus, Finnvera) is backed by the verified claims on an official domain (the allow-list
+plus the spec's base-location domains, `verify.official_domains`) that name it, or shown as
+"unverified – see gaps". `config/finland.yaml` is never read here: its values are hints to verify,
+never facts. The location notes are the location claims plus the claims that name the spec's base
+municipality, region or a nearby town (D-009).
 
 The starttiraha business-plan draft (IF-307, `ideaforge.business_plan`) is a section of the
 report, in `config/report.yaml: business_plan_language`.
@@ -293,9 +294,14 @@ def programmes(base: BaseLocation) -> tuple[Programme, ...]:
     return (PROGRAMMES[0], leader, *PROGRAMMES[1:])
 
 
-def funding_fit(claims: list[Claim], base: BaseLocation) -> list[dict[str, Any]]:
+def funding_fit(
+    claims: list[Claim], base: BaseLocation, official: list[str] | None = None
+) -> list[dict[str, Any]]:
     """Per programme: the verified official financing claims that back it and the financing claims
-    about it that do not count."""
+    about it that do not count. `official` is the run's official-domain list, by default the
+    allow-list plus the base's own domains (`verify.official_domains`)."""
+    if official is None:
+        official = verify.official_domains(base)
     financing = [c for c in claims if c.dimension == "financing"]
     out = []
     for p in programmes(base):
@@ -304,7 +310,7 @@ def funding_fit(claims: list[Claim], base: BaseLocation) -> list[dict[str, Any]]
             for c in financing
             if _mentions(c, p.pattern) or any(verify.domain_matches(c.source_url, d) for d in p.domains)
         ]
-        backing = [c for c in about if c.verification == "verified" and verify.is_official(c.source_url)]
+        backing = [c for c in about if c.verification == "verified" and verify.is_official(c.source_url, official)]
         out.append(
             {
                 "name": p.name,
@@ -335,7 +341,7 @@ def risk_rows(risks: list[RiskItem], known: set[str]) -> list[dict[str, Any]]:
     ]
 
 
-def source_rows(claims: list[Claim]) -> list[dict[str, Any]]:
+def source_rows(claims: list[Claim], official: list[str] | None = None) -> list[dict[str, Any]]:
     by_url: dict[str, list[Claim]] = {}
     for c in claims:
         by_url.setdefault(c.source_url, []).append(c)
@@ -352,7 +358,7 @@ def source_rows(claims: list[Claim]) -> list[dict[str, Any]]:
                 "title": group[0].source_title,
                 "retrieved_at": min(c.retrieved_at for c in group).isoformat(timespec="seconds"),
                 "verification": ", ".join(f"{s} ×{n}" for s, n in sorted(states.items())) + "".join(f"; {f}" for f in flags),
-                "official": "yes" if verify.is_official(url) else "",
+                "official": "yes" if verify.is_official(url, official) else "",
                 "claim_ids": ", ".join(c.claim_id for c in group),
             }
         )
@@ -393,7 +399,8 @@ def context(run_id: str, now: datetime) -> dict[str, Any]:
     rubric = config.rubric()
     weights = {d.id: d.weight for d in rubric.dimensions}
     local_verified, local_other = location_notes(claims, spec.base_location)
-    funding = funding_fit(claims, spec.base_location)
+    official = verify.official_domains(spec.base_location)
+    funding = funding_fit(claims, spec.base_location, official)
     return {
         "run_id": run_id,
         "generated_at": now.isoformat(timespec="seconds"),
@@ -416,7 +423,7 @@ def context(run_id: str, now: datetime) -> dict[str, Any]:
         "local_places": or_list(base_places(spec.base_location)),
         "location_gaps": research_gaps(run_dir, "location"),
         "risks": risk_rows(risks, {c.claim_id for c in claims}),
-        "sources": source_rows(claims),
+        "sources": source_rows(claims, official),
         "bp": business_plan.context(spec, sheet, claims, risks, funding, config.report().business_plan_language),
         "usage": usage.render_summary(usage.summarize(run_id, run_dir, db.stages(run_id))),
     }

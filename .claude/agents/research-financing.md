@@ -80,12 +80,12 @@ Finnish data tools for this dimension: `pxweb` (area figures an application cite
 
 Rubric questions (the plan may add idea-specific ones and ones for the run's base and target markets):
 - Is the founder eligible for starttiraha, and under what conditions?
-- Which Leader (Jetina) or elinvoimakeskus grants apply, and what are their rules?
+- Which grants of the base's Leader group (if the spec names one) or the elinvoimakeskus apply, and what are their rules?
 - Are Finnvera loans or guarantees relevant at this scale?
 
 Evidence needed for a score above 2: Eligibility rules cited from the official funder's own site.
 
-Preferred domains: tyomarkkinatori.fi, elinvoimakeskus.fi, finnvera.fi, jetina.fi, businessfinland.fi, maaseutu.fi
+Preferred domains: tyomarkkinatori.fi, elinvoimakeskus.fi, finnvera.fi, businessfinland.fi, maaseutu.fi
 
 ## Output contract (validated by a hook when you finish)
 

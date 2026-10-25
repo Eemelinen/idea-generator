@@ -126,9 +126,10 @@ def min_sources(evidence: list[Claim], n: int, independent: bool = True) -> str 
     return None if have >= n else f"min_sources: {have} of {n} {what}"
 
 
-def has_official_source(evidence: list[Claim]) -> str | None:
-    """≥ 1 verified claim on an allow-listed domain (by URL, not the declared `source_type`)."""
-    if any(is_official(c.source_url) for c in evidence):
+def has_official_source(evidence: list[Claim], official: list[str] | None = None) -> str | None:
+    """≥ 1 verified claim on an allow-listed domain (by URL, not the declared `source_type`).
+    `official` is the run's allow-list (`verify.official_domains`), the global one by default."""
+    if any(is_official(c.source_url, official) for c in evidence):
         return None
     return "has_official_source: no verified claim on an allow-listed official domain"
 
@@ -149,7 +150,7 @@ RULES: dict[str, Callable[..., str | None]] = {
 }
 
 
-def check_rule(rule: EvidenceRule, evidence: list[Claim]) -> str | None:
+def check_rule(rule: EvidenceRule, evidence: list[Claim], official: list[str] | None = None) -> str | None:
     """Apply one rubric `evidence_rule` entry; a malformed entry raises ValueError."""
     params = dict(rule.model_extra or {})
     if rule.rule == "min_sources":
@@ -162,7 +163,7 @@ def check_rule(rule: EvidenceRule, evidence: list[Claim]) -> str | None:
     elif rule.rule == "has_numeric":
         args = {"field": params.pop("field", None)}
     else:
-        args = {}
+        args = {"official": official}
     if params:
         raise ValueError(f"{rule.rule}: unknown parameters {sorted(params)}")
     return RULES[rule.rule](evidence, **args)
@@ -185,14 +186,16 @@ def check_rubric(rubric: RubricConfig) -> None:
 # ---------------------------------------------------------------- scoring
 
 
-def score_dimension(proposed: DimensionScore, claims: dict[str, Claim], rubric: RubricConfig) -> DimensionScore:
+def score_dimension(
+    proposed: DimensionScore, claims: dict[str, Claim], rubric: RubricConfig, official: list[str] | None = None
+) -> DimensionScore:
     """Drop unverified citations, apply the dimension's evidence rules and cap if any fails."""
     kept, _ = verified_citations(proposed, claims)
     evidence = [claims[cid] for cid in kept]
     failures = [
         reason
         for rule in rubric.dimension(proposed.dimension).evidence_rule
-        if (reason := check_rule(rule, evidence)) is not None
+        if (reason := check_rule(rule, evidence, official)) is not None
     ]
     if failures:
         return proposed.model_copy(
@@ -266,8 +269,10 @@ def score(
     unit_economics: UnitEconomics | None = None,
     computed_triggers: Iterable[str] = (),
     rubric: RubricConfig | None = None,
+    official: list[str] | None = None,
 ) -> ScoreSheet:
-    """Score a run: proposed scores + all its claims (any state) + the spec's kill-trigger overrides."""
+    """Score a run: proposed scores + all its claims (any state) + the spec's kill-trigger overrides.
+    `official` is the run's official-domain list (`verify.official_domains` of the spec's base)."""
     rubric = rubric or config.rubric()
     claims = list(claims)
     by_id = {c.claim_id: c for c in claims}
@@ -276,7 +281,7 @@ def score(
         if p.dimension in by_dim:
             raise ValueError(f"dimension {p.dimension} is scored more than once")
         by_dim[p.dimension] = p
-    scores = [score_dimension(by_dim.get(d) or _missing(d), by_id, rubric) for d in RUBRIC_DIMENSIONS]
+    scores = [score_dimension(by_dim.get(d) or _missing(d), by_id, rubric, official) for d in RUBRIC_DIMENSIONS]
     total = weighted_total(scores, rubric)
     fired = fired_kill_triggers(claims, overrides, computed_triggers)
     insufficient = sum(s.status == "insufficient_data" for s in scores)

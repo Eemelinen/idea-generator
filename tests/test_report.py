@@ -314,6 +314,19 @@ def test_no_leader_group_means_no_leader_programme(scored):
     assert "Leader (" not in heading4(draft(text), "11. Rahoitussuunnitelma")
 
 
+def test_a_claim_on_the_leader_groups_own_site_backs_it_and_counts_as_official(scored):
+    based_elsewhere(scored, base_location=ELSEWHERE | {"leader_group": {"name": "Kalakukko", "domain": "kalakukko.fi"}})
+    claim = synthetic_claim("financing-007", "Kalakukko funds new rural businesses.",
+                            "https://www.kalakukko.fi/synthetic/funding")  # fmt: skip
+    edit_json(scored / "03_claims" / "verified.json", lambda data: data.append(claim))
+    text = render(scored)
+    leader = subsection(section(text, "Finland funding fit"), "Leader (Kalakukko)")
+    assert "- `financing-007`: Kalakukko funds new rural businesses." in leader
+    assert report.UNVERIFIED_GAP not in leader
+    row = next(line for line in section(text, "Sources").splitlines() if "kalakukko.fi/synthetic" in line)
+    assert "| yes |" in row
+
+
 def test_fired_kill_trigger_shows_its_evidence(scored):
     edit_json(scored / "03_claims" / "verified.json", lambda data: data[0]["flags"].append("permit_impossible"))
     text = render(scored)

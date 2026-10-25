@@ -217,6 +217,26 @@ def test_spec_override_keeps_permit_impossible_from_forcing_no_go(run):
     assert sheet.kill_triggers_fired == [] and sheet.verdict == "GO"
 
 
+def test_the_spec_base_location_decides_which_municipal_site_is_official(run):
+    """IF-703: regulation's only official claim moved to a municipality's site counts only when
+    the spec's base location lists that domain."""
+    def move(data):
+        claim = next(c for c in data if c["claim_id"] == "regulation-001")
+        claim["source_url"] = "https://www.example-kunta.fi/synthetic/regulation"
+
+    edit_json(run / "03_claims" / "verified.json", move)
+    base = {"municipality": "Esimerkki", "region": "Synthetic region", "official_domains": ["example-kunta.fi"]}
+    edit_json(run / "00_spec.json", lambda spec: spec.__setitem__("base_location", base))
+    assert score_run.main([RUN]) == 0
+    assert by_dim(scores_file(run))["regulation"].status == "scored"
+
+    edit_json(run / "00_spec.json", lambda spec: spec.__setitem__("base_location", base | {"official_domains": []}))
+    assert score_run.main([RUN]) == 0
+    regulation = by_dim(scores_file(run))["regulation"]
+    assert regulation.status == "insufficient_data"
+    assert regulation.cap_reason == "has_official_source: no verified claim on an allow-listed official domain"
+
+
 def test_unverified_citations_cannot_lift_a_cap(run):
     # customer cites one verified claim and two unverified ones: 1 of 3 sources → capped at 2
     add_claim(run, claim_id="customer-005", verification="unverified", source_url="https://example.net/a")

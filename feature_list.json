@@ -865,7 +865,7 @@
       "area": "scoring",
       "title": "Rubric and official sources follow the run's scope",
       "user_visible_behavior": "The rubric names no place: the location dimension becomes \"Location fit\" (catchment area for local ideas, operating base and logistics for online ones, weight unchanged), the market, gtm, regulation, financing and killcause questions refer to the spec's base and markets, and a claim from one of the run's own official domains (the base municipality's site, its Leader group) counts as official while those domains leave the global allow-list.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-037"],
       "ticket": "IF-703",
       "spec": "docs/TICKETS.md#if-703-rubric-and-official-sources-follow-the-runs-scope",
@@ -873,7 +873,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_scoring.py tests/test_verify.py tests/test_config.py tests/test_gen_agents.py (a run-level official domain satisfies has_official_source for that run only; the rubric has no fixed place names; weights still sum to 1)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-25 pnpm check → pass (working tree on ca44555)",
+        "2026-10-25 uv run pytest tests/test_scoring.py tests/test_verify.py tests/test_config.py tests/test_gen_agents.py → pass (working tree on ca44555)"
+      ],
       "attempts": 0,
       "notes": ""
     },

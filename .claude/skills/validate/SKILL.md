@@ -131,6 +131,8 @@ that first, never work around it.
      industry and news, then forums), following the mode's steps in the agent's brief.
    - `preferred_domains`: the rubric's `preferred_domains` plus the dimension's list under
      `preferred` in `config/domains.yaml`; regulation and financing also get the `official` list.
+     Regulation, financing and location also get the spec's `base_location.official_domains`
+     and its `leader_group.domain`, which count as official for this run only.
    - `evidence_needed`: the rubric's `min_evidence_for_3`.
    - `killcause` (always present): questions on dead competitors, free substitutes,
      regulatory blockers and "why hasn't this been done here" (the rubric's killcause

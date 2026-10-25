@@ -81,7 +81,8 @@ Finnish data tools for this dimension: `pxweb` (cost and wage indices), `eurosta
 
 Rubric questions (the plan may add idea-specific ones and ones for the run's base and target markets):
 - What are the variable costs per unit (materials, delivery, platform fees, VAT effects)?
-- What are the fixed monthly costs (premises, insurance, software, accounting, YEL)?
+- What are the fixed monthly costs (insurance, software, accounting, YEL; premises for a local or hybrid business)?
+- Online or hybrid: what do shipping, fulfilment, marketplace and payment fees cost per order?
 - What does it cost to acquire a customer through the likely channels?
 - What is the contribution margin per unit and the break-even volume?
 
