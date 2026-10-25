@@ -308,6 +308,11 @@ These came out of reviewing the plan. Phase 1 already applies them; later ticket
 | IF-607        | F-034   | Pipeline control from the UI                           | —               | F-031, F-033               | unattended |
 | IF-608        | F-035   | Settings editor with history                           | —               | F-030                      | unattended |
 | IF-609        | F-036   | Web UI acceptance run                                  | —               | F-032, F-034, F-035        | human      |
+| IF-701        | F-037   | Idea scope: business mode and base location            | —               | —                          | unattended |
+| IF-702        | F-038   | Research and debate briefs follow the run's scope      | —               | F-037                      | unattended |
+| IF-703        | F-039   | Rubric and official sources follow the run's scope     | —               | F-037                      | unattended |
+| IF-704        | F-040   | Report and business plan follow the run's scope        | —               | F-037                      | unattended |
+| IF-705        | F-041   | Scope acceptance: an online idea from the UI           | —               | F-038, F-039, F-040        | human      |
 | IF-602–IF-603 | —       | Backlog (not queued)                                   | —               | —                          | —          |
 
 ---
@@ -809,6 +814,86 @@ A local web UI to start and control the pipeline, read its results and edit ever
   - changing a preset and a model role takes effect on the next run (`meta.json`), and the agents were regenerated
   - stopping the server mid-job and restarting it shows the job as interrupted; a retry resumes the run without redoing completed stages
   - jobs, logs, review scores and settings history survive the restart, and a backup made with `python -m ideaforge.db backup` restores a working database
+
+---
+
+## Phase 7: Scope beyond Rääkkylä
+
+Every idea is researched, scored and reported as a physical business in Rääkkylä today (D-009). The only per-idea scope setting is the free-text `geography` ladder, which no prompt, rubric entry or report section reads. IF-701 adds a business mode and a base location to the spec; IF-702–IF-704 make the agents, the rubric and the report follow them and can be built in parallel; IF-705 accepts the result on real runs.
+
+Rules every Phase 7 ticket follows:
+
+- **Defaults keep today's behaviour.** The founder defaults (`config/founder.yaml`) and the schema defaults are Rääkkylä / North Karelia, mode `local`, so a run started without touching the new fields, and every run made before them, behaves as now.
+- **Modes.** `online`: customers buy remotely; the base matters for logistics, costs, registration and funding only. `local`: customers come to or are served near a physical place. `hybrid`: both, e.g. a shop with a webshop. Local-only research steps apply to `local` and `hybrid`, online steps to `online` and `hybrid`.
+- **No place name outside config and specs.** Prompts, agent templates, skills, the rubric and Python name no municipality, region, statistics code or Leader group; they refer to the run's spec. Place names may stay in docs, recorded fixtures and tests that use them as sample data.
+- **Generated agents** are fixed by editing `agent_templates/` and `prompts/` and running `uv run python scripts/gen_agents.py`.
+
+Where the assumptions live (audit of 2026-10-25, line numbers at `42b54e5`):
+
+| Area               | Places                                                                                                                                                                                                                                                                                                                                                                 | Ticket |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| Spec, intake, form | `schemas.py:106,127` (geography default), `web/control.py:29,90`, `config/finland.yaml:5` (`geography_ladder`, used only by a test), `validate/SKILL.md:83,91`                                                                                                                                                                                                         | IF-701 |
+| Prompts            | `research_base.md:1,15,17,19,27,28,32`, `killcause.md:5,7-8`, `claim_extractor.md:1`, `debate_persona.md:1,52`, `research_contract.md:10` (example quote)                                                                                                                                                                                                              | IF-702 |
+| Agent templates    | `research-location` (whole brief), `research-competition:6,9,11`, `research-regulation:3,8,9,11`, `research-unit-economics:3,7,11`, `research-customer:6`, `research-market:6,7`, `research-gtm:3,6,8`, `research-pricing:6`, `research-financing:3,7`, `research-killcause:5,7`, `_research_base:15`, `debate-operator:3`, `debate-investor:3`, `debate-accountant:3` | IF-702 |
+| Skills             | `validate/SKILL.md:116-118` (plan's "Finland/Rääkkylä-specific questions"), `synthesize/SKILL.md:72`                                                                                                                                                                                                                                                                   | IF-702 |
+| Rubric and domains | `rubric.yaml:37,81,98,110,112,125,134-146,168`; `domains.yaml:15-18` (raakkyla.fi, jetina.fi, luotsipohjoiskarjala.fi official), `:35,37` (preferred)                                                                                                                                                                                                                  | IF-703 |
+| Report and plan    | `report.py:65` (Leader "Jetina"), `:74` `LOCAL_RE`, `:287-291` `location_notes()`; `templates/report.md.j2:150,161`; `review.py:35`; `business_plan.py:85,203` (premises)                                                                                                                                                                                              | IF-704 |
+| Not affected       | `fi/pxweb.py`, `fi/prh.py`, `fi/eurostat.py` have no default region; only the prompts' examples name one.                                                                                                                                                                                                                                                              | —      |
+
+### IF-701 Idea scope: business mode and base location
+
+- **Mode:** unattended. **Depends on:** —.
+- **Scope:**
+  - **Schemas:** `BusinessMode = Literal["online", "local", "hybrid"]` and a strict `BaseLocation`: `municipality`, `municipality_code` (optional, e.g. `KU707`), `region`, `region_code` (optional, e.g. `MK12`), `nearby` (towns), `official_domains`, `leader_group` (optional `{name, domain}`). `IdeaSpec` and `Intake` get `business_mode` and `base_location`, defaulting to Rääkkylä / `local`, so old `00_spec.json` and `intake.json` files still validate.
+  - **Defaults:** `FounderConfig` gets `business_mode`, `base_location` and `geography` (the target-market ladder), prefilled with today's values; the Settings page shows them through its generated founder form. `finland.yaml`'s `geography_ladder` is removed and `test_config` checks the founder default against the schema default instead.
+  - **Forms:** the New idea and New version forms (`web/control.py`, `templates/_idea_form.html`) get a mode choice with one-line descriptions and the base-location fields, prefilled from `config.founder()` and, for a new version, from the parent spec. The geography field is relabelled "Target markets, nearest first". `check_idea()` validates the fields into the `Intake`; the run's Idea tab shows the mode and the base.
+  - **Validate Stage 0:** maps `business_mode` and `base_location` from `intake.json` into `00_spec.json`; without an intake, the geography clarifying question also settles the mode and the base.
+- **Docs:** README (New idea), IMPLEMENTATION_PLAN.md (spec fields), DECISIONS.md D-009.
+- **Verification:** `L1: pnpm check` · `L1: uv run pytest tests/test_schemas.py tests/test_new_run.py tests/test_web_control.py tests/test_web_settings.py tests/test_config.py tests/test_skills.py`.
+- **Acceptance:** as the verification.
+
+### IF-702 Research and debate briefs follow the run's scope
+
+- **Mode:** unattended. **Depends on:** F-037.
+- **Scope:**
+  - **Scope lines:** `brief.scope_lines(run_dir)` reads `00_spec.json` and `brief_lines()` adds them, so `scripts/research_brief.py` puts them in every research and mini-research brief. Example: `Scope: online business. Base: Rääkkylä (KU707), North Karelia (MK12); nearby: Joensuu, Kitee. Target markets, nearest first: Finland → EU.` plus one line of mode guidance. The debate skill pastes the same lines into the persona prompts.
+  - **Prompts and templates** (the table above): place-neutral wording that points to the scope line and the spec; tool recipes use placeholders (`--filter Alue=<municipality_code>,<region_code>`, `prh search --municipality <municipality>`). Local-only steps (premises rent, zoning and building permits, catchment population, summer residents, local networks, Google Maps listings) sit under "Local or hybrid:". New "Online or hybrid:" steps: national and EU e-commerce demand (Statistics Finland, Eurostat `isoc_*`), competing webshops and marketplaces, shipping and fulfilment costs (Posti, Matkahuolto, parcel lockers), platform and payment fees, distance-selling and consumer-protection rules, EU VAT OSS, digital acquisition channels. `research-location` assesses the catchment area for local ideas and the operating base (logistics, shipping times, connectivity, costs) for online ones.
+  - **Validate Stage 1:** the plan's local questions become base-location- and mode-specific questions.
+  - Regenerate the agents.
+- **Verification:** `L1: pnpm check` · `L1: uv run pytest tests/test_brief.py tests/test_gen_agents.py tests/test_skills.py` (scope lines for an online, a local and a hybrid spec; no fixed place name or code in the generated agents; the agents are up to date; validate and debate pass the scope lines).
+- **Acceptance:** as the verification.
+
+### IF-703 Rubric and official sources follow the run's scope
+
+- **Mode:** unattended. **Depends on:** F-037.
+- **Scope:**
+  - **Rubric:** the `location` dimension is renamed "Location fit" with mode-prefixed questions (local: catchment demand, logistics, local assets; online: operating base, shipping, connectivity, costs); weight and evidence rules unchanged, so `scoring.score()` keeps one global rubric. Questions `:37`, `:98`, `:112`, `:125` and `:168` refer to the spec's base and markets; regulation, gtm and unit economics get online questions (distance selling, consumer rules, OSS VAT, marketplaces, shipping costs).
+  - **Official sources:** `has_official_source` and verification also accept the run's `base_location.official_domains` and its Leader group's domain. `raakkyla.fi`, `jetina.fi` and `luotsipohjoiskarjala.fi` move from the global allow-list in `domains.yaml` into the founder default; the preferred-domain lists drop them.
+- **Docs:** CLAUDE.md (the domain allow-list text), IMPLEMENTATION_PLAN.md (rubric).
+- **Verification:** `L1: pnpm check` · `L1: uv run pytest tests/test_scoring.py tests/test_verify.py tests/test_config.py tests/test_gen_agents.py` (a run-level official domain counts for that run only; no fixed place name in the rubric; weights sum to 1).
+- **Acceptance:** as the verification.
+
+### IF-704 Report and business plan follow the run's scope
+
+- **Mode:** unattended. **Depends on:** F-037.
+- **Scope:**
+  - **Location notes:** the report heading becomes "Location notes" (`review.SECTIONS` follows). `location_notes()` builds its pattern from the spec's municipality, region and nearby towns instead of `LOCAL_RE`, and the empty-section line names those places.
+  - **Funding fit:** the Leader programme's name and domain come from `base_location.leader_group`; with none, the programme is left out.
+  - **Business plan:** section 8's fill-in text depends on the mode: premises and their costs for local, storage, fulfilment and the webshop platform for online, both for hybrid.
+  - Regenerate the golden snapshot (`IDEAFORGE_UPDATE_GOLDEN=1`).
+- **Verification:** `L1: pnpm check` · `L1: uv run pytest tests/test_report.py tests/test_status.py tests/test_revised_plan.py` (location notes for a non-Rääkkylä spec; review sections equal the template headings; business-plan text by mode).
+- **Acceptance:** as the verification.
+
+### IF-705 Scope acceptance: an online idea from the UI
+
+- **Mode:** human. **Depends on:** F-038, F-039, F-040.
+- **Steps:** with the `.ideaforge-dev` marker removed, start the server and use only the UI.
+- **Verification:** `L1: pnpm check` · `manual:` the acceptance list below, observed on two real ideas; results recorded here.
+- **Acceptance:**
+  - an online-store idea with mode `online` and markets Finland → EU runs validate → synthesize with no question asked
+  - its plan and research size the market and competition in Finland and the EU (webshops, marketplaces, e-commerce statistics) and price shipping and platform fees; Rääkkylä appears only as the operating base
+  - its report has a "Location notes" section about the operating base and no Rääkkylä-specific funding programme unless the base location names one
+  - a local idea with the default scope still gets the Rääkkylä research, scores and report sections it gets today
 
 ## Backlog: v2 (optional, not queued)
 

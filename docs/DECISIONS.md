@@ -103,3 +103,20 @@ Format: **Context** (what forced a choice) · **Decision** · **Consequences**.
   - Settings changed in the UI make `config/` differ from git, which `meta.json` already records as `config_dirty`.
   - The live headless path is first exercised by the human acceptance ticket IF-609.
   - IF-601 (F-030) built the app shell, the `schema_version` migrations, `python -m ideaforge.db backup` and the runs dashboard. HTMX is not vendored yet (TICKETS.md plan note 37): the unattended session could not download it, and the dashboard needs no partial updates.
+
+## D-009 · Per-idea business mode and base location instead of a fixed Rääkkylä scope (2026-10-25)
+
+- Context:
+  - The user wants to test ideas that are not tied to Rääkkylä: online stores sold across Finland and the EU, and businesses with a physical location somewhere else.
+  - An audit found Rääkkylä, North Karelia, their statistics codes and the Jetina Leader group hardcoded in the research and debate prompts, the agent templates, the validate skill, the rubric, the official-domain allow-list and the report code. Many steps also assume premises, zoning and a local population.
+  - The only per-idea scope setting, the `geography` ladder, is not read by any prompt, rubric entry or report section.
+- Decision:
+  - Every idea gets a `business_mode` (`online`, `local` or `hybrid`) and a `base_location` (municipality, region, statistics codes, nearby towns, official domains, optional Leader group) next to the target-market ladder.
+  - Defaults come from `config/founder.yaml`, editable on the Settings page, and are Rääkkylä / North Karelia, mode `local`, so nothing changes until the user changes them.
+  - The agents stay generated once from static templates. The per-run scope reaches them as lines that `brief.py` adds to every research, mini-research and debate brief, and the templates split local-only and online steps.
+  - The rubric keeps its ten dimensions and weights. The location dimension adapts its questions by mode instead of being dropped for online ideas.
+  - The base location's official domains count as official for that run only.
+- Consequences:
+  - Five tickets, IF-701–IF-705 (F-037–F-041), in TICKETS.md Phase 7, with the audit table and the rules every ticket follows.
+  - Runs made before the change load with the Rääkkylä / `local` defaults.
+  - `raakkyla.fi`, `jetina.fi` and `luotsipohjoiskarjala.fi` leave the global allow-list, so a claim from them counts as official only in a run whose base location lists them.
