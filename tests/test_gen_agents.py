@@ -107,7 +107,7 @@ def test_research_agents_know_the_mini_research_contract():
 
 # The `fi` tools each research brief names for its dimension (IF-211).
 BRIEF_TOOLS = {
-    "customer": {"pxweb", "prh"},
+    "customer": {"pxweb", "prh", "eurostat"},
     "market": {"pxweb", "prh", "eurostat"},
     "competition": {"prh"},
     "pricing": {"pxweb"},
@@ -142,8 +142,8 @@ def test_research_base_explains_the_fi_tools():
     for command in (
         "uv run python -m ideaforge.fi.pxweb search",
         "uv run python -m ideaforge.fi.pxweb meta <table_path>",
-        "uv run python -m ideaforge.fi.pxweb get <table_path> --filter Alue=KU707,MK12",
-        "uv run python -m ideaforge.fi.prh search --industry <TOL 2025 code or prefix> --municipality Rääkkylä",
+        "uv run python -m ideaforge.fi.pxweb get <table_path> --filter Alue=<municipality_code>,<region_code>",
+        "uv run python -m ideaforge.fi.prh search --industry <TOL 2025 code or prefix> --municipality <municipality>",
         "uv run python -m ideaforge.fi.prh search --name",
         "uv run python -m ideaforge.fi.eurostat get <dataset> --geo FI",
     ):
@@ -151,7 +151,8 @@ def test_research_base_explains_the_fi_tools():
     # Plan notes 31–33: cite the `cite:` line, TOL 2025 prefixes, how Alue names resolve.
     assert "**Cite the `cite:` line `get` prints**" in text and "`unfetchable`" in text
     assert "TOL 2025" in text and "2- or 3-digit prefix" in text
-    assert "Rääkkylä `KU707`" in text and "North Karelia `MK12`" in text and "first in table order" in text
+    assert "the scope line gives the base's codes" in text and "first in table order" in text
+    assert "When the scope line gives no code, find it with `pxweb meta` first." in text
 
 
 def test_fi_commands_in_the_briefs_pass_the_research_guard():
@@ -178,3 +179,93 @@ def test_claim_extractor_is_on_its_role_and_writes_only_extraction_files():
     assert "Write `[]` when none" in body
     for forbidden in ("WebSearch", "WebFetch", "ideaforge.fi."):
         assert forbidden not in body, forbidden
+
+
+# ---------------------------------------------------------------- scope (IF-702)
+
+PROMPTS = config.ROOT / "prompts"
+TEMPLATES = config.ROOT / "agent_templates"
+CODE_RE = re.compile(r"\b(KU\d{3}|MK\d{2})\b")
+
+
+def fixed_places() -> set[str]:
+    """The founder default's places plus the ones the Phase 7 audit found in the prompts."""
+    base = config.founder().base_location
+    places = {base.municipality, base.region, *base.nearby, *base.official_domains}
+    if base.leader_group:
+        places |= {base.leader_group.name, base.leader_group.domain}
+    places |= {p for p in config.founder().geography if p not in {"Finland", "online/EU"}}
+    return places | {"Rääkkylä", "Pohjois-Karjala", "Keski-Karjala", "Karelia", "Savonlinna", "Liperi", "Luotsi"}
+
+
+def without_config_text(text: str) -> str:
+    """Drop what gen_agents renders from config/rubric.yaml and config/domains.yaml (the dimension
+    title, rubric questions, evidence rule and preferred domains): IF-703 makes those place-neutral."""
+    rubric = config.rubric()
+    parts = [*rubric.killcause.research_questions]
+    for d in rubric.dimensions:
+        parts += [d.name, d.min_evidence_for_3, *d.research_questions]
+    for part in sorted(parts, key=len, reverse=True):
+        text = text.replace(part, "")
+    return "\n".join(ln for ln in text.splitlines() if not ln.startswith("Preferred domains:"))
+
+
+def test_prompts_and_templates_name_no_fixed_place_or_code():
+    for path in [*PROMPTS.glob("*.md"), *TEMPLATES.glob("*.j2")]:
+        text = path.read_text(encoding="utf-8")
+        for place in fixed_places():
+            assert place not in text, (path.name, place)
+        assert not CODE_RE.search(text), (path.name, CODE_RE.search(text))
+
+
+def test_generated_agents_name_no_fixed_place_or_code():
+    for path, text in gen_agents.render_all().items():
+        text = without_config_text(text)
+        for place in fixed_places():
+            assert place not in text, (path.stem, place)
+        assert not CODE_RE.search(text), (path.stem, CODE_RE.search(text))
+
+
+def test_research_agents_follow_the_scope_line_and_the_mode():
+    rendered = {p.stem: t for p, t in gen_agents.render_all().items()}
+    research = {s.dimension: rendered[s.name] for s in agents.AGENTS.values() if s.kind == "research"}
+    for dim, text in research.items():
+        assert "## Scope" in text and "The brief's `Scope:` line" in text, dim
+        assert "`<municipality>`, `<municipality_code>`, `<region>`, `<region_code>`" in text, dim
+        assert "Size and compare along the scope line's target markets" in text, dim
+    # local-only steps are marked; every dimension with a local step also has an online one
+    for dim, text in research.items():
+        focus = text.split("## Your dimension:", 1)[1]
+        if "Local or hybrid:" in focus:
+            assert "Online or hybrid:" in focus, dim
+    for dim in ("customer", "market", "competition", "unit_economics", "gtm", "regulation", "location"):
+        focus = research[dim].split("## Your dimension:", 1)[1]
+        assert "Online or hybrid:" in focus, dim
+    # the online steps the ticket lists, each in the dimension that owns it
+    online = {
+        "market": ("e-commerce demand", "`isoc_*`", "Eurostat"),
+        "competition": ("webshops and marketplace sellers",),
+        "unit_economics": ("Posti", "Matkahuolto", "parcel lockers", "marketplace and payment-provider fees"),
+        "pricing": ("platform fee", "shipping price"),
+        "regulation": ("distance-selling and consumer-protection rules", "OSS"),
+        "gtm": ("digital acquisition channels",),
+        "killcause": ("marketplaces and international webshops", "distance-selling"),
+    }
+    for dim, phrases in online.items():
+        for phrase in phrases:
+            assert phrase in research[dim], (dim, phrase)
+    location = research["location"]
+    assert "the catchment area" in location and "the base as the operating base" in location
+    for local in ("premises", "zoning", "population", "summer residents", "local networks"):
+        assert any(local in t.split("## Your dimension:", 1)[1] for t in research.values()), local
+    assert "Leader group the scope line names" in research["financing"]
+
+
+def test_debate_personas_judge_the_plan_for_the_run_scope():
+    rendered = {p.stem: t for p, t in gen_agents.render_all().items()}
+    for spec in agents.AGENTS.values():
+        if spec.kind == "debate":
+            text = rendered[spec.name]
+            assert "the run's scope)" in text and "The brief's `Scope:` line" in text, spec.name
+    assert "logistics from the base" in rendered["debate-operator"]
+    assert "OSS" in rendered["debate-accountant"]

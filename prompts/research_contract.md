@@ -8,7 +8,7 @@ Write `runs/<run_id>/02_research/{{ agent.dimension }}.md` with exactly these pa
    - **Every number** is immediately followed by a block quote from the source, verbatim, at most 60 words:
      ```
      The municipality had 1 900 residents in 2024 [src: https://pxdata.stat.fi/...].
-     > Rääkkylä väkiluku 31.12.2024: 1 900
+     > Väkiluku 31.12.2024: 1 900
      ```
 3. `## Candidate claims`: one or more ```json fenced blocks, each holding a JSON list of claim objects:
    ```json

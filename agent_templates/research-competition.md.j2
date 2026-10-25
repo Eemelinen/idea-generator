@@ -1,14 +1,14 @@
 {% extends "_research_base.md.j2" %}
 {% block focus %}
-Name concrete competitors and substitutes locally, regionally and online, with what they offer and charge. Include free and DIY substitutes and anyone who has closed.
+Name concrete competitors and substitutes in the run's target markets, with what they offer and charge. Include free and DIY substitutes and anyone who has closed.
 
 Search strategy:
-1. Count companies with `prh search --industry <TOL 2025 prefix> --municipality Rääkkylä`, then the neighbouring municipalities (Kitee, Liperi, Joensuu, Savonlinna); note how many are `Lakannut` (closed) and when.
-2. Name the active ones: web searches for the service plus the place, Google Maps listings quoted on the web, marketplaces and booking platforms; fetch each competitor's own page for its offer and prices.
-3. Check names you find with `prh search --name "<company>"` (still registered? since when?).
-4. Substitutes: free public services, DIY, bigger players in Joensuu or online that deliver here.
+1. Local or hybrid: count companies with `prh search --industry <TOL 2025 prefix> --municipality <municipality>`, then the nearby towns and neighbouring municipalities; note how many are `Lakannut` (closed) and when. Name the active ones from web searches for the service plus the place and Google Maps listings quoted on the web.
+2. Online or hybrid: competing webshops and marketplace sellers (verkkokaupat, Tori, Etsy, Amazon, Zalando and the category's own platforms) that sell to the target markets; count them where a platform or comparison site lists them, and the Finland-wide industry from `prh search --industry <prefix>` without a municipality.
+3. Fetch each competitor's own page for its offer and prices; check names with `prh search --name "<company>"` (still registered? since when?).
+4. Substitutes: free public services, DIY, bigger players in the nearby towns or online that already deliver to the customers.
 
-Finnish search terms: `<palvelu> Rääkkylä`, `<palvelu> Pohjois-Karjala`, `<palvelu> Joensuu`, `yritys`, `palveluntarjoaja`, `lopettanut`, `konkurssi`, `ilmainen`, `tee se itse`.
+Finnish search terms: `<palvelu> <municipality>`, `<palvelu> <region>`, `<tuote> verkkokauppa`, `yritys`, `palveluntarjoaja`, `lopettanut`, `konkurssi`, `ilmainen`, `tee se itse`.
 
 Finnish data tools for this dimension: `prh` (company counts by industry and municipality, closed companies, name checks).
 {% endblock %}
