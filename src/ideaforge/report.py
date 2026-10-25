@@ -8,11 +8,11 @@ scores, caps, kill triggers, the verdict and the unit economics come from 04_sco
 04_risks.json, the gaps from each research file's `## Gaps` section and the usage summary from
 usage.jsonl (`usage.render_summary`).
 
-Finland funding fit: each programme (starttiraha, Leader / Jetina, elinvoimakeskus, Finnvera) is
-backed by the verified claims on an allow-listed official domain (`verify.is_official`) that name
-it, or shown as "unverified – see gaps". `config/finland.yaml` is never read here: its values are
-hints to verify, never facts. The Rääkkylä notes are the location claims plus the claims that name
-Rääkkylä, Keski-Karjala or North Karelia.
+Finland funding fit: each programme (starttiraha, the spec's Leader group if it names one,
+elinvoimakeskus, Finnvera) is backed by the verified claims on an allow-listed official domain
+(`verify.is_official`) that name it, or shown as "unverified – see gaps". `config/finland.yaml` is
+never read here: its values are hints to verify, never facts. The location notes are the location
+claims plus the claims that name the spec's base municipality, region or a nearby town (D-009).
 
 The starttiraha business-plan draft (IF-307, `ideaforge.business_plan`) is a section of the
 report, in `config/report.yaml: business_plan_language`.
@@ -35,7 +35,7 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from ideaforge import business_plan, config, db, runs, scoring, usage, verify
-from ideaforge.schemas import KILL_TRIGGERS, RUBRIC_DIMENSIONS, Claim, IdeaSpec, RiskItem, ScoreSheet
+from ideaforge.schemas import KILL_TRIGGERS, RUBRIC_DIMENSIONS, BaseLocation, Claim, IdeaSpec, RiskItem, ScoreSheet
 from ideaforge.synthesis import InputError, load_claims, load_risks, load_scores, load_spec
 
 REPORT = "05_report.md"
@@ -60,9 +60,9 @@ class Programme:
 # shoreline permits, and "leader" or "starttiraha" appear in competition and tax claims. A
 # financing claim is about a programme when its statement, source title or quote names it, or its
 # URL is on the programme's own site; only the verified ones on an allow-listed domain back it.
+# The Leader programme is the spec's Leader group (`programmes()`); the others are national.
 PROGRAMMES = (
     Programme("starttiraha", "Starttiraha (start-up grant)", re.compile(r"starttirah|start-?up grant", re.I)),
-    Programme("leader", "Leader (Jetina)", re.compile(r"jetina|\bleader\b(?!ship)", re.I), ("jetina.fi",)),
     Programme(
         "elinvoimakeskus",
         "Elinvoimakeskus business development grants",
@@ -71,7 +71,7 @@ PROGRAMMES = (
     ),
     Programme("finnvera", "Finnvera loans and guarantees", re.compile(r"finnvera", re.I), ("finnvera.fi",)),
 )
-LOCAL_RE = re.compile(r"r[aä][aä]kkyl[aä]|keski-karjala|central karelia|pohjois-karjala|north karelia", re.I)
+LEADER_RE = r"\bleader\b(?!ship)"
 GAPS_RE = re.compile(r"^##\s+Gaps\s*$(.*?)(?=^##\s|\Z)", re.I | re.M | re.S)
 LIST_MARK_RE = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+")
 
@@ -262,12 +262,43 @@ def _mentions(c: Claim, pattern: re.Pattern[str]) -> bool:
     return any(pattern.search(text) for text in (c.statement, c.source_title, c.quote))
 
 
-def funding_fit(claims: list[Claim]) -> list[dict[str, Any]]:
+def place_regex(names: Iterable[str]) -> str:
+    """A pattern for any of `names` at a word start, also with a Finnish case ending (-n, -ssa,
+    -llä, whose stem may drop or double the final vowel): a name of five or more letters loses one
+    final vowel, and a/ä and o/ö match either spelling."""
+    alternatives = []
+    for name in dict.fromkeys(n.strip() for n in names if n.strip()):
+        stem = name[:-1] if len(name) >= 5 and name[-1].lower() in "aeiouyäö" else name
+        alternatives.append("".join("[aä]" if ch in "aä" else "[oö]" if ch in "oö" else re.escape(ch) for ch in stem))
+    return rf"(?<!\w)(?:{'|'.join(alternatives)})" if alternatives else r"(?!)"
+
+
+def base_places(base: BaseLocation) -> list[str]:
+    return list(dict.fromkeys([base.municipality, base.region, *base.nearby]))
+
+
+def or_list(items: list[str]) -> str:
+    return items[0] if len(items) == 1 else f"{', '.join(items[:-1])} or {items[-1]}"
+
+
+def programmes(base: BaseLocation) -> tuple[Programme, ...]:
+    """The funding programmes of a run based at `base`: the national ones plus its Leader group, if
+    the base location names one (D-009)."""
+    group = base.leader_group
+    if group is None:
+        return PROGRAMMES
+    leader = Programme(
+        "leader", f"Leader ({group.name})", re.compile(f"{place_regex([group.name])}|{LEADER_RE}", re.I), (group.domain,)
+    )
+    return (PROGRAMMES[0], leader, *PROGRAMMES[1:])
+
+
+def funding_fit(claims: list[Claim], base: BaseLocation) -> list[dict[str, Any]]:
     """Per programme: the verified official financing claims that back it and the financing claims
     about it that do not count."""
     financing = [c for c in claims if c.dimension == "financing"]
     out = []
-    for p in PROGRAMMES:
+    for p in programmes(base):
         about = [
             c
             for c in financing
@@ -284,10 +315,11 @@ def funding_fit(claims: list[Claim]) -> list[dict[str, Any]]:
     return out
 
 
-def location_notes(claims: list[Claim]) -> tuple[list[Claim], list[Claim]]:
-    """Location claims plus claims of any dimension naming Rääkkylä / Keski-Karjala / North Karelia:
-    (verified, the rest)."""
-    local = [c for c in claims if c.dimension == "location" or _mentions(c, LOCAL_RE)]
+def location_notes(claims: list[Claim], base: BaseLocation) -> tuple[list[Claim], list[Claim]]:
+    """Location claims plus claims of any dimension naming the base municipality, its region or a
+    nearby town: (verified, the rest)."""
+    pattern = re.compile(place_regex(base_places(base)), re.I)
+    local = [c for c in claims if c.dimension == "location" or _mentions(c, pattern)]
     return [c for c in local if c.verification == "verified"], [c for c in local if c.verification != "verified"]
 
 
@@ -360,8 +392,8 @@ def context(run_id: str, now: datetime) -> dict[str, Any]:
     risks = load_risks(run_dir).risks
     rubric = config.rubric()
     weights = {d.id: d.weight for d in rubric.dimensions}
-    local_verified, local_other = location_notes(claims)
-    funding = funding_fit(claims)
+    local_verified, local_other = location_notes(claims, spec.base_location)
+    funding = funding_fit(claims, spec.base_location)
     return {
         "run_id": run_id,
         "generated_at": now.isoformat(timespec="seconds"),
@@ -381,6 +413,7 @@ def context(run_id: str, now: datetime) -> dict[str, Any]:
         "location_score": next((s for s in sheet.scores if s.dimension == "location"), None),
         "local_verified": local_verified,
         "local_other": local_other,
+        "local_places": or_list(base_places(spec.base_location)),
         "location_gaps": research_gaps(run_dir, "location"),
         "risks": risk_rows(risks, {c.claim_id for c in claims}),
         "sources": source_rows(claims),

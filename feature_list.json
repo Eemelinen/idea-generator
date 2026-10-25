@@ -880,7 +880,7 @@
       "area": "report",
       "title": "Report and business plan follow the run's scope",
       "user_visible_behavior": "The report's \"Location notes\" section (formerly \"Rääkkylä location notes\") collects claims about the run's own base location and nearby towns, the Leader programme shows the run's Leader group or is left out, and section 8 of the starttiraha business-plan draft asks for premises for local ideas and for storage, fulfilment and the webshop platform for online ones.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-037"],
       "ticket": "IF-704",
       "spec": "docs/TICKETS.md#if-704-report-and-business-plan-follow-the-runs-scope",
@@ -888,7 +888,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_report.py tests/test_status.py tests/test_revised_plan.py (location notes match a non-Rääkkylä spec; review sections equal the template headings; the business-plan fill-in text depends on the mode; the golden snapshot is regenerated)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-25 pnpm check → pass (working tree on ca44555)",
+        "2026-10-25 uv run pytest tests/test_report.py tests/test_status.py tests/test_revised_plan.py → pass (working tree on ca44555)"
+      ],
       "attempts": 0,
       "notes": ""
     },
