@@ -147,7 +147,7 @@ Each item counts only when a verified financing claim on an allow-listed officia
 {% endfor %}
 {% endif %}
 
-## Rääkkylä location notes
+## Location notes
 
 {% if location_score %}
 Location score: {{ location_score.final_score | score }} of 5{% if location_score.status == "insufficient_data" %}, **{{ cap_label }}**: insufficient data{% endif %}.
@@ -158,7 +158,7 @@ Location score: {{ location_score.final_score | score }} of 5{% if location_scor
 - `{{ c.claim_id }}`: {{ c | claim }} Source: {{ c.source_title | link(c.source_url) }}
 {% endfor %}
 {% else %}
-- No verified claim about Rääkkylä, Keski-Karjala or North Karelia.
+- No verified claim about {{ local_places }}.
 {% endif %}
 {% if local_other %}
 - Not counted (not verified): {% for c in local_other %}`{{ c.claim_id }}` ({{ c.verification }}){{ ", " if not loop.last }}{% endfor %}

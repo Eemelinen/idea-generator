@@ -14,6 +14,7 @@ import os
 import re
 import shutil
 from datetime import UTC, datetime
+from typing import get_args
 
 import pytest
 import render_report
@@ -22,7 +23,7 @@ import yaml
 from conftest import FIXTURES, REPO
 
 from ideaforge import business_plan, config, db, report, runs
-from ideaforge.schemas import UnitEconomics
+from ideaforge.schemas import BusinessMode, UnitEconomics, default_base_location
 
 RUN = "20261023-130000-sauna-cabins"
 NOW = datetime(2026, 10, 23, 14, 0, tzinfo=UTC)
@@ -98,7 +99,7 @@ def test_report_has_every_section_in_order(scored):
     headings = re.findall(r"^## (.+)$", text, re.M)
     assert [h.split(":")[0] for h in headings] == [
         "Verdict", "Score table", "Kill triggers", "Unit economics", "Dimensions",
-        "Finland funding fit", "Rääkkylä location notes", "Risk register", "Starttiraha business-plan draft",
+        "Finland funding fit", "Location notes", "Risk register", "Starttiraha business-plan draft",
         "Sources", "Usage summary",
     ]  # fmt: skip
     dims = re.findall(r"^### .*\(`(\w+)`\)$", section(text, "Dimensions"), re.M)
@@ -223,7 +224,7 @@ def test_funding_gap_never_shows_a_finland_yaml_value(scored):
     edit_json(scored / "03_claims" / "verified.json", lambda data: data.__setitem__(
         slice(None), [c for c in data if c["claim_id"] not in ("financing-004", "financing-005", "financing-006")]))  # fmt: skip
     funding = section(render(scored), "Finland funding fit")
-    for p in report.PROGRAMMES:
+    for p in report.programmes(default_base_location()):
         body = subsection(funding, p.name)
         assert f"- **{report.UNVERIFIED_GAP}**: no verified financing claim on an official domain covers this." in body
         assert "Not counted" not in body
@@ -243,15 +244,74 @@ def test_report_never_reads_finland_yaml():
     assert "finland" not in draft.lower()
 
 
-# ---------------------------------------------------------------- Rääkkylä, kill triggers, sources
+# ---------------------------------------------------------------- location, kill triggers, sources
 
 
 def test_location_notes_list_verified_local_claims_and_gaps(scored):
-    notes = section(render(scored), "Rääkkylä location notes")
+    notes = section(render(scored), "Location notes")
     assert "- `location-004`: Rääkkylä has a synthetic number of summer residents (3000 persons)." in notes
     assert "- `location-001`" in notes
     assert "`gtm-004` (conflict)" in notes  # names North Karelia, not verified
     assert "- No data on broadband coverage by village in Rääkkylä." in notes
+
+
+# D-009: a base elsewhere (synthetic scope values), no Leader group
+ELSEWHERE = {"municipality": "Kuopio", "region": "Pohjois-Savo", "nearby": ["Siilinjärvi"], "official_domains": ["kuopio.fi"]}
+
+
+def based_elsewhere(run_dir, **fields):
+    edit_json(run_dir / "00_spec.json", lambda data: data.update({"base_location": ELSEWHERE} | fields))
+
+
+def test_location_notes_follow_the_spec_base_location(scored):
+    elsewhere = [
+        synthetic_claim("gtm-005", "Kuopiossa on synthetic coworking spaces.", "https://example.org/synthetic/kuopio"),
+        synthetic_claim("competition-005", "Two synthetic cabin firms operate in Siilinjärvi.", "https://example.org/synthetic/s"),
+        synthetic_claim("market-005", "Pohjois-Savon synthetic tourism grew.", "https://example.org/synthetic/ps",
+                        verification="unverified"),
+    ]  # fmt: skip
+    edit_json(scored / "03_claims" / "verified.json", lambda data: data.extend(elsewhere))
+    based_elsewhere(scored)
+    notes = section(render(scored), "Location notes")
+    assert "- `gtm-005`: Kuopiossa on synthetic coworking spaces." in notes  # inflected
+    assert "- `competition-005`" in notes and "`market-005` (unverified)" in notes
+    assert "- `location-004`" in notes  # a location claim counts wherever it is about
+    assert "gtm-004" not in notes  # names North Karelia, not this base
+
+
+def test_location_notes_without_a_local_claim_name_the_base_places(scored):
+    edit_json(scored / "03_claims" / "verified.json", lambda data: data.__setitem__(
+        slice(None), [c for c in data if c["dimension"] != "location"]))  # fmt: skip
+    based_elsewhere(scored)
+    notes = section(render(scored), "Location notes")
+    assert "- No verified claim about Kuopio, Pohjois-Savo or Siilinjärvi." in notes
+
+
+def test_place_regex_matches_inflected_names_at_a_word_start():
+    pattern = re.compile(report.place_regex(["Rääkkylä", "Kitee", "Joensuu", "Pori"]), re.I)
+    for text in ("Rääkkylässä", "raakkylan", "Kiteellä", "Joensuun", "in Pori.", "PORIN"):
+        assert pattern.search(text), text
+    for text in ("Kitchen", "Temporin", "Lappeenranta"):
+        assert not pattern.search(text), text
+    assert not re.search(report.place_regex([" "]), "anything")
+
+
+def test_leader_programme_comes_from_the_spec_or_is_left_out(scored):
+    based_elsewhere(scored, base_location=ELSEWHERE | {"leader_group": {"name": "Kalakukko", "domain": "kalakukko.fi"}})
+    funding = section(render(scored), "Finland funding fit")
+    assert re.findall(r"^### (Leader.*)$", funding, re.M) == ["Leader (Kalakukko)"]
+    assert "`financing-006`" in subsection(funding, "Leader (Kalakukko)")  # "the Leader group" still matches
+
+
+def test_no_leader_group_means_no_leader_programme(scored):
+    based_elsewhere(scored)
+    text = render(scored)
+    funding = section(text, "Finland funding fit")
+    assert re.findall(r"^### (.+)$", funding, re.M) == [
+        "Starttiraha (start-up grant)", "Elinvoimakeskus business development grants", "Finnvera loans and guarantees",
+        "Funding gaps (financing research)",
+    ]  # fmt: skip
+    assert "Leader (" not in heading4(draft(text), "11. Rahoitussuunnitelma")
 
 
 def test_fired_kill_trigger_shows_its_evidence(scored):
@@ -521,10 +581,31 @@ def test_draft_funding_is_backed_or_unverified_and_shows_no_finland_yaml_value(s
     edit_json(scored / "03_claims" / "verified.json", lambda data: data.__setitem__(
         slice(None), [c for c in data if c["claim_id"] not in ("financing-004", "financing-005", "financing-006")]))  # fmt: skip
     financing = heading4(draft(render(scored)), "11. Rahoitussuunnitelma")
-    for p in report.PROGRAMMES:
+    for p in report.programmes(default_base_location()):
         assert f"  - {p.name}: **vahvistamaton – katso puutteet**" in financing
     for value in finland_values() - {"Jetina", "Rääkkylä", "Pohjois-Karjala", "Keski-Karjala"}:
         assert value not in financing, f"draft financing shows the finland.yaml hint {value!r}"
+
+
+@pytest.mark.parametrize(
+    ("mode", "fill"),
+    [
+        ("local", "toimitilat ja niiden kustannukset"),
+        ("online", "varastointi, tilausten toimitus ja verkkokauppa-alusta sekä niiden kustannukset"),
+        ("hybrid", "toimitilat, varastointi, tilausten toimitus ja verkkokauppa-alusta sekä niiden kustannukset"),
+    ],
+)
+def test_draft_location_fill_in_follows_the_business_mode(scored, mode, fill):
+    edit_json(scored / "00_spec.json", lambda data: data.__setitem__("business_mode", mode))
+    location = heading4(draft(render(scored)), "8. Sijainti ja toimintaympäristö")
+    assert f"- **TÄYDENNÄ**: {fill}\n" in location
+    assert ("toimitilat" in location) == (mode != "online")
+    assert ("verkkokauppa-alusta" in location) == (mode != "local")
+
+
+def test_draft_location_fill_in_exists_for_every_mode_and_language():
+    for language, t in business_plan.TEXT.items():
+        assert set(t["location_fill"]) == set(get_args(BusinessMode)), language
 
 
 def test_calculation_without_inputs_lists_every_role_to_fill_in():

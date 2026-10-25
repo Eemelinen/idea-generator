@@ -282,7 +282,7 @@ Each item counts only when a verified financing claim on an allow-listed officia
 - No official page found on Leader (Jetina) funding for this kind of business.
 - Elinvoimakeskus grant conditions for side businesses not found.
 
-## Rääkkylä location notes
+## Location notes
 
 Location score: 4 of 5.
 
