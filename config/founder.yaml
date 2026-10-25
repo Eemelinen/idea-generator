@@ -13,3 +13,16 @@ skills:
   - customer service / sales experience
   - marketing (social media, SEO)
 goal: side_income        # side_income | full_time | starttiraha
+# The scope every new idea starts from (D-009); the New idea form can change it per idea.
+business_mode: local     # online | local | hybrid
+base_location:
+  municipality: Rääkkylä
+  municipality_code: KU707   # Statistics Finland municipality code (optional)
+  region: North Karelia
+  region_code: MK12          # Statistics Finland region (maakunta) code (optional)
+  nearby: [Joensuu, Kitee]   # nearby towns, one per line
+  official_domains: [raakkyla.fi, luotsipohjoiskarjala.fi]   # the base's official sites, one per line
+  leader_group:              # optional Leader action group; leave both blank for none
+    name: Jetina
+    domain: jetina.fi
+geography: [Rääkkylä, North Karelia, Finland, online/EU]   # target markets, nearest first

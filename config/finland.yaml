@@ -2,8 +2,6 @@
 # runtime before it is cited. Research agents cite the official page, never this file.
 # Values were not checked when this file was written: treat every number as stale.
 
-geography_ladder: [Rääkkylä, North Karelia, Finland, online/EU]   # IF-150; the IdeaSpec.geography default
-
 hints:
   vat_small_business_threshold:
     description: Annual turnover under which a business need not register for VAT (vähäinen toiminta).

@@ -5,7 +5,7 @@ import pytest
 from pydantic import ValidationError
 
 from ideaforge import config
-from ideaforge.schemas import RUBRIC_DIMENSIONS, IdeaSpec
+from ideaforge.schemas import RUBRIC_DIMENSIONS, BaseLocation, IdeaSpec, Intake
 
 
 def test_all_configs_load():
@@ -64,13 +64,26 @@ def test_report_language_rejects_unknown():
         config.ReportConfig.model_validate({"language": "sv", "business_plan_language": "fi"})
 
 
-def test_geography_ladder_is_the_same_everywhere():
-    """IF-150: the user's ladder is the spec default and what the research agents and /validate use."""
-    ladder = config.finland()["geography_ladder"]
-    assert IdeaSpec.model_fields["geography"].default == ladder
-    assert " → ".join(ladder) in (config.PROMPTS_DIR / "research_base.md").read_text(encoding="utf-8")
-    skill = (config.ROOT / ".claude" / "skills" / "validate" / "SKILL.md").read_text(encoding="utf-8")
-    assert "[" + ", ".join(f'"{step}"' for step in ladder) + "]" in skill
+def test_founder_scope_is_the_schema_default():
+    """IF-701: the founder's scope is what a spec or intake without one (every run made before
+    D-009) loads as, so the default behaviour is the same whichever path a run takes."""
+    founder = config.founder()
+    for model in (IdeaSpec, Intake):
+        fields = model.model_fields
+        assert founder.geography == fields["geography"].default
+        assert founder.business_mode == fields["business_mode"].default == "local"
+        assert founder.base_location == fields["base_location"].get_default(call_default_factory=True)
+    assert "geography_ladder" not in config.finland()
+
+
+def test_base_location_rejects_bad_codes_and_domains():
+    base = config.founder().base_location.model_dump()
+    for bad in ({"municipality_code": "707"}, {"region_code": "Pohjois-Karjala"},
+                {"official_domains": ["https://raakkyla.fi/"]}, {"leader_group": {"name": "", "domain": "jetina.fi"}}):
+        with pytest.raises(ValidationError):
+            BaseLocation.model_validate(base | bad)
+    # a Leader group left blank (as the settings form posts it) is none
+    assert BaseLocation.model_validate(base | {"leader_group": {"name": " ", "domain": ""}}).leader_group is None
 
 
 def test_official_domains_include_core_sources():

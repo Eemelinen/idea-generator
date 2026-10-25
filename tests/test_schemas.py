@@ -9,6 +9,7 @@ from ideaforge.schemas import (
     Basis,
     Claim,
     IdeaSpec,
+    Intake,
     ResearchPlan,
     Verdict,
 )
@@ -89,6 +90,38 @@ def test_spec_allows_at_most_5_clarifications():
     data["clarifications"] = [{"question": f"q{i}", "answer": "a"} for i in range(6)]
     with pytest.raises(ValidationError):
         IdeaSpec.model_validate(data)
+
+
+def test_spec_written_before_the_scope_fields_loads_as_raakkyla_local():
+    """IF-701 / D-009: the spec fixture predates business_mode and base_location."""
+    data = load("spec.json")
+    assert "business_mode" not in data and "base_location" not in data
+    spec = IdeaSpec.model_validate(data)
+    assert spec.business_mode == "local"
+    base = spec.base_location
+    assert (base.municipality, base.municipality_code, base.region, base.region_code) == (
+        "Rääkkylä", "KU707", "North Karelia", "MK12")
+    assert base.leader_group is not None and base.leader_group.domain == "jetina.fi"
+    intake = Intake.model_validate({"goal": "side_income", "capital_eur": 0, "hours_per_week": 5})
+    assert (intake.business_mode, intake.base_location) == (spec.business_mode, base)
+
+
+def test_spec_scope_fields_validate():
+    """A synthetic online business based elsewhere, without codes or a Leader group."""
+    scope = {
+        "business_mode": "online",
+        "base_location": {"municipality": "Kitee", "region": "North Karelia", "official_domains": ["kitee.fi"]},
+        "geography": ["Finland", "EU"],
+    }
+    spec = IdeaSpec.model_validate(load("spec.json") | scope)
+    assert spec.base_location.municipality_code is None and spec.base_location.leader_group is None
+    assert spec.base_location.nearby == []
+    for bad in ({"business_mode": "mail_order"},
+                {"base_location": {"municipality": "Kitee"}},
+                {"base_location": scope["base_location"] | {"unexpected": 1}},
+                {"base_location": scope["base_location"] | {"leader_group": {"name": "X"}}}):
+        with pytest.raises(ValidationError):
+            IdeaSpec.model_validate(load("spec.json") | scope | bad)
 
 
 def test_plan_requires_killcause_and_unique_dimensions():

@@ -204,6 +204,21 @@ def test_validate_stage0_takes_the_clarifications_from_intake_json():
     assert '"--intake"' in (ROOT / "scripts" / "new_run.py").read_text(encoding="utf-8")
 
 
+def test_validate_stage0_settles_the_scope_from_founder_yaml():
+    """IF-701: without an intake.json, the scope question settles the business mode, the base
+    location and the target markets, defaulting to config/founder.yaml's; no place is named."""
+    text = sections(split("validate")[1])["Stage 0 — Intake"]
+    ask = text[text.find("3. Ask **at most 5**") : text.find("4. Write")]
+    assert "business mode" in ask and "base location" in ask and "target markets" in ask
+    assert "`config/founder.yaml`'s as the default" in ask
+    write = text[text.find("4. Write") : text.find("5. ")]
+    for field in ("`geography`", "`business_mode`", "`base_location`"):
+        assert field in write, field
+    assert "`config/founder.yaml`'s unless the scope answer changes them" in write
+    for place in (config.founder().base_location.municipality, config.founder().base_location.region):
+        assert place not in text
+
+
 def test_validate_stage1_plan_has_killcause_and_local_questions():
     text = sections(split("validate")[1])["Stage 1 — Research plan"]
     assert "01_plan.json" in text and "config/rubric.yaml" in text

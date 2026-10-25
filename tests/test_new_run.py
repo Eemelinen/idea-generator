@@ -50,7 +50,17 @@ INTAKE = {
     "capital_eur": 2000,
     "hours_per_week": 30,
     "skills": ["carpentry (synthetic)"],
-    "geography": ["Rääkkylä", "Finland"],
+    "geography": ["Finland", "online/EU"],
+    "business_mode": "hybrid",
+    "base_location": {
+        "municipality": "Kitee",
+        "municipality_code": None,
+        "region": "North Karelia",
+        "region_code": None,
+        "nearby": [],
+        "official_domains": ["kitee.fi"],
+        "leader_group": None,
+    },
     "answers": [{"question": "Who pays?", "answer": "Summer cottage owners (synthetic)"}],
     "kill_trigger_overrides": ["permit_impossible"],
 }
@@ -72,6 +82,7 @@ def test_intake_defaults(project, capsys):
     intake = Intake.model_validate_json((project / "runs" / run_id / "intake.json").read_text(encoding="utf-8"))
     assert intake.skills is None and intake.answers == [] and intake.kill_trigger_overrides == []
     assert intake.geography == IdeaSpec.model_fields["geography"].default
+    assert intake.business_mode == "local" and intake.base_location.municipality == "Rääkkylä"
 
 
 @pytest.mark.parametrize(
@@ -81,6 +92,8 @@ def test_intake_defaults(project, capsys):
         INTAKE | {"hours_per_week": 120},
         INTAKE | {"capital_eur": -1},
         INTAKE | {"geography": []},
+        INTAKE | {"business_mode": "mail_order"},
+        INTAKE | {"base_location": INTAKE["base_location"] | {"region_code": "12"}},
         INTAKE | {"answers": [{"question": "q", "answer": "a"}] * 6},
         INTAKE | {"kill_trigger_overrides": ["bad_weather"]},
         INTAKE | {"unexpected": 1},

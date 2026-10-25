@@ -120,3 +120,4 @@ Format: **Context** (what forced a choice) · **Decision** · **Consequences**.
   - Five tickets, IF-701–IF-705 (F-037–F-041), in TICKETS.md Phase 7, with the audit table and the rules every ticket follows.
   - Runs made before the change load with the Rääkkylä / `local` defaults.
   - `raakkyla.fi`, `jetina.fi` and `luotsipohjoiskarjala.fi` leave the global allow-list, so a claim from them counts as official only in a run whose base location lists them.
+  - IF-701 (F-037) added the fields: `IdeaSpec` and `Intake` default to the schema's Rääkkylä scope, `config/founder.yaml` holds the editable default (a test keeps the two equal), and `finland.yaml`'s `geography_ladder` is gone. A blank statistics code or a blank Leader group in a form means none, and Stage 0 never guesses codes or domains for a base the user names.

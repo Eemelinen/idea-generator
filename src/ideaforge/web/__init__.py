@@ -301,7 +301,7 @@ def create_app(root: Path | None = None, *, worker_poll: float = jobs.POLL_SECON
     ) -> HTMLResponse:
         context = dict(
             form=form, errors=list(errors), goals=control.GOALS, presets=sorted(config.budget().presets),
-            kill_triggers=KILL_TRIGGERS, run_to=control.RUN_TO, founder=config.founder(),
+            kill_triggers=KILL_TRIGGERS, run_to=control.RUN_TO, modes=control.BUSINESS_MODES, founder=config.founder(),
         )
         if parent is None:
             return page(request, "new_idea.html", "new", status_code=status_code, **context)

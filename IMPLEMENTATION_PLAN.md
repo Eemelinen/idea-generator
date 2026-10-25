@@ -285,7 +285,7 @@ Claude Code has no hard `max_uses` for built-in tools, so these are enforced two
 
 Pydantic models (all with `model_config = ConfigDict(extra="forbid")`):
 
-- `IdeaSpec`: `idea_id`, `title`, `one_liner`, `customer`, `problem`, `solution`, `revenue_model`, `geography` (default: Rääkkylä → North Karelia → Finland → online), `founder_constraints` {hours_per_week, capital_eur, skills[], goal: side_income|full_time|starttiraha}, `clarifications[]` (Q/A pairs), `kill_trigger_overrides[]`, `vat_registered` (default true; economics.py), `version`.
+- `IdeaSpec`: `idea_id`, `title`, `one_liner`, `customer`, `problem`, `solution`, `revenue_model`, `geography` (the target markets, nearest first; default: Rääkkylä → North Karelia → Finland → online/EU), `business_mode` (`online`|`local`|`hybrid`, default `local`), `base_location` {municipality, municipality_code?, region, region_code?, nearby[], official_domains[], leader_group? {name, domain}} (default Rääkkylä / North Karelia; D-009), `founder_constraints` {hours_per_week, capital_eur, skills[], goal: side_income|full_time|starttiraha}, `clarifications[]` (Q/A pairs), `kill_trigger_overrides[]`, `vat_registered` (default true; economics.py), `version`.
 - `ResearchPlan`: per dimension: `questions[]`, `search_strategy`, `preferred_domains[]`, `evidence_needed`.
 - `Claim`: `claim_id` (e.g. `competition-007`), `dimension`, `statement`, `value: float|None`, `unit`, `source_url`, `source_title`, `quote` (≤ 60 words), `published_date|None`, `retrieved_at`, `source_type` (official|industry|news|forum|vendor|api), `confidence` (0–1), `flags[]` (kill-trigger names), `verification` (pending|verified|unverified|conflict).
 - `DimensionScore`: `dimension`, `proposed_score` (0–5, model), `justification`, `supporting_claim_ids[]`, `final_score` (Python), `cap_reason|None`, `status` (scored|insufficient_data).
@@ -306,8 +306,8 @@ SQLite tables mirror these: `runs`, `idea_versions`, `stages` (run_id, stage, st
 ### Stage 0 — Intake (`/validate`, main session)
 
 1. `uv run python scripts/new_run.py "<idea text>"` → prints `run_id`, writes `runs/<run_id>/idea.md`.
-2. Orchestrator produces `00_spec.json` (IdeaSpec). It must ask the user **up to 5 clarifying questions** via `AskUserQuestion` only where the answer changes research direction (geography, goal, capital, time). Store Q/A in `clarifications`.
-   A run created with `new_run.py --intake '<json>'` (a headless job, IF-604) has `runs/<run_id>/intake.json` (schema `Intake`: goal, capital, hours, skills, geography, free-text answers, kill-trigger overrides) instead: the orchestrator builds the spec from it, asks nothing and treats the run as "just run it" (no plan approval either), so `claude -p` never needs `AskUserQuestion`.
+2. Orchestrator produces `00_spec.json` (IdeaSpec). It must ask the user **up to 5 clarifying questions** via `AskUserQuestion` only where the answer changes research direction (scope: business mode, base location and target markets; goal, capital, time). The scope defaults to `config/founder.yaml`'s. Store Q/A in `clarifications`.
+   A run created with `new_run.py --intake '<json>'` (a headless job, IF-604) has `runs/<run_id>/intake.json` (schema `Intake`: goal, capital, hours, skills, geography, business mode, base location, free-text answers, kill-trigger overrides) instead: the orchestrator builds the spec from it, asks nothing and treats the run as "just run it" (no plan approval either), so `claude -p` never needs `AskUserQuestion`.
 3. Hook validates `00_spec.json` against `IdeaSpec`.
 
 ### Stage 1 — Research plan (main session)

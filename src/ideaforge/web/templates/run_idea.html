@@ -15,7 +15,10 @@
   <dt>Problem</dt><dd>{{ spec.problem }}</dd>
   <dt>Solution</dt><dd>{{ spec.solution }}</dd>
   <dt>Revenue model</dt><dd>{{ spec.revenue_model }}</dd>
-  <dt>Geography</dt><dd>{{ spec.geography|join(", ") }}</dd>
+  <dt>Business mode</dt><dd>{{ spec.business_mode }}</dd>
+  {% set base = spec.base_location %}
+  <dt>Base location</dt><dd>{{ base.municipality }}{% if base.municipality_code %} ({{ base.municipality_code }}){% endif %}, {{ base.region }}{% if base.region_code %} ({{ base.region_code }}){% endif %}{% if base.nearby %} · nearby: {{ base.nearby|join(", ") }}{% endif %}{% if base.official_domains %} · official domains: {{ base.official_domains|join(", ") }}{% endif %}{% if base.leader_group %} · Leader group: {{ base.leader_group.name }} ({{ base.leader_group.domain }}){% endif %}</dd>
+  <dt>Target markets</dt><dd>{{ spec.geography|join(" → ") }}</dd>
   <dt>Founder constraints</dt><dd>{{ spec.founder_constraints.hours_per_week|round(1) }} h/week · {{ "%.0f"|format(spec.founder_constraints.capital_eur) }} EUR capital · goal {{ spec.founder_constraints.goal }}{% if spec.founder_constraints.skills %} · skills: {{ spec.founder_constraints.skills|join(", ") }}{% endif %}</dd>
   <dt>VAT registered</dt><dd>{{ "yes" if spec.vat_registered else "no" }}</dd>
   <dt>Kill-trigger overrides</dt><dd>{{ spec.kill_trigger_overrides|join(", ") if spec.kill_trigger_overrides else "none" }}</dd>

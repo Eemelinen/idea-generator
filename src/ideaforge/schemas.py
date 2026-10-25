@@ -59,6 +59,8 @@ SourceType = Literal["official", "industry", "news", "forum", "vendor", "api"]
 VerificationState = Literal["pending", "verified", "unverified", "conflict"]
 Persona = Literal["founder", "investor", "customer", "accountant", "operator"]
 Goal = Literal["side_income", "full_time", "starttiraha"]
+# How customers buy (D-009): remotely, at or near a physical place, or both.
+BusinessMode = Literal["online", "local", "hybrid"]
 VerdictLabel = Literal["GO", "PIVOT", "NO_GO", "INSUFFICIENT_DATA"]
 # Input roles of economics.py (economics.ROLES); the synthesizer assigns claim ids to them.
 EconomicsRole = Literal[
@@ -73,6 +75,8 @@ Unit01 = Annotated[float, Field(ge=0, le=1)]
 
 CLAIM_ID_RE = re.compile(r"^[a-z_]+-\d{3,}$")
 QUOTE_MAX_WORDS = 60
+# A bare host name such as `raakkyla.fi` (no scheme, no path), as in config/domains.yaml.
+DOMAIN_PATTERN = r"^[a-z0-9-]+(\.[a-z0-9-]+)+$"
 
 
 class Strict(BaseModel):
@@ -89,6 +93,55 @@ class FounderConstraints(Strict):
     goal: Goal
 
 
+class LeaderGroup(Strict):
+    name: Annotated[str, Field(min_length=1)]
+    domain: Annotated[str, Field(pattern=DOMAIN_PATTERN)]
+
+
+class BaseLocation(Strict):
+    """Where the business is based (D-009): for a local business the place its customers come
+    to, for an online one the base for logistics, costs, registration and funding."""
+
+    municipality: Annotated[str, Field(min_length=1)]
+    municipality_code: Annotated[str | None, Field(pattern=r"^KU\d{3}$")] = None  # Statistics Finland
+    region: Annotated[str, Field(min_length=1)]
+    region_code: Annotated[str | None, Field(pattern=r"^MK\d{2}$")] = None
+    nearby: list[str] = []  # towns
+    official_domains: list[Annotated[str, Field(pattern=DOMAIN_PATTERN)]] = []
+    leader_group: LeaderGroup | None = None
+
+    @field_validator("municipality_code", "region_code", mode="before")
+    @classmethod
+    def _blank_code(cls, v: object) -> object:
+        return None if isinstance(v, str) and not v.strip() else v
+
+    @field_validator("leader_group", mode="before")
+    @classmethod
+    def _blank_leader_group(cls, v: object) -> object:
+        # a form with the Leader group's fields left empty means none
+        if isinstance(v, dict) and not any(str(x or "").strip() for x in v.values()):
+            return None
+        return v
+
+
+# The founder default (config/founder.yaml; tests/test_config.py keeps them equal) and what a
+# spec or intake written before D-009 loads as.
+DEFAULT_GEOGRAPHY = ["Rääkkylä", "North Karelia", "Finland", "online/EU"]
+DEFAULT_BUSINESS_MODE: BusinessMode = "local"
+
+
+def default_base_location() -> BaseLocation:
+    return BaseLocation(
+        municipality="Rääkkylä",
+        municipality_code="KU707",
+        region="North Karelia",
+        region_code="MK12",
+        nearby=["Joensuu", "Kitee"],
+        official_domains=["raakkyla.fi", "luotsipohjoiskarjala.fi"],
+        leader_group=LeaderGroup(name="Jetina", domain="jetina.fi"),
+    )
+
+
 class Clarification(Strict):
     question: str
     answer: str
@@ -102,8 +155,10 @@ class IdeaSpec(Strict):
     problem: str
     solution: str
     revenue_model: str
-    # The ladder from config/finland.yaml (IF-150; tests/test_config.py keeps them equal).
-    geography: list[str] = ["Rääkkylä", "North Karelia", "Finland", "online/EU"]
+    # The target markets, nearest first (IF-150).
+    geography: list[str] = DEFAULT_GEOGRAPHY
+    business_mode: BusinessMode = DEFAULT_BUSINESS_MODE
+    base_location: BaseLocation = Field(default_factory=default_base_location)
     founder_constraints: FounderConstraints
     clarifications: list[Clarification] = Field(default_factory=list, max_length=5)
     # Kill triggers the user has explicitly accepted the risk of; score_run.py will not
@@ -124,7 +179,9 @@ class Intake(Strict):
     capital_eur: Annotated[float, Field(ge=0)]
     hours_per_week: Annotated[float, Field(ge=0, le=100)]
     skills: list[str] | None = None  # None = config/founder.yaml's
-    geography: Annotated[list[str], Field(min_length=1)] = ["Rääkkylä", "North Karelia", "Finland", "online/EU"]
+    geography: Annotated[list[str], Field(min_length=1)] = DEFAULT_GEOGRAPHY
+    business_mode: BusinessMode = DEFAULT_BUSINESS_MODE
+    base_location: BaseLocation = Field(default_factory=default_base_location)
     answers: list[Clarification] = Field(default_factory=list, max_length=5)  # free-text answers
     kill_trigger_overrides: list[KillTrigger] = []
 

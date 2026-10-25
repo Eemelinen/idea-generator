@@ -823,7 +823,7 @@
       "area": "pipeline",
       "title": "Idea scope: business mode and base location",
       "user_visible_behavior": "The New idea and New version forms ask for a business mode (online, local or hybrid) and a base location (municipality and region with their statistics codes, nearby towns, official domains, optional Leader group) next to the target-market ladder, prefilled from `config/founder.yaml` (editable on the Settings page, Rääkkylä by default). The values are stored in `intake.json` and `00_spec.json`, shown on the run's Idea tab, and runs created before the change still load as Rääkkylä / local.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [],
       "ticket": "IF-701",
       "spec": "docs/TICKETS.md#if-701-idea-scope-business-mode-and-base-location",
@@ -831,7 +831,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_schemas.py tests/test_new_run.py tests/test_web_control.py tests/test_web_settings.py tests/test_config.py tests/test_skills.py (new fields validate and default to Rääkkylä / local; an old spec without them still loads; the forms prefill from founder.yaml and from the parent spec and reject an invalid mode; the Settings founder form shows the new fields; validate Stage 0 maps them from intake.json)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-25 pnpm check → pass (working tree on ebb7e00)",
+        "2026-10-25 uv run pytest tests/test_schemas.py tests/test_new_run.py tests/test_web_control.py tests/test_web_settings.py tests/test_config.py tests/test_skills.py → pass (working tree on ebb7e00)"
+      ],
       "attempts": 0,
       "notes": "From the 2026-10-25 audit of hardcoded Rääkkylä assumptions (TICKETS.md Phase 7). The later scope features build on these fields."
     },

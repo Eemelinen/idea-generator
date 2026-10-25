@@ -5,6 +5,7 @@ and the server's background worker. `claude` is the fake binary of tests/test_jo
 texts and answers are synthetic (TICKETS.md plan note 14). Nothing touches the network."""
 
 import json
+import shutil
 from datetime import date, timedelta
 
 import pytest
@@ -30,6 +31,15 @@ def form(**overrides) -> dict:
         "hours_per_week": "15",
         "skills": "\n".join(config.founder().skills),
         "geography": "Rääkkylä\nNorth Karelia",
+        "business_mode": "local",
+        "municipality": "Rääkkylä",
+        "municipality_code": "KU707",
+        "region": "North Karelia",
+        "region_code": "MK12",
+        "nearby": "Joensuu\nKitee",
+        "official_domains": "raakkyla.fi",
+        "leader_name": "Jetina",
+        "leader_domain": "jetina.fi",
         "preset": "economy",
         "as_of": "",
         "question_1": "Who pays?",
@@ -66,7 +76,7 @@ def test_new_idea_form_starts_from_the_founder_defaults(client):
     founder = config.founder()
     assert f'name="capital_eur" value="{founder.capital_eur:g}"' in html
     assert f'name="hours_per_week" value="{founder.hours_per_week:g}"' in html
-    assert founder.skills[0] in html and "Rääkkylä\nNorth Karelia\nFinland\nonline/EU" in html
+    assert founder.skills[0] in html and "\n".join(founder.geography) + "</textarea>" in html
     assert f'<option value="{config.budget().default_preset}" selected>' in html
     for preset in config.budget().presets:
         assert f'<option value="{preset}"' in html
@@ -78,6 +88,27 @@ def test_new_idea_form_starts_from_the_founder_defaults(client):
     assert 'href="/new"' in client.get("/").text
 
 
+def test_new_idea_form_prefills_the_scope_from_founder_yaml(client, project, monkeypatch):
+    """The scope fields come from config/founder.yaml (editable on the Settings page)."""
+    cfg = project / "config"
+    shutil.copytree(config.CONFIG_DIR, cfg)
+    monkeypatch.setattr(config, "CONFIG_DIR", cfg)
+    text = (cfg / "founder.yaml").read_text(encoding="utf-8")
+    text = text.replace("business_mode: local", "business_mode: hybrid").replace("municipality: Rääkkylä", "municipality: Kitee")
+    (cfg / "founder.yaml").write_text(text, encoding="utf-8")
+    config.reload()
+    try:
+        html = client.get("/new").text
+    finally:
+        config.reload()
+    assert "Target markets, nearest first" in html
+    for mode, help in control.BUSINESS_MODES:
+        assert f'name="business_mode" value="{mode}"{" checked" if mode == "hybrid" else ""}>' in html
+        assert help in html
+    assert 'name="municipality" value="Kitee"' in html
+    assert 'name="municipality_code" value="KU707"' in html and 'name="region_code" value="MK12"' in html
+    assert "Joensuu\nKitee</textarea>" in html and "raakkyla.fi\nluotsipohjoiskarjala.fi</textarea>" in html
+    assert 'name="leader_name" value="Jetina"' in html and 'name="leader_domain" value="jetina.fi"' in html
 @pytest.mark.parametrize(
     "run_to, chain",
     [("validate", ["validate"]), ("synthesize", ["validate", "synthesize"]),
@@ -95,6 +126,11 @@ def test_new_idea_creates_the_run_and_queues_its_chain(client, project, run_to, 
     assert intake.goal == "side_income" and intake.capital_eur == 3000.5 and intake.hours_per_week == 15
     assert intake.skills is None  # unchanged founder skills → config/founder.yaml's
     assert intake.geography == ["Rääkkylä", "North Karelia"]
+    assert intake.business_mode == "local" and intake.base_location.model_dump() == {
+        "municipality": "Rääkkylä", "municipality_code": "KU707", "region": "North Karelia", "region_code": "MK12",
+        "nearby": ["Joensuu", "Kitee"], "official_domains": ["raakkyla.fi"],
+        "leader_group": {"name": "Jetina", "domain": "jetina.fi"},
+    }
     assert [(a.question, a.answer) for a in intake.answers] == [("Who pays?", "Summer visitors from Joensuu (synthetic)")]
     meta = json.loads((project / "runs" / run_id / "meta.json").read_text(encoding="utf-8"))
     assert meta["budget_preset"] == "economy"
@@ -113,6 +149,19 @@ def test_new_idea_with_skills_overrides_and_an_as_of_date(client, project):
         assert conn.execute("SELECT as_of FROM runs WHERE run_id=?", (run_id,)).fetchone()["as_of"] == as_of
 
 
+def test_new_online_idea_based_elsewhere_without_codes_or_a_leader_group(client, project):
+    data = form(business_mode="online", geography="Finland\nEU", municipality=" Kitee ", municipality_code="",
+                region="North Karelia", region_code="", nearby="", official_domains="Kitee.fi\n",
+                leader_name="", leader_domain="")
+    assert client.post("/new", data=data, follow_redirects=False).status_code == 303
+    (run_id,) = run_ids(project)
+    intake = Intake.model_validate_json((project / "runs" / run_id / "intake.json").read_text(encoding="utf-8"))
+    assert intake.business_mode == "online" and intake.geography == ["Finland", "EU"]
+    base = intake.base_location
+    assert (base.municipality, base.municipality_code, base.region_code, base.nearby) == ("Kitee", None, None, [])
+    assert base.official_domains == ["kitee.fi"] and base.leader_group is None
+
+
 def test_an_idea_text_starting_with_a_dash_is_not_an_option(client, project):
     assert client.post("/new", data=form(idea="-sauna cabins (synthetic)"), follow_redirects=False).status_code == 303
     (run_id,) = run_ids(project)
@@ -129,7 +178,13 @@ def test_an_idea_text_starting_with_a_dash_is_not_an_option(client, project):
         ({"capital_eur": "-5"}, "capital_eur: Input should be greater than or equal to 0"),
         ({"hours_per_week": "120"}, "hours_per_week: Input should be less than or equal to 100"),
         ({"hours_per_week": "nan"}, "hours per week must be a finite number"),
-        ({"geography": "\n  \n"}, "geography needs at least one place"),
+        ({"geography": "\n  \n"}, "target markets need at least one place"),
+        ({"business_mode": "mail_order"}, "business mode must be one of local, online, hybrid"),
+        ({"business_mode": ""}, "business mode must be one of local, online, hybrid"),
+        ({"municipality": "  "}, "base_location.municipality: String should have at least 1 character"),
+        ({"municipality_code": "707"}, "base_location.municipality_code: String should match pattern"),
+        ({"official_domains": "https://raakkyla.fi/"}, "base_location.official_domains.0: String should match"),
+        ({"leader_domain": ""}, "base_location.leader_group.domain: String should match pattern"),
         ({"answer_1": ""}, "question 1 has no answer"),
         ({"question_2": "", "answer_2": "nobody asked (synthetic)"}, "answer 2 has no question"),
         ({"preset": "huge"}, "preset must be one of deep, economy, standard"),
@@ -249,6 +304,23 @@ def test_new_version_form_starts_from_the_parent_spec(client, finished):  # noqa
     assert 'name="capital_eur" value="15000"' in html and "carpentry\nhospitality" in html
     assert "Rääkkylä\nNorth Karelia\nFinland\nonline" in html
     assert 'value="Do you already own the cabins?"' in html
+    # the fixture spec predates the scope fields: Rääkkylä / local
+    assert 'name="business_mode" value="local" checked>' in html and 'name="municipality" value="Rääkkylä"' in html
+
+
+def test_new_version_form_takes_the_scope_from_the_parent_spec(client, finished):  # noqa: F811
+    path = runs.run_dir(FINISHED) / "00_spec.json"
+    spec = json.loads(path.read_text(encoding="utf-8"))
+    spec |= {
+        "business_mode": "online",
+        "geography": ["Finland", "EU"],
+        "base_location": {"municipality": "Kitee", "region": "North Karelia", "official_domains": ["kitee.fi"]},
+    }
+    path.write_text(json.dumps(spec), encoding="utf-8")
+    html = client.get(f"/runs/{FINISHED}/version").text
+    assert 'name="business_mode" value="online" checked>' in html and "Finland\nEU</textarea>" in html
+    assert 'name="municipality" value="Kitee"' in html and 'name="municipality_code" value=""' in html
+    assert 'name="leader_name" value=""' in html and "kitee.fi</textarea>" in html
 
 
 def test_new_version_creates_the_next_version_and_queues_it(client, project, finished):  # noqa: F811
