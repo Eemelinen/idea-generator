@@ -117,6 +117,10 @@ def test_idea_tab(finished, client):
     html = client.get(f"/runs/{FINISHED}/idea").text
     assert "Sauna-and-lake cabins for remote workers" in html
     assert "Do you already own the cabins?" in html and "One cabin is owned" in html
+    # the fixture spec predates the scope fields (IF-701): it shows as Rääkkylä / local
+    assert "<dt>Business mode</dt><dd>local</dd>" in html
+    assert "Rääkkylä (KU707), North Karelia (MK12) · nearby: Joensuu, Kitee" in html and "Leader group: Jetina" in html
+    assert "<dt>Target markets</dt><dd>Rääkkylä → North Karelia → Finland → online</dd>" in html
     plan = json.loads((FIXTURES / "plan.json").read_text(encoding="utf-8"))
     assert rows(html, "data-dimension") == [d["dimension"] for d in plan["dimensions"]]
     assert plan["dimensions"][0]["questions"][0] in html

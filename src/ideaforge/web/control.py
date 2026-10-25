@@ -22,11 +22,17 @@ from typing import get_args
 from pydantic import ValidationError
 
 from ideaforge import config, db, jobs, runs
-from ideaforge.schemas import KILL_TRIGGERS, Goal, Intake
+from ideaforge.schemas import KILL_TRIGGERS, BaseLocation, BusinessMode, Goal, Intake
 from ideaforge.synthesis import InputError, load_spec
 
 GOALS = get_args(Goal)
-DEFAULT_GEOGRAPHY = Intake.model_fields["geography"].default
+# (mode, what it means), in the order the form offers them (TICKETS.md Phase 7 → Modes).
+BUSINESS_MODES = (
+    ("local", "customers come to, or are served near, a physical place"),
+    ("online", "customers buy remotely; the base matters for logistics, costs, registration and funding"),
+    ("hybrid", "both, e.g. a shop with a webshop"),
+)
+assert {m for m, _ in BUSINESS_MODES} == set(get_args(BusinessMode))
 MAX_ANSWERS = Intake.model_fields["answers"].metadata[0].max_length
 # How far a new idea runs: (key, label, the jobs chained after validate).
 RUN_TO = (
@@ -68,7 +74,17 @@ class IdeaForm:
     capital_eur: str = ""
     hours_per_week: str = ""
     skills: str = ""  # one per line
-    geography: str = ""  # one per line, nearest first
+    geography: str = ""  # target markets, one per line, nearest first
+    business_mode: str = ""
+    # the base location; the lists one per line, the Leader group blank for none
+    municipality: str = ""
+    municipality_code: str = ""
+    region: str = ""
+    region_code: str = ""
+    nearby: str = ""
+    official_domains: str = ""
+    leader_name: str = ""
+    leader_domain: str = ""
     preset: str = ""
     as_of: str = ""
     kill_trigger_overrides: list[str] = field(default_factory=list)
@@ -80,16 +96,25 @@ class IdeaForm:
 
     @classmethod
     def defaults(cls) -> IdeaForm:
-        """Founder constraints from `config/founder.yaml`, the default geography and preset."""
+        """Founder constraints and scope from `config/founder.yaml`, and the default preset."""
         founder = config.founder()
-        return cls(
+        form = cls(
             goal=founder.goal,
             capital_eur=_number_text(founder.capital_eur),
             hours_per_week=_number_text(founder.hours_per_week),
             skills="\n".join(founder.skills),
-            geography="\n".join(DEFAULT_GEOGRAPHY),
             preset=config.budget().default_preset,
         )
+        form._set_scope(founder.business_mode, founder.base_location, founder.geography)
+        return form
+
+    def _set_scope(self, mode: str, base: BaseLocation, geography: list[str]) -> None:
+        self.business_mode, self.geography = mode, "\n".join(geography)
+        self.municipality, self.municipality_code = base.municipality, base.municipality_code or ""
+        self.region, self.region_code = base.region, base.region_code or ""
+        self.nearby, self.official_domains = "\n".join(base.nearby), "\n".join(base.official_domains)
+        leader = base.leader_group
+        self.leader_name, self.leader_domain = (leader.name, leader.domain) if leader else ("", "")
 
     @classmethod
     def for_version(cls, parent: str) -> IdeaForm:
@@ -108,7 +133,7 @@ class IdeaForm:
         form.goal, form.capital_eur, form.hours_per_week = fc.goal, _number_text(fc.capital_eur), _number_text(fc.hours_per_week)
         if fc.skills:
             form.skills = "\n".join(fc.skills)
-        form.geography = "\n".join(spec.geography)
+        form._set_scope(spec.business_mode, spec.base_location, spec.geography)
         form.kill_trigger_overrides = list(spec.kill_trigger_overrides)
         form.answers = [(c.question, c.answer) for c in spec.clarifications]
         form.__post_init__()
@@ -123,6 +148,15 @@ class IdeaForm:
             hours_per_week=fields.get("hours_per_week", ""),
             skills=fields.get("skills", ""),
             geography=fields.get("geography", ""),
+            business_mode=fields.get("business_mode", ""),
+            municipality=fields.get("municipality", ""),
+            municipality_code=fields.get("municipality_code", ""),
+            region=fields.get("region", ""),
+            region_code=fields.get("region_code", ""),
+            nearby=fields.get("nearby", ""),
+            official_domains=fields.get("official_domains", ""),
+            leader_name=fields.get("leader_name", ""),
+            leader_domain=fields.get("leader_domain", ""),
             preset=fields.get("preset", ""),
             as_of=fields.get("as_of", ""),
             kill_trigger_overrides=kill_triggers,
@@ -189,7 +223,9 @@ def check_idea(form: IdeaForm) -> NewRun:
     hours = _number(form.hours_per_week, "hours per week", errors)
     geography = _lines(form.geography)
     if not geography:
-        errors.append("geography needs at least one place")
+        errors.append("target markets need at least one place")
+    if form.business_mode not in get_args(BusinessMode):
+        errors.append(f"business mode must be one of {', '.join(m for m, _ in BUSINESS_MODES)}")
     skills = _lines(form.skills)
     unknown = sorted(set(form.kill_trigger_overrides) - set(KILL_TRIGGERS))
     if unknown:
@@ -228,6 +264,17 @@ def check_idea(form: IdeaForm) -> NewRun:
                 # unchanged founder skills stay null, so the spec takes config/founder.yaml's
                 "skills": None if skills == config.founder().skills else skills,
                 "geography": geography,
+                "business_mode": form.business_mode,
+                "base_location": {
+                    "municipality": form.municipality.strip(),
+                    "municipality_code": form.municipality_code.strip(),
+                    "region": form.region.strip(),
+                    "region_code": form.region_code.strip(),
+                    "nearby": _lines(form.nearby),
+                    "official_domains": [d.lower() for d in _lines(form.official_domains)],
+                    # blank codes and a blank Leader group are none (BaseLocation)
+                    "leader_group": {"name": form.leader_name.strip(), "domain": form.leader_domain.strip().lower()},
+                },
                 "answers": answers,
                 "kill_trigger_overrides": sorted(set(form.kill_trigger_overrides), key=KILL_TRIGGERS.index),
             })

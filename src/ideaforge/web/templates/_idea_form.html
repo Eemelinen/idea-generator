@@ -1,5 +1,5 @@
 {# The new-idea / new-version form (IF-607). `action` is where it posts. #}
-{% macro idea_form(form, action, submit, errors, goals, presets, kill_triggers, run_to, founder) %}
+{% macro idea_form(form, action, submit, errors, goals, presets, kill_triggers, run_to, modes, founder) %}
 {% if errors %}
 <div class="banner warn" role="alert" id="form-errors">
   <strong>Nothing was queued.</strong>
@@ -24,10 +24,34 @@
     </label>
   </fieldset>
   <fieldset>
-    <legend>Scope</legend>
-    <label class="wide">Geography, one per line, nearest first
+    <legend>Scope <span class="muted">(defaults: <code>config/founder.yaml</code>)</span></legend>
+    <div role="radiogroup" aria-label="Business mode">Business mode
+      {% for m, help in modes %}
+      <label class="check"><input type="radio" name="business_mode" value="{{ m }}"{% if m == form.business_mode %} checked{% endif %}> <strong>{{ m }}</strong>: {{ help }}</label>
+      {% endfor %}
+    </div>
+    <label class="wide">Target markets, nearest first, one per line
       <textarea name="geography" rows="4" required>{{ form.geography }}</textarea>
     </label>
+  </fieldset>
+  <fieldset>
+    <legend>Base location</legend>
+    <p class="muted">Where the business is based: the place local customers come to, or the base for logistics, costs, registration and funding.</p>
+    <label>Municipality <input name="municipality" value="{{ form.municipality }}" required></label>
+    <label>Municipality code (optional) <input name="municipality_code" value="{{ form.municipality_code }}" placeholder="KU707"></label>
+    <label>Region <input name="region" value="{{ form.region }}" required></label>
+    <label>Region code (optional) <input name="region_code" value="{{ form.region_code }}" placeholder="MK12"></label>
+    <label>Nearby towns, one per line
+      <textarea name="nearby" rows="3">{{ form.nearby }}</textarea>
+    </label>
+    <label>Official domains, one per line
+      <textarea name="official_domains" rows="3">{{ form.official_domains }}</textarea>
+    </label>
+    <label>Leader group (optional) <input name="leader_name" value="{{ form.leader_name }}"></label>
+    <label>Leader group domain <input name="leader_domain" value="{{ form.leader_domain }}"></label>
+  </fieldset>
+  <fieldset>
+    <legend>Run</legend>
     <label>Budget preset
       <select name="preset">
         {% for p in presets %}<option value="{{ p }}"{% if p == form.preset %} selected{% endif %}>{{ p }}</option>{% endfor %}

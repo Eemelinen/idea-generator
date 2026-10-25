@@ -75,21 +75,27 @@ that first, never work around it.
      exit 1 report the error and stop: it is the job's input, never edit it). It holds the
      answers: ask no questions (skip step 3) and write `00_spec.json` from it in step 4:
      `founder_constraints` gets `goal`, `capital_eur` and `hours_per_week` from it and
-     `skills` from it unless it is `null` (then `config/founder.yaml`'s); `geography` is its
-     `geography`; `clarifications` are its `answers`, verbatim; `kill_trigger_overrides` are
-     its `kill_trigger_overrides`. The run is "just run it" from here on.
+     `skills` from it unless it is `null` (then `config/founder.yaml`'s); `geography`,
+     `business_mode` and `base_location` are its `geography`, `business_mode` and
+     `base_location`, verbatim; `clarifications` are its `answers`, verbatim;
+     `kill_trigger_overrides` are its `kill_trigger_overrides`. The run is "just run it" from
+     here on.
    - Without it, continue with step 3.
 3. Ask **at most 5** clarifying questions with `AskUserQuestion`, and only where the answer
-   changes the research direction: geography (local service vs. online), the founder's goal
-   (`side_income` | `full_time` | `starttiraha`), capital, hours per week, the paying customer.
+   changes the research direction: the scope (one question settles the business mode
+   `online` | `local` | `hybrid`, the base location and the target markets, offering
+   `config/founder.yaml`'s as the default), the founder's goal (`side_income` | `full_time` |
+   `starttiraha`), capital, hours per week, the paying customer.
    Ask nothing the idea text already answers. If `config/founder.yaml` has `confirmed: false`,
    its values are placeholders: say so when you use them.
 4. Write `runs/<run_id>/00_spec.json` (schema `IdeaSpec` in `src/ideaforge/schemas.py`):
    - `idea_id`: `idea_id` from `runs/<run_id>/meta.json`.
    - `title`, `one_liner`, `customer`, `problem`, `solution`, `revenue_model` from the idea
      and the answers. Unknown is written as unknown; never invent facts about the market.
-   - `geography`: the default ladder `["Rääkkylä", "North Karelia", "Finland", "online/EU"]`
-     unless an answer changes it.
+   - `geography` (the target markets, nearest first), `business_mode` and `base_location`:
+     `config/founder.yaml`'s unless the scope answer changes them. For a base location the
+     user names, write only what they say: statistics codes `null`, `official_domains` and
+     `leader_group` only as given (never guessed).
    - `founder_constraints`: `hours_per_week`, `capital_eur`, `skills`, `goal` from
      `config/founder.yaml`, overridden by the user's answers.
    - `clarifications`: one `{question, answer}` per question asked (max 5).

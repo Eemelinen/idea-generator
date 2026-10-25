@@ -11,7 +11,7 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from ideaforge.schemas import RUBRIC_DIMENSIONS, Goal
+from ideaforge.schemas import RUBRIC_DIMENSIONS, BaseLocation, BusinessMode, Goal
 
 
 def _find_root() -> Path:
@@ -145,6 +145,10 @@ class FounderConfig(_Cfg):
     capital_eur: float
     skills: list[str]
     goal: Goal
+    # The scope a new idea starts from (D-009); the form and Stage 0 may change it per idea.
+    business_mode: BusinessMode
+    base_location: BaseLocation
+    geography: list[str] = Field(min_length=1)  # target markets, nearest first
 
 
 class ReportConfig(_Cfg):
@@ -162,7 +166,6 @@ class FinlandHint(BaseModel):
 
 
 class FinlandConfig(_Cfg):
-    geography_ladder: list[str] = Field(min_length=1)
     hints: dict[str, FinlandHint] = Field(min_length=1)
 
 

@@ -150,6 +150,28 @@ def test_a_form_save_keeps_comments_order_and_flow_style(client, conf):
     ]
 
 
+def test_the_founder_form_edits_the_default_scope(client, conf):
+    """IF-701: the business mode, base location and target markets every new idea starts from."""
+    html = client.get("/settings/founder").text
+    assert '<select id="f:business_mode" name="f:business_mode">' in html
+    for mode in ("online", "local", "hybrid"):
+        assert f'<option value="{mode}"' in html
+    for path in ("base_location/municipality", "base_location/municipality_code", "base_location/region",
+                 "base_location/region_code", "base_location/nearby", "base_location/official_domains",
+                 "base_location/leader_group/name", "base_location/leader_group/domain", "geography"):
+        assert f'name="f:{path}"' in html, path
+    changes = {"business_mode": "online", "base_location/municipality": "Kitee", "base_location/municipality_code": "",
+               "base_location/leader_group/name": "", "base_location/leader_group/domain": ""}
+    resp = client.post("/settings/founder", data=form_of("founder", **changes))
+    assert resp.status_code == 200 and "Saved config/founder.yaml." in resp.text
+    founder = config.founder()
+    assert founder.business_mode == "online" and founder.base_location.municipality == "Kitee"
+    assert founder.base_location.municipality_code is None and founder.base_location.leader_group is None
+    assert founder.base_location.region_code == "MK12"
+    resp = client.post("/settings/founder", data=form_of("founder", business_mode="mail_order"))
+    assert resp.status_code == 400 and config.founder().business_mode == "online"
+
+
 def test_a_raw_save_writes_the_text_as_typed(client, conf):
     raw = text(conf, "report").replace("language: en", "language: fi  # switched in the raw editor")
     resp = client.post("/settings/report/raw", data={"raw": raw.replace("\n", "\r\n")})
