@@ -266,9 +266,9 @@ class Claim(Strict):
 
 
 class ConflictGroup(Strict):
-    """One entry of 03_claims/conflicts.json: claims of one dimension whose statements are similar
-    but whose values differ by more than 25 % (verify.detect_conflicts, IF-210). `claim_ids` is in
-    preference order, the claim to prefer first: official > api > industry > news > forum >
+    """One entry of 03_claims/conflicts.json: claims of one dimension from different sources that
+    state the same measure, every pair with values more than 25 % apart (verify.detect_conflicts,
+    IF-210, IF-217). `claim_ids` is in preference order, the claim to prefer first: official > api > industry > news > forum >
     vendor, then the newest."""
 
     dimension: Dimension

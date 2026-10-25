@@ -20,11 +20,16 @@ Extracted claims (IF-211): the claim extractor's candidate claims for a research
 (03_claims/extracted/<stem>.json, `ideaforge.extract`) join that file's parsed claims and are
 verified the same way.
 
-Conflicts (IF-210): `detect_conflicts` groups verified claims of one dimension whose statements
-are similar (rapidfuzz token_sort_ratio ≥ 80) and whose values differ by more than 25 %; every
-claim of a group becomes `conflict` and is kept, and the groups go to 03_claims/conflicts.json in
-preference order (official > api > industry > news > forum > vendor, then the newest) for the
-synthesizer.
+Conflicts (IF-210, IF-217): two verified claims of one dimension conflict when they come from
+different sources, state the same measure and their values differ by more than 25 %. Same source
+means the same URL, or two `fi` API claims (each an exact re-queried cell, so two values are two
+cells, not a disagreement). Same measure (`same_measure`) means that, with each claim's own value
+masked, the statements have the same content words: a different year or period (`2024`,
+`2025Q4`, `12 months`), place or name, or measure word (`closed`/`started`) is another figure.
+`detect_conflicts` forms a group only where every pair conflicts (no chaining); every claim of a
+group becomes `conflict` and is kept, and the groups go to 03_claims/conflicts.json in preference
+order (official > api > industry > news > forum > vendor, then the newest) for the synthesizer.
+`recheck_conflicts` recomputes them from verified.json alone (`verify_claims.py --conflicts-only`).
 
 The HTTP layers are plain callables (`HttpGet`, `ideaforge.fi.http.Transport`) so tests inject
 synthetic pages and the IF-200 recordings and never touch the network.
@@ -75,11 +80,26 @@ API_FLAG = "api_mismatch"
 OWNED_FLAGS = (*FETCH_FLAGS, AS_OF_FLAG, API_FLAG)
 # API re-query (IF-209): an integer (a count) must match exactly, a float within ±1 %.
 FLOAT_TOLERANCE = 0.01
-# Conflicts (IF-210): similar statements (token_sort_ratio ≥ 80) whose values differ by > 25 %.
-CONFLICT_SIMILARITY = 80.0
+# Conflicts (IF-210, IF-217): the same measure (`same_measure`) from two sources, values > 25 % apart.
 CONFLICT_DIFFERENCE = 0.25
+# A number as normalize() leaves it: `1 454`, `16.24`, `2,100`; not part of a word (`2025q4`).
+NUMBER_RE = re.compile(r"(?<![\w.,])(?:\d{1,3}(?: \d{3})+|\d+)(?:[.,]\d+)?(?![\w])")
+WORD_RE = re.compile(r"\w+")
+VALUE_SCALES = (1, 1e-3, 1e-6, 1e-9)
+NUMBER_WORDS = dict(
+    zip("one two three four five six seven eight nine ten eleven twelve".split(), map(str, range(1, 13)), strict=True)
+)
+# Function words and hedges; what is left of a statement is what it measures. English plus the
+# commonest Finnish ones (normalized: no diacritics).
+CONFLICT_STOPWORDS = frozenset(
+    """a an the of in on at to for from by with and or as is are was were be been being has have
+    had there that this these those it its their which who per than about around approximately
+    approx roughly circa ca some nearly almost estimated estimate
+    ja oli ovat noin arviolta vuonna kuin se ne han eli""".split()
+)
 SOURCE_PREFERENCE: tuple[SourceType, ...] = ("official", "api", "industry", "news", "forum", "vendor")
 CONFLICTS_FILE = "conflicts.json"
+REPORT_FILE = "05_report.md"
 # HTML is reduced to its text; other text types (text/*, JSON, XML) are matched as they are;
 # anything else (PDF, images) is unfetchable.
 HTML_TYPES = ("", "text/html", "application/xhtml+xml")
@@ -467,8 +487,52 @@ def requery_warning(claim: Claim, result: ApiResult) -> str | None:
 # ---------------------------------------------------------------- conflicts (IF-210)
 
 
-def statements_similar(a: str, b: str) -> bool:
-    return fuzz.token_sort_ratio(normalize(a), normalize(b)) >= CONFLICT_SIMILARITY
+def _number_readings(text: str) -> set[float]:
+    """Every value a number as written may mean: `1 454` → 1454; `2,100` → 2.1 or 2100."""
+    digits = text.replace(" ", "")
+    readings = {float(digits.replace(",", "."))}
+    sep = digits[-4:-3]
+    if sep in (",", ".") and digits.count(sep) == 1:
+        readings.add(float(digits.replace(sep, "")))
+    return readings
+
+
+def _states_value(text: str, value: float) -> bool:
+    """The number is the claim's own value (±1 %), as written or in thousands, millions or billions."""
+    targets = [value * scale for scale in VALUE_SCALES]
+    return any(x == t or abs(x - t) <= FLOAT_TOLERANCE * abs(t) for x in _number_readings(text) for t in targets)
+
+
+def _fold(token: str) -> str:
+    token = NUMBER_WORDS.get(token, token)
+    if len(token) > 3 and token.endswith("ies"):
+        return token[:-3] + "y"
+    if len(token) > 3 and token.endswith("s") and not token.endswith("ss"):
+        return token[:-1]
+    return token
+
+
+def measure_tokens(statement: str, value: float | None) -> frozenset[str]:
+    """What a statement measures: its content words, with the claim's own value masked. Every
+    other number stays (a year, a period, a code), and so does every name; function words and
+    hedges (`about`, `estimated`) go, and an English plural folds to its singular."""
+    text = normalize(statement)
+    if value is not None:
+        text = NUMBER_RE.sub(lambda m: " " if _states_value(m.group(), value) else m.group().replace(" ", ""), text)
+    return frozenset(_fold(t) for t in WORD_RE.findall(text) if t not in CONFLICT_STOPWORDS)
+
+
+def same_measure(a: Claim, b: Claim) -> bool:
+    """Like with like: once each claim's own value is masked, the statements have the same content
+    words. A different year or period, place or name, or measure word means a different figure."""
+    return measure_tokens(a.statement, a.value) == measure_tokens(b.statement, b.value)
+
+
+def same_source(a: Claim, b: Claim) -> bool:
+    """One source: the same URL, or two `fi` API claims, each an exact re-queried cell (IF-209)."""
+    if a.source_url == b.source_url:
+        return True
+    return all(c.source_type == "api" and requery.api_of(c.source_url) for c in (a, b))
 
 
 def values_conflict(a: float, b: float) -> bool:
@@ -492,10 +556,23 @@ def in_conflict(a: Claim, b: Claim) -> bool:
         a.dimension == b.dimension
         and a.value is not None
         and b.value is not None
+        and not same_source(a, b)
         and _units_compatible(a.unit, b.unit)
         and values_conflict(a.value, b.value)
-        and statements_similar(a.statement, b.statement)
+        and same_measure(a, b)
     )
+
+
+def _cliques(adjacent: dict[int, set[int]], r: set[int], p: set[int], x: set[int]) -> Iterable[set[int]]:
+    """Bron–Kerbosch with a pivot: every maximal set of pairwise-adjacent nodes."""
+    if not p and not x:
+        yield r
+        return
+    pivot = max(p | x, key=lambda v: len(adjacent[v] & p))
+    for v in sorted(p - adjacent[pivot]):
+        yield from _cliques(adjacent, r | {v}, p & adjacent[v], x & adjacent[v])
+        p = p - {v}
+        x = x | {v}
 
 
 def preference_key(claim: Claim) -> tuple[int, int, float, str]:
@@ -506,31 +583,23 @@ def preference_key(claim: Claim) -> tuple[int, int, float, str]:
 
 
 def detect_conflicts(claims: Iterable[Claim]) -> list[ConflictGroup]:
-    """Groups of verified (or already conflict) claims linked by `in_conflict`, each in
-    preference order. Claims without a value never conflict. Pairs are compared within a
-    dimension, which holds a few dozen claims at most, so no full-text prefilter is needed."""
+    """Groups of verified (or already conflict) claims in which every pair is `in_conflict`
+    (maximal cliques, so no chaining: a claim conflicting with two claims that agree with each
+    other sits in two groups), each in preference order. Claims without a value never conflict.
+    Pairs are compared within a dimension, which holds a few dozen claims at most."""
     pool = [c for c in claims if c.verification in ("verified", "conflict") and c.value is not None]
-    parent = {c.claim_id: c.claim_id for c in pool}
-
-    def root(cid: str) -> str:
-        while parent[cid] != cid:
-            parent[cid] = parent[parent[cid]]
-            cid = parent[cid]
-        return cid
-
+    adjacent: dict[int, set[int]] = {i: set() for i in range(len(pool))}
     for i, a in enumerate(pool):
-        for b in pool[i + 1 :]:
-            if in_conflict(a, b):
-                parent[root(b.claim_id)] = root(a.claim_id)
-    groups: dict[str, list[Claim]] = {}
-    for c in pool:
-        groups.setdefault(root(c.claim_id), []).append(c)
-    out = [
-        ConflictGroup(dimension=g[0].dimension, claim_ids=[c.claim_id for c in sorted(g, key=preference_key)])
-        for g in groups.values()
-        if len(g) > 1
-    ]
-    return sorted(out, key=lambda g: (g.dimension, g.claim_ids[0]))
+        for j in range(i + 1, len(pool)):
+            if in_conflict(a, pool[j]):
+                adjacent[i].add(j)
+                adjacent[j].add(i)
+    linked = {i for i, n in adjacent.items() if n}
+    out = []
+    for clique in _cliques(adjacent, set(), linked, set()) if linked else ():
+        group = sorted((pool[i] for i in clique), key=preference_key)
+        out.append(ConflictGroup(dimension=group[0].dimension, claim_ids=[c.claim_id for c in group]))
+    return sorted(out, key=lambda g: (g.dimension, g.claim_ids))
 
 
 def mark_conflicts(claims: list[Claim], groups: list[ConflictGroup], changeable: set[str] | None = None) -> list[Claim]:
@@ -737,6 +806,36 @@ def verify_run(
     conflicts_path.write_bytes(_CONFLICTS.dump_json(conflicts, indent=2) + b"\n")
     db.upsert_claims(run_id, verified[len(kept):])
     return VerifyResult(verified, by_file, warnings, conflicts)
+
+
+def recheck_conflicts(run_id: str) -> VerifyResult:
+    """Recompute the conflicts of an existing ledger (IF-217) from 03_claims/verified.json alone,
+    fetching nothing: every `verified` or `conflict` claim gets its state from the new groups, and
+    verified.json, conflicts.json and the changed `claims` rows are rewritten. Refused once
+    05_report.md exists, because the report is immutable and was written from the old states."""
+    run_dir = runs.run_dir(run_id)
+    ledger = run_dir / "03_claims" / "verified.json"
+    if not ledger.is_file():
+        raise FileNotFoundError(f"{ledger} does not exist; verify the run first")
+    if (run_dir / REPORT_FILE).exists():
+        raise FileExistsError(f"{run_dir / REPORT_FILE} exists; a written report is immutable")
+    before = _CLAIMS.validate_json(ledger.read_bytes())
+    conflicts = detect_conflicts(before)
+    reset = [c.model_copy(update={"verification": "verified"}) if c.verification == "conflict" else c for c in before]
+    claims = mark_conflicts(reset, conflicts)
+    changed = [new for old, new in zip(before, claims, strict=True) if new.verification != old.verification]
+    by_id = {c.claim_id: c for c in claims}
+    by_file = {
+        p.stem: [by_id[c.claim_id] for c in _CLAIMS.validate_json(p.read_bytes()) if c.claim_id in by_id]
+        for p in sorted((run_dir / "03_claims").glob("*.json"))
+        if p.name not in ("verified.json", CONFLICTS_FILE)
+    }
+    _write_claims(ledger, claims)
+    (run_dir / "03_claims" / CONFLICTS_FILE).write_bytes(_CONFLICTS.dump_json(conflicts, indent=2) + b"\n")
+    db.upsert_claims(run_id, changed)
+    old = {c.claim_id: c.verification for c in before}
+    warnings = [f"{c.claim_id}: {old[c.claim_id]} → {c.verification}" for c in changed]
+    return VerifyResult(claims, by_file, warnings, conflicts)
 
 
 def summary(result: VerifyResult) -> str:

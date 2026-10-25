@@ -928,7 +928,7 @@
       "area": "verification",
       "title": "Conflict detection compares like with like",
       "user_visible_behavior": "Claims are marked `conflict` only when two sources give different figures for the same measure: claims from the same source URL, two API-tool claims (each an exact re-queried table cell), claims about different years or periods, different places or names, or different measures never conflict, and a group forms only where every pair conflicts. Real disagreements (two sources giving different figures for the same statement) are still flagged, and `scripts/verify_claims.py <run_id> --conflicts-only` recomputes the conflicts of an existing ledger without fetching anything.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [],
       "ticket": "IF-217",
       "spec": "docs/TICKETS.md#if-217-conflict-detection-compares-like-with-like",
@@ -936,7 +936,10 @@
         "L1: pnpm check",
         "L1: uv run pytest tests/test_verify.py (same-URL, API-vs-API, different-period, different-place and different-measure pairs are not conflicts; a pair conflicts only when every member of its group does; two sources with different figures for the same statement still conflict; --conflicts-only rewrites conflicts.json and the claim states from verified.json alone)"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-25 pnpm check → pass (working tree on e7f111e)",
+        "2026-10-25 uv run pytest tests/test_verify.py → pass (working tree on e7f111e)"
+      ],
       "attempts": 0,
       "notes": "From the F-041 acceptance run (2026-10-25): all 9 conflict groups (30 claims) of run 20261025-172428-an-online-store-selling-dried were false, and conflict claims never count toward a score, so the run lost its core Statistics Finland and Eurostat demand figures. TICKETS.md IF-217 lists the groups by pattern."
     }
