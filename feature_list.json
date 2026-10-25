@@ -907,7 +907,7 @@
       "area": "acceptance",
       "title": "Scope acceptance: an online idea from the UI",
       "user_visible_behavior": "An online-store idea submitted through the UI with mode online and markets Finland → EU runs validate → synthesize, and its plan, research and report size the market and competition nationally and in the EU, with Rääkkylä appearing only as the operating base; a local idea with the default scope still gets the Rääkkylä research.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": ["F-038", "F-039", "F-040"],
       "ticket": "IF-705",
       "spec": "docs/TICKETS.md#if-705-scope-acceptance-an-online-idea-from-the-ui",
@@ -915,7 +915,10 @@
         "L1: pnpm check",
         "manual: an online idea and a local idea run validate → synthesize from the UI; every IF-705 acceptance item observed and recorded under the ticket"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-10-25 pnpm check → pass (working tree on 24ebda5)",
+        "2026-10-25 manual: an online idea and a local idea run validate → synthesize from the UI; every IF-705 acceptance item observed and recorded under the ticket → observed by eemeli: online berry webshop (20261025-172428, mode online, Finland → EU) and local cabin idea (20261025-172429, default scope) ran validate → synthesize from the UI with no question; online plan, research and report sized Finland/EU, priced shipping and platform fees and used Rääkkylä only as the operating base; local run kept the Rääkkylä research and report sections; details under TICKETS.md IF-705 (working tree on 24ebda5)"
+      ],
       "attempts": 0,
       "notes": ""
     }
