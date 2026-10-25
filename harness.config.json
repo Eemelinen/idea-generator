@@ -132,6 +132,7 @@
     "maxBudgetUsd": 4,
     "wallClockMin": 15
   },
+  "review": { "maxBudgetUsd": 6 },
   "allowedTools": [
     "Bash(pnpm check*)",
     "Bash(pnpm format*)",
