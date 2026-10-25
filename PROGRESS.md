@@ -59,6 +59,12 @@ Repository-local session log. Read it at clock-in, update it at clock-out (AGENT
 
 ## Session Log
 
+### Session 047 — 2026-10-25 (interactive: safety-review budget)
+
+- Goal: let the loop's safety review reach a verdict. It ran out of its $2 default budget on the F-038, F-039 and F-042 PRs (3.05–3.54 USD after 3–5 turns), so each waited for a human.
+- Completed (this commit): `harness.config.json` sets `review.maxBudgetUsd` to 6. The default itself and the review's missing prompt-cache hits are a harness issue, queued in the harness repository.
+- Next best step: the human acceptance run F-036 (IF-609), or the human-only F-012.
+
 ### Session 047 — 2026-10-25 (driver-run: F-042 conflict detection compares like with like)
 
 - Goal: F-042 / IF-217: stop false `conflict` marks (same source, API cells, other periods, places or measures, chained groups) and add `verify_claims.py --conflicts-only`.
