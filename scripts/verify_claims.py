@@ -2,6 +2,7 @@
 
     uv run python scripts/verify_claims.py <run_id>
     uv run python scripts/verify_claims.py <run_id> --only mini-<n>-<dim>
+    uv run python scripts/verify_claims.py <run_id> --conflicts-only
 
 Parses the '## Candidate claims' blocks of runs/<run_id>/02_research/*.md into
 03_claims/<dimension>.json, fetches every source (robots.txt respected, 10 s timeout, cached in
@@ -15,6 +16,11 @@ unfetchable or robots-disallowed sources) on stderr. Exit 0 once verified.json i
 --only <stem> (repeatable; a debate's mini-research file) parses and verifies just that file and
 adds its claims to the existing verified.json; every other claim keeps its state and retrieval
 time. Exit 1 also when that file or verified.json is missing.
+
+--conflicts-only recomputes 03_claims/conflicts.json and the verified/conflict states of the
+existing verified.json (and the claims rows) without parsing or fetching anything, e.g. after the
+conflict rule changed (IF-217); each changed state is printed as a warning. Exit 1 when
+verified.json is missing or 05_report.md exists (a written report is immutable).
 """
 
 from __future__ import annotations
@@ -28,7 +34,9 @@ from ideaforge import db, runs, verify
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("run_id")
-    parser.add_argument("--only", action="append", metavar="STEM", help="verify only 02_research/<STEM>.md")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--only", action="append", metavar="STEM", help="verify only 02_research/<STEM>.md")
+    mode.add_argument("--conflicts-only", action="store_true", help="recompute conflicts from verified.json, fetch nothing")
     args = parser.parse_args(argv)
 
     try:
@@ -47,8 +55,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     try:
-        result = verify.verify_run(args.run_id, only=args.only)
-    except FileNotFoundError as e:
+        if args.conflicts_only:
+            result = verify.recheck_conflicts(args.run_id)
+        else:
+            result = verify.verify_run(args.run_id, only=args.only)
+    except (FileNotFoundError, FileExistsError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
     for w in result.warnings:

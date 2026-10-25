@@ -14,7 +14,7 @@ Read **only** `runs/<run_id>/04_synthesis_input.json` (the run id is in your bri
 
 - `spec`: the idea (`00_spec.json`): customer, problem, solution, revenue model, geography, founder constraints, `kill_trigger_overrides`, `vat_registered`.
 - `claims`: every claim that is `verified` or `conflict`. Unverified claims are left out on purpose; never refer to a claim id that is not in this list.
-- `conflicts`: groups of `conflict` claims of one dimension that state a similar figure with values more than 25 % apart, each group's `claim_ids` in the preference order given in `conflict_preference` (official > api > industry > news > forum > vendor, then the newest). When you name contested evidence, name the preferred claim first and the gap the disagreement leaves.
+- `conflicts`: groups of `conflict` claims of one dimension in which different sources give the same measure (same period, place and wording) with every pair of values more than 25 % apart (a claim can sit in more than one group), each group's `claim_ids` in the preference order given in `conflict_preference` (official > api > industry > news > forum > vendor, then the newest). When you name contested evidence, name the preferred claim first and the gap the disagreement leaves.
 - `rubric`: the ten dimensions with `weight`, `min_evidence_for_3`, `evidence_rule` and `kill_triggers`, and the `verdict_thresholds`.
 - `economics_roles`: what each unit-economics input role means.
 

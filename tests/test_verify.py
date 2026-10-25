@@ -874,13 +874,14 @@ def test_a_missing_unit_still_conflicts():
 
 def test_conflict_groups_are_in_preference_order():
     claims = [
+        # values doubling, so every pair conflicts (IF-217: a group needs every pair)
         conflict_claim("market-001", 100, source_type="vendor"),
         conflict_claim("market-002", 200, source_type="news", published_date="2024-01-01"),
-        conflict_claim("market-003", 300, source_type="news", published_date="2025-01-01"),
-        conflict_claim("market-004", 400, source_type="official"),
-        conflict_claim("market-005", 500, source_type="api"),
-        conflict_claim("market-006", 600, source_type="forum"),
-        conflict_claim("market-007", 700, source_type="industry"),
+        conflict_claim("market-003", 400, source_type="news", published_date="2025-01-01"),
+        conflict_claim("market-004", 800, source_type="official"),
+        conflict_claim("market-005", 1600, source_type="api"),
+        conflict_claim("market-006", 3200, source_type="forum"),
+        conflict_claim("market-007", 6400, source_type="industry"),
     ]
     groups = verify.detect_conflicts(claims)
     assert groups == [
@@ -891,7 +892,7 @@ def test_conflict_groups_are_in_preference_order():
     ]
 
 
-def test_linked_conflicts_form_one_group_and_others_stay_verified():
+def test_a_group_needs_every_pair_to_conflict():
     claims = [
         conflict_claim("market-001", 100),
         conflict_claim("market-002", 130),  # vs 001: 30 %
@@ -899,10 +900,115 @@ def test_linked_conflicts_form_one_group_and_others_stay_verified():
         conflict_claim("market-004", 101, statement="North Karelia has {v} sauna rafts."),
     ]
     groups = verify.detect_conflicts(claims)
+    # 002 and 003 agree, so there is no chain 001–002–003: 001 sits in two groups.
     # same type, undated, retrieved together: the claim id breaks the tie
-    assert [g.claim_ids for g in groups] == [["market-001", "market-002", "market-003"]]
+    assert [g.claim_ids for g in groups] == [["market-001", "market-002"], ["market-001", "market-003"]]
     states = {c.claim_id: c.verification for c in verify.mark_conflicts(claims, groups)}
     assert states == {"market-001": "conflict", "market-002": "conflict", "market-003": "conflict", "market-004": "verified"}
+
+
+def test_pairwise_conflicting_claims_form_one_group():
+    claims = [conflict_claim("market-001", 100), conflict_claim("market-002", 200), conflict_claim("market-003", 400)]
+    assert [g.claim_ids for g in verify.detect_conflicts(claims)] == [["market-001", "market-002", "market-003"]]
+
+
+# Like with like (IF-217). The statements follow the false groups of the F-041 acceptance run
+# (TICKETS.md IF-217); the claims built from them are synthetic, each on its own news URL, so
+# only the like-with-like rule keeps them apart.
+SAME_TABLE = "In 2025, {v} % of the population in Finland's ICT survey had bought {what} in the previous three months."
+EUROSTAT = "In {year}, {v} % of individuals in {geo} had bought food or beverages online in the last {months} months."
+YTJ = "The YTJ register lists {v} companies in {town} whose main line is fruit and vegetable processing (TOL 10390)."
+HOUSEHOLD = "The average Finnish household spent {v} EUR on {what} in 2022."
+
+
+def _pair(a, b):
+    """Two synthetic claims of one dimension from different news URLs: ((value, statement), …)."""
+    return [conflict_claim("market-001", a[0], statement=a[1], unit="%"), conflict_claim("market-002", b[0], statement=b[1], unit="%")]
+
+
+@pytest.mark.parametrize(
+    ("a", "b"),
+    [
+        # different cells of one table: what was bought
+        ((61, SAME_TABLE.replace("{what}", "something online")), (14, SAME_TABLE.replace("{what}", "food or drinks online"))),
+        # different place
+        ((16.24, EUROSTAT.format(v="{v}", year=2024, geo="Finland", months=3)),
+         (24.45, EUROSTAT.format(v="{v}", year=2024, geo="the Netherlands", months=3))),
+        ((16.24, EUROSTAT.format(v="{v}", year=2024, geo="Finland", months=3)),
+         (10.98, EUROSTAT.format(v="{v}", year=2024, geo="the EU-27", months=3))),
+        ((0, YTJ.format(v="{v}", town="Kitee")), (2, YTJ.format(v="{v}", town="Joensuu"))),
+        # different period: year, quarter, reference period
+        ((16.24, EUROSTAT.format(v="{v}", year=2024, geo="Finland", months=3)),
+         (9.99, EUROSTAT.format(v="{v}", year=2020, geo="Finland", months=3))),
+        ((1454, "An estimated {v} trade enterprises (TOL G) closed in Finland in 2025Q4."),
+         (900, "An estimated {v} trade enterprises (TOL G) closed in Finland in 2025Q1.")),
+        ((62.35, EUROSTAT.format(v="{v}", year=2025, geo="Finland", months=3)),
+         (82.04, EUROSTAT.format(v="{v}", year=2025, geo="Finland", months=12))),
+        # different measure
+        ((1454, "An estimated {v} trade enterprises (TOL G) closed in Finland in 2025Q4."),
+         (879, "An estimated {v} trade enterprises (TOL G) started in Finland in 2025Q4.")),
+        ((10, HOUSEHOLD.replace("{what}", "dried fruit")), (441, HOUSEHOLD.replace("{what}", "fresh berries"))),
+        ((24, "Shopify's Basic plan costs {v} € per month when billed yearly."),
+         (32, "Shopify's Basic plan costs {v} € per month when billed monthly.")),
+    ],
+)  # fmt: skip
+def test_different_periods_places_and_measures_never_conflict(a, b):
+    claims = _pair((a[0], a[1].format(v=f"{a[0]:g}")), (b[0], b[1].format(v=f"{b[0]:g}")))
+    assert verify.detect_conflicts(claims) == []
+
+
+@pytest.mark.parametrize(
+    ("a", "b"),
+    [
+        ((100, "Rääkkylä has 100 summer cottages."), (126, "Rääkkylä has 126 summer cottages.")),
+        # rephrased, a hedge, thousands written with a space and a plural/singular difference
+        ((2100, "There are about 2 100 summer cottages in Rääkkylä."), (1500, "Rääkkylä has 1 500 summer cottage.")),
+        # a value written in millions, and a number word for the period
+        ((1_500_000, "Finns spent 1.5 million EUR on sauna rafts in the last three months."),
+         (2_400_000, "Finns spent 2,4 million EUR on sauna rafts in the last 3 months.")),
+        ((16.24, EUROSTAT.format(v="16.24", year=2024, geo="Finland", months=3)),
+         (24.0, EUROSTAT.format(v="24", year=2024, geo="Finland", months=3))),
+    ],
+)  # fmt: skip
+def test_two_sources_with_different_figures_for_the_same_statement_conflict(a, b):
+    claims = _pair(a, b)
+    assert [g.claim_ids for g in verify.detect_conflicts(claims)] == [["market-001", "market-002"]]
+
+
+def test_the_same_source_never_conflicts():
+    same_url = {"source_url": "https://example.fi/synthetic-cottages"}
+    claims = [conflict_claim("market-001", 100, **same_url), conflict_claim("market-002", 200, **same_url)]
+    assert verify.detect_conflicts(claims) == []
+
+
+PX = "https://pxdata.stat.fi/PXWeb/api/v1/fi/StatFin/synthetic/{}.px?vuosi=2024"
+
+
+def test_two_api_tool_claims_never_conflict():
+    api = [
+        conflict_claim("market-001", 100, source_type="api", source_url=PX.format("a")),
+        conflict_claim("market-002", 200, source_type="api", source_url=PX.format("b")),
+    ]
+    assert verify.detect_conflicts(api) == []
+    # An API cell against another kind of source, or an `api` claim on a page that is no `fi`
+    # tool URL (fetched and quote-matched, not re-queried), can still disagree.
+    page = conflict_claim("market-003", 200, source_type="api", source_url="https://example.fi/synthetic-api")
+    news = conflict_claim("market-004", 300, source_type="news")
+    assert [g.claim_ids for g in verify.detect_conflicts([api[0], page])] == [["market-001", "market-003"]]
+    assert [g.claim_ids for g in verify.detect_conflicts([api[0], news])] == [["market-001", "market-004"]]
+
+
+@pytest.mark.parametrize(
+    ("statement", "value", "tokens"),
+    [
+        ("An estimated 1 454 trade enterprises closed in 2025Q4.", 1454, {"trade", "enterprise", "closed", "2025q4"}),
+        ("In 2024, 16,24 % bought online in the last 3 months.", 16.24, {"2024", "bought", "online", "last", "3", "month"}),
+        ("Rääkkylä had 2,100 cottages in 2020.", 2100, {"raakkyla", "cottage", "2020"}),
+        ("Rääkkylä had 2,100 cottages in 2020.", None, {"raakkyla", "2", "100", "cottage", "2020"}),
+    ],
+)
+def test_measure_tokens_mask_only_the_claims_own_value(statement, value, tokens):
+    assert verify.measure_tokens(statement, value) == tokens
 
 
 CONFLICT_MD = research_md(
@@ -968,6 +1074,79 @@ def test_mini_research_conflict_leaves_the_kept_claims_alone(active_run, monkeyp
     result = verify.verify_run(RUN_ID, conflict_web(), only=["mini-1-market"])
     states = {c.claim_id: c.verification for c in result.claims}
     # 90 vs 126 conflicts: the new claim becomes conflict; the kept claims keep their state.
+    # 90 vs 100 does not (11 %), so 101 joins 002 in a group of its own (IF-217: no chaining).
     assert states == {"market-001": "conflict", "market-002": "conflict", "market-003": "verified", "market-101": "conflict"}
     groups = json.loads((active_run / "03_claims" / "conflicts.json").read_text(encoding="utf-8"))
-    assert groups == [{"dimension": "market", "claim_ids": ["market-002", "market-001", "market-101"]}]
+    assert groups == [
+        {"dimension": "market", "claim_ids": ["market-002", "market-001"]},
+        {"dimension": "market", "claim_ids": ["market-002", "market-101"]},
+    ]
+
+
+# ---------------------------------------------------------------- --conflicts-only (IF-217)
+
+
+def _ledger(run_dir, claims, groups):
+    claims_dir = run_dir / "03_claims"
+    claims_dir.mkdir(exist_ok=True)
+    (claims_dir / "verified.json").write_text(json.dumps([c.model_dump(mode="json") for c in claims]), encoding="utf-8")
+    (claims_dir / "conflicts.json").write_text(json.dumps(groups), encoding="utf-8")
+    (claims_dir / "market.json").write_text(
+        json.dumps([c.model_copy(update={"verification": "pending"}).model_dump(mode="json") for c in claims]),
+        encoding="utf-8",
+    )
+
+
+def test_conflicts_only_recomputes_the_ledger_without_fetching(active_run, monkeypatch, capsys):
+    db.init()
+    db.create_run(RUN_ID, "test idea", idea_id="test-idea")
+    year = "Rääkkylä had {v} summer cottages in {y}."
+    claims = [
+        # an old false group: two cells of one API table and another year
+        conflict_claim("market-001", 61, source_type="api", source_url=PX.format("a"), verification="conflict"),
+        conflict_claim("market-002", 14, source_type="api", source_url=PX.format("b"), verification="conflict"),
+        conflict_claim("market-003", 100, statement=year.replace("{y}", "2024"), verification="conflict"),
+        conflict_claim("market-004", 200, statement=year.replace("{y}", "2020"), verification="conflict"),
+        # a real disagreement the old ledger missed, and an unverified claim that stays so
+        conflict_claim("market-005", 100, statement=year.replace("{y}", "2023")),
+        conflict_claim("market-006", 150, statement=year.replace("{y}", "2023")),
+        conflict_claim("market-007", 300, statement=year.replace("{y}", "2023"), verification="unverified"),
+    ]
+    _ledger(active_run, claims, [{"dimension": "market", "claim_ids": [f"market-00{i}" for i in range(1, 5)]}])
+    db.upsert_claims(RUN_ID, claims)
+
+    def no_network(*args, **kwargs):
+        raise AssertionError("--conflicts-only must not fetch")
+
+    monkeypatch.setattr(verify, "requests_get", no_network)
+    monkeypatch.setattr(verify.Requerier, "get", no_network)
+    assert verify_claims.main([RUN_ID, "--conflicts-only"]) == 0
+    out, err = capsys.readouterr()
+    expected = {"market-001": "verified", "market-002": "verified", "market-003": "verified", "market-004": "verified",
+                "market-005": "conflict", "market-006": "conflict", "market-007": "unverified"}  # fmt: skip
+    ledger = json.loads((active_run / "03_claims" / "verified.json").read_text(encoding="utf-8"))
+    assert {c["claim_id"]: c["verification"] for c in ledger} == expected
+    assert [c["retrieved_at"] for c in ledger] == [c.retrieved_at.isoformat().replace("+00:00", "Z") for c in claims]
+    groups = json.loads((active_run / "03_claims" / "conflicts.json").read_text(encoding="utf-8"))
+    assert groups == [{"dimension": "market", "claim_ids": ["market-005", "market-006"]}]
+    validate_file.validate_path(active_run / "03_claims" / "conflicts.json")
+    with db.session() as conn:
+        rows = dict(conn.execute("SELECT claim_id, verification FROM claims WHERE run_id=?", (RUN_ID,)).fetchall())
+    assert rows == expected
+    assert "warning: market-001: conflict → verified" in err
+    assert "warning: market-005: verified → conflict" in err
+    assert "market: 4 verified, 2 conflict, 1 unverified" in out
+    assert "conflicts: 1 group(s) in 03_claims/conflicts.json" in out
+
+
+def test_conflicts_only_needs_a_ledger_and_no_report(active_run, capsys):
+    db.init()
+    db.create_run(RUN_ID, "test idea", idea_id="test-idea")
+    assert verify_claims.main([RUN_ID, "--conflicts-only"]) == 1
+    assert "verified.json does not exist" in capsys.readouterr().err
+    _ledger(active_run, [conflict_claim("market-001", 100)], [])
+    (active_run / "05_report.md").write_text("# Synthetic report\n", encoding="utf-8")
+    assert verify_claims.main([RUN_ID, "--conflicts-only"]) == 1
+    assert "a written report is immutable" in capsys.readouterr().err
+    with pytest.raises(SystemExit):
+        verify_claims.main([RUN_ID, "--conflicts-only", "--only", "mini-1-market"])
